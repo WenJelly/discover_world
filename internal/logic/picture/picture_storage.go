@@ -26,9 +26,11 @@ func buildPictureThumbnailURL(baseURL string, size int64, option types.CompressP
 	case 1:
 		return buildCurrentCompressedPictureURL(baseURL, size), nil
 	case 2:
+		return buildStrongCompressedPictureURL(baseURL), nil
+	case 3:
 		return buildCenteredCropPictureURL(baseURL, option.CutWidth, option.CutHeight)
 	default:
-		return "", commonresponse.BadRequest("compressType 只能是 0、1、2")
+		return "", commonresponse.BadRequest("compressType 只能是 0、1、2、3")
 	}
 }
 
@@ -51,6 +53,13 @@ func buildCompressedThumbnailURL(baseURL string, size int64) string {
 	)
 }
 
+func buildStrongCompressedPictureURL(baseURL string) string {
+	return fmt.Sprintf(
+		"%s?imageMogr2/thumbnail/1200x1200>/format/webp/quality/70!/minsize/1/ignore-error/1",
+		baseURL,
+	)
+}
+
 func compressedThumbnailProfile(size int64) (maxEdge int, quality int) {
 	switch {
 	case size >= largeCompressedThreshold:
@@ -64,7 +73,7 @@ func compressedThumbnailProfile(size int64) (maxEdge int, quality int) {
 
 func buildCenteredCropPictureURL(baseURL string, width, height int64) (string, error) {
 	if width <= 0 || height <= 0 {
-		return "", commonresponse.BadRequest("compressType=2 时 cutWidth 和 CutHeight 必须为正整数")
+		return "", commonresponse.BadRequest("compressType=3 时 cutWidth 和 CutHeight 必须为正整数")
 	}
 
 	return fmt.Sprintf(

@@ -1,0 +1,234 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react"
+
+import { loginUser, registerUser } from "@/lib/api"
+import {
+  AUTH_EXPIRED_EVENT,
+  clearAuthStorage,
+  getTokenExpiresAt,
+  isTokenUsable,
+  notifyAuthExpired,
+  TOKEN_KEY,
+  USER_KEY,
+  type AuthExpiredEventDetail,
+} from "@/lib/auth-session"
+import type {
+  AuthUser,
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+} from "@/lib/types"
+import { useToast } from "@/hooks/use-toast"
+
+type AuthContextValue = {
+  user: AuthUser | null
+  token: string | null
+  isAuthenticated: boolean
+  login: (
+    req: LoginRequest,
+    options?: {
+      remember?: boolean
+    }
+  ) => Promise<AuthUser>
+  register: (req: RegisterRequest) => Promise<RegisterResponse>
+  logout: () => void
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+
+function toAuthUser(resp: LoginResponse): AuthUser {
+  return {
+    id: resp.id,
+    userEmail: resp.userEmail,
+    userName: resp.userName,
+    userAvatar: resp.userAvatar,
+    userProfile: resp.userProfile,
+    userRole: resp.userRole,
+    createTime: resp.createTime,
+    updateTime: resp.updateTime,
+  }
+}
+
+function safeGet(storage: Storage, key: string) {
+  try {
+    return storage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function safeSet(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value)
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+}
+
+function safeRemove(storage: Storage, key: string) {
+  try {
+    storage.removeItem(key)
+  } catch {
+    // Ignore unavailable storage.
+  }
+}
+
+function readStoredAuth() {
+  if (typeof window === "undefined") {
+    return {
+      token: null,
+      user: null,
+    }
+  }
+
+  const token = safeGet(localStorage, TOKEN_KEY) ?? safeGet(sessionStorage, TOKEN_KEY)
+  const rawUser = safeGet(localStorage, USER_KEY) ?? safeGet(sessionStorage, USER_KEY)
+
+  if (!token || !rawUser) {
+    return {
+      token: null,
+      user: null,
+    }
+  }
+
+  if (!isTokenUsable(token)) {
+    clearStoredAuth()
+    return {
+      token: null,
+      user: null,
+    }
+  }
+
+  try {
+    return {
+      token,
+      user: JSON.parse(rawUser) as AuthUser,
+    }
+  } catch {
+    clearStoredAuth()
+    return {
+      token: null,
+      user: null,
+    }
+  }
+}
+
+function persistAuth(token: string, user: AuthUser, remember: boolean) {
+  const targetStorage = remember ? localStorage : sessionStorage
+  const staleStorage = remember ? sessionStorage : localStorage
+
+  safeRemove(staleStorage, TOKEN_KEY)
+  safeRemove(staleStorage, USER_KEY)
+  safeSet(targetStorage, TOKEN_KEY, token)
+  safeSet(targetStorage, USER_KEY, JSON.stringify(user))
+}
+
+function clearStoredAuth() {
+  clearAuthStorage()
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [auth, setAuth] = useState(readStoredAuth)
+  const { toast } = useToast()
+
+  const clearAuthState = useCallback(() => {
+    clearStoredAuth()
+    setAuth({
+      token: null,
+      user: null,
+    })
+  }, [])
+
+  const login = useCallback(
+    async (req: LoginRequest, options: { remember?: boolean } = {}) => {
+      const resp = await loginUser(req)
+      const nextUser = toAuthUser(resp)
+
+      persistAuth(resp.token, nextUser, options.remember ?? true)
+      setAuth({
+        token: resp.token,
+        user: nextUser,
+      })
+
+      return nextUser
+    },
+    []
+  )
+
+  const register = useCallback((req: RegisterRequest) => registerUser(req), [])
+
+  const logout = useCallback(() => {
+    clearAuthState()
+  }, [clearAuthState])
+
+  useEffect(() => {
+    function handleAuthExpired(event: Event) {
+      const detail = (event as CustomEvent<AuthExpiredEventDetail>).detail
+
+      clearAuthState()
+      toast({
+        title: "登录已过期",
+        description: detail?.message ?? "请重新登录后继续操作。",
+        variant: "destructive",
+      })
+    }
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
+
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
+    }
+  }, [clearAuthState, toast])
+
+  useEffect(() => {
+    if (!auth.token) {
+      return
+    }
+
+    const expiresAt = getTokenExpiresAt(auth.token)
+    if (!expiresAt || expiresAt <= Date.now()) {
+      notifyAuthExpired("登录已过期，请重新登录")
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      notifyAuthExpired("登录已过期，请重新登录")
+    }, Math.min(expiresAt - Date.now(), 2_147_483_647))
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [auth.token])
+
+  const value = useMemo(
+    () => ({
+      user: auth.user,
+      token: auth.token,
+      isAuthenticated: Boolean(auth.token && auth.user),
+      login,
+      register,
+      logout,
+    }),
+    [auth.token, auth.user, login, logout, register]
+  )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider")
+  }
+
+  return context
+}

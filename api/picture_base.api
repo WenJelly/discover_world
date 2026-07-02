@@ -9,9 +9,9 @@ info(
 
 type (
     CompressPictureType {
-        CompressType int64 `json:"compressType,default=0"` // 0表示不压缩;1-表示等比例压缩;2-表示居中裁剪
-        CutHeight int64 `json:"CutHeight,optional"`        // 裁剪的长度；压缩类型=2时使用
-        CutWidth int64 `json:"cutWidth,optional"`          // 裁剪的宽度度；压缩类型=2时使用
+        CompressType int64 `json:"compressType,default=0"` // 0表示不压缩;1-表示等比例压缩;2-表示进一步等比例压缩;3-表示居中裁剪
+        CutHeight int64 `json:"CutHeight,optional"`        // 裁剪的长度；压缩类型=3时使用
+        CutWidth int64 `json:"cutWidth,optional"`          // 裁剪的宽度度；压缩类型=3时使用
     }
 
     QueryPictureRequest {
