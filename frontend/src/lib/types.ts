@@ -12,7 +12,7 @@ export interface PictureResponse {
   name: string;
   introduction: string;
   category: string;
-  tags: string[];
+  tags: string[] | null;
   picSize: number;
   picWidth: number;
   picHeight: number;

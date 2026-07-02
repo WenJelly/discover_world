@@ -63,7 +63,6 @@ export default function HeroPhotoRing({ photos }: HeroPhotoRingProps) {
   return (
     <Canvas
       camera={{ position: [0, 0, 12], fov: 50 }}
-      frameloop="demand"
       gl={{ antialias: true, alpha: true }}
     >
       <ambientLight intensity={0.6} />
