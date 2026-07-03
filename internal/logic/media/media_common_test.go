@@ -1,0 +1,160 @@
+package media
+
+import (
+	"database/sql"
+	"strings"
+	"testing"
+	"time"
+
+	"discover_world/internal/types"
+	"discover_world/model"
+)
+
+func TestEncodeDecodeMediaCursor(t *testing.T) {
+	token, err := encodeMediaCursor(12345)
+	if err != nil {
+		t.Fatalf("encodeMediaCursor returned error: %v", err)
+	}
+
+	id, err := decodeMediaCursor(token)
+	if err != nil {
+		t.Fatalf("decodeMediaCursor returned error: %v", err)
+	}
+	if id != 12345 {
+		t.Fatalf("decodeMediaCursor id = %d, want 12345", id)
+	}
+}
+
+func TestDecodeMediaCursorRejectsInvalidTokens(t *testing.T) {
+	if _, err := decodeMediaCursor("not-a-cursor"); err == nil {
+		t.Fatal("decodeMediaCursor should reject invalid cursor tokens")
+	}
+}
+
+func TestBuildMediaObjectKeyUsesBucketBasePath(t *testing.T) {
+	key, err := buildMediaObjectKey("media/images", "image", 1001, "jpeg")
+	if err != nil {
+		t.Fatalf("buildMediaObjectKey returned error: %v", err)
+	}
+
+	if key != "media/images/asset-1001/original.jpg" {
+		t.Fatalf("object key = %q, want media/images/asset-1001/original.jpg", key)
+	}
+}
+
+func TestBuildPublicObjectURLPrefersCdnDomain(t *testing.T) {
+	bucket := &model.StorageBucket{
+		Endpoint:  sql.NullString{String: "https://bucket.cos.ap-guangzhou.myqcloud.com", Valid: true},
+		CdnDomain: sql.NullString{String: "https://cdn.example.com/media", Valid: true},
+	}
+
+	got := buildPublicObjectURL(bucket, "media/images/asset-1001/original image.jpg")
+	want := "https://cdn.example.com/media/media/images/asset-1001/original%20image.jpg"
+	if got != want {
+		t.Fatalf("public URL = %q, want %q", got, want)
+	}
+}
+
+func TestCollectOriginalBucketIDsKeepsAssetOrderAndDedupes(t *testing.T) {
+	assets := []*model.MediaAsset{
+		{Id: 1},
+		nil,
+		{Id: 2},
+		{Id: 3},
+	}
+	objects := map[uint64]*model.MediaObject{
+		1: {BucketId: 10},
+		2: {BucketId: 10},
+		3: {BucketId: 11},
+	}
+
+	got := collectOriginalBucketIDs(assets, objects)
+	want := []uint64{10, 11}
+	if len(got) != len(want) {
+		t.Fatalf("collectOriginalBucketIDs length = %d, want %d: %#v", len(got), len(want), got)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("collectOriginalBucketIDs = %#v, want %#v", got, want)
+		}
+	}
+}
+
+func TestBuildVariantURLCompression(t *testing.T) {
+	got, err := buildVariantURL("https://cdn.example.com/a.jpg", 8<<20, types.MediaVariantRequest{CompressType: 1})
+	if err != nil {
+		t.Fatalf("buildVariantURL returned error: %v", err)
+	}
+	if !strings.Contains(got, "imageMogr2/thumbnail/1920x1920>") {
+		t.Fatalf("variant URL = %q, want 1920 thumbnail processing", got)
+	}
+}
+
+func TestBuildVariantURLKeepsEmptyBaseURL(t *testing.T) {
+	got, err := buildVariantURL("", 8<<20, types.MediaVariantRequest{CompressType: 2})
+	if err != nil {
+		t.Fatalf("buildVariantURL returned error: %v", err)
+	}
+	if got != "" {
+		t.Fatalf("variant URL = %q, want empty URL", got)
+	}
+}
+
+func TestMetadataJSONRoundTrip(t *testing.T) {
+	reviewTime := time.Date(2026, 7, 3, 12, 0, 0, 0, time.UTC)
+	raw := metadataJSON(mediaMetadata{
+		UsageType:     "avatar",
+		Category:      "城市",
+		Tags:          []string{"夜景", "旅行"},
+		DominantColor: "#112233",
+		BlurHash:      "001ABC",
+		ReviewMessage: "ok",
+		ReviewerId:    "7",
+		ReviewTime:    formatTime(reviewTime),
+	})
+
+	got := parseMediaMetadata(raw)
+	if got.UsageType != "avatar" || got.Category != "城市" || got.DominantColor != "#112233" || got.ReviewerId != "7" {
+		t.Fatalf("metadata round trip failed: %#v", got)
+	}
+	if len(got.Tags) != 2 || got.Tags[0] != "夜景" || got.Tags[1] != "旅行" {
+		t.Fatalf("metadata tags = %#v", got.Tags)
+	}
+}
+
+func TestBuildPublicMediaAssetListWhereExcludesAvatarUsage(t *testing.T) {
+	whereSQL, _, err := buildPublicMediaAssetListWhere(mediaListFilter{})
+	if err != nil {
+		t.Fatalf("buildPublicMediaAssetListWhere returned error: %v", err)
+	}
+
+	if !strings.Contains(whereSQL, "$.usageType") {
+		t.Fatalf("public media where SQL = %q, want usageType filter", whereSQL)
+	}
+	if !strings.Contains(whereSQL, "avatar") {
+		t.Fatalf("public media where SQL = %q, want avatar exclusion", whereSQL)
+	}
+}
+
+func TestStorageUsageCandidatesRequireAvatarBucket(t *testing.T) {
+	got := storageUsageCandidates("avatar")
+	want := []string{"avatar"}
+	if len(got) != len(want) {
+		t.Fatalf("storageUsageCandidates length = %d, want %d: %#v", len(got), len(want), got)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("storageUsageCandidates = %#v, want %#v", got, want)
+		}
+	}
+
+	if media := storageUsageCandidates("media"); len(media) != 1 || media[0] != "media" {
+		t.Fatalf("storageUsageCandidates(media) = %#v, want [media]", media)
+	}
+}
+
+func TestInitialUploadAuditStatusIsApproved(t *testing.T) {
+	if got := initialUploadAuditStatus(); got != "approved" {
+		t.Fatalf("initialUploadAuditStatus() = %q, want approved", got)
+	}
+}

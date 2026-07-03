@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, fetchPictureCursorList } from "@/lib/api";
+import {
+  MEDIA_ASSET_UPLOADED_EVENT,
+  shouldDisplayUploadedMediaAsset,
+  type MediaAssetUploadedEventDetail,
+} from "@/lib/media-events";
 import type { PictureResponse } from "@/lib/types";
 
 export type UseInfinitePicturesOptions = {
@@ -107,6 +112,29 @@ export function useInfinitePictures(
   useEffect(() => {
     loadMore();
   }, [loadMore]);
+
+  useEffect(() => {
+    const handleUploaded = (event: Event) => {
+      const asset = (event as CustomEvent<MediaAssetUploadedEventDetail>).detail?.asset;
+      if (!asset || !shouldDisplayUploadedMediaAsset(asset)) {
+        return;
+      }
+
+      setState((current) => {
+        if (current.pictures.some((picture) => picture.id === asset.id)) {
+          return current;
+        }
+
+        return {
+          ...current,
+          pictures: [asset, ...current.pictures],
+        };
+      });
+    };
+
+    window.addEventListener(MEDIA_ASSET_UPLOADED_EVENT, handleUploaded);
+    return () => window.removeEventListener(MEDIA_ASSET_UPLOADED_EVENT, handleUploaded);
+  }, []);
 
   return { ...state, loadMore, retry };
 }

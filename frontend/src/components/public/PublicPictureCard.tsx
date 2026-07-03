@@ -25,7 +25,7 @@ function PublicPictureCardImpl({ picture }: PublicPictureCardProps) {
       style={{ backgroundColor: picture.picColor || "#b9c1c7" }}
     >
       <a
-        href={`/picture/${picture.id}`}
+        href={`/media/${picture.id}`}
         className="photo_link"
         aria-label={`查看公开图片: ${picture.name || "未命名作品"}, 作者 ${authorName}`}
       >

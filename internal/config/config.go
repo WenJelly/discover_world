@@ -25,6 +25,16 @@ type CosConfig struct {
 	} `json:",optional"`
 }
 
+type StorageSecretConfig struct {
+	SecretId  string `json:",optional"`
+	SecretKey string `json:",optional"`
+}
+
+type AdminConfig struct {
+	Usernames []string `json:",optional"`
+	Emails    []string `json:",optional"`
+}
+
 type Config struct {
 	rest.RestConf
 
@@ -39,6 +49,9 @@ type Config struct {
 	}
 
 	Cos CosConfig
+
+	Admin          AdminConfig
+	StorageSecrets map[string]StorageSecretConfig `json:",optional"`
 }
 
 func (c *Config) Normalize() {
@@ -47,6 +60,20 @@ func (c *Config) Normalize() {
 
 func (c *Config) ApplyCosOverride(override CosConfig) {
 	c.Cos.ApplyOverride(override)
+}
+
+func (c *Config) ApplyStorageSecret(ref string, secret StorageSecretConfig) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return
+	}
+	if strings.TrimSpace(secret.SecretId) == "" && strings.TrimSpace(secret.SecretKey) == "" {
+		return
+	}
+	if c.StorageSecrets == nil {
+		c.StorageSecrets = make(map[string]StorageSecretConfig)
+	}
+	c.StorageSecrets[ref] = secret
 }
 
 func (c *CosConfig) Normalize() {

@@ -12,7 +12,7 @@ function PictureCardImpl({ picture }: PictureCardProps) {
 
   return (
     <a
-      href={`/picture/${picture.id}`}
+      href={`/media/${picture.id}`}
       className="group relative block h-full overflow-hidden bg-slate-100 dark:bg-slate-900"
       style={{ backgroundColor: picColor || undefined }}
     >

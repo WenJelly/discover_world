@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"log"
 
-	"photo-album/internal/common/response"
-	"photo-album/internal/config"
-	"photo-album/internal/handler"
-	"photo-album/internal/svc"
+	"discover_world/internal/common/response"
+	"discover_world/internal/config"
+	"discover_world/internal/handler"
+	"discover_world/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 	"github.com/zeromicro/go-zero/rest/httpx"

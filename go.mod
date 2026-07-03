@@ -1,4 +1,4 @@
-module photo-album
+module discover_world
 
 go 1.26
 

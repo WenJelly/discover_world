@@ -4,17 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strconv"
 	"strings"
 
-	commonresponse "photo-album/internal/common/response"
-	"photo-album/internal/svc"
-	"photo-album/model"
+	commonresponse "discover_world/internal/common/response"
+	"discover_world/model"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
-func ExtractUserIDFromBearerToken(authorization, secret string) (int64, error) {
+type AccountProvider interface {
+	AuthSecret() string
+	FindActiveAccount(ctx context.Context, id uint64) (*model.UserAccount, error)
+	IsAdminAccount(account *model.UserAccount) bool
+}
+
+func ExtractUserIDFromBearerToken(authorization, secret string) (uint64, error) {
 	if strings.TrimSpace(secret) == "" {
 		return 0, errors.New("jwt secret is empty")
 	}
@@ -46,17 +52,34 @@ func ExtractUserIDFromBearerToken(authorization, secret string) (int64, error) {
 	return claimToInt64(claims["userId"])
 }
 
-func LoadRequiredLoginUser(ctx context.Context, svcCtx *svc.ServiceContext, authorization string) (*model.User, error) {
+func ExtractUserIDFromContext(ctx context.Context) (uint64, error) {
+	if ctx == nil {
+		return 0, errors.New("missing context")
+	}
+
+	for _, key := range []string{"userId", "uid", "id"} {
+		if value := ctx.Value(key); value != nil {
+			return claimToInt64(value)
+		}
+	}
+
+	return 0, errors.New("missing userId claim")
+}
+
+func LoadRequiredLoginUser(ctx context.Context, provider AccountProvider, authorization string) (*model.UserAccount, error) {
 	if loginUser, ok := LoginUserFromContext(ctx); ok {
 		return loginUser, nil
 	}
 
-	userID, err := ExtractUserIDFromBearerToken(authorization, svcCtx.Config.Auth.AccessSecret)
+	userID, err := ExtractUserIDFromContext(ctx)
+	if err != nil {
+		userID, err = ExtractUserIDFromBearerToken(authorization, provider.AuthSecret())
+	}
 	if err != nil {
 		return nil, commonresponse.Unauthorized("请先登录")
 	}
 
-	loginUser, err := svcCtx.UserModel.FindOneActive(ctx, userID)
+	loginUser, err := provider.FindActiveAccount(ctx, userID)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
 			return nil, commonresponse.Unauthorized("登录用户不存在")
@@ -67,43 +90,79 @@ func LoadRequiredLoginUser(ctx context.Context, svcCtx *svc.ServiceContext, auth
 	return loginUser, nil
 }
 
-func LoadRequiredAdminUser(ctx context.Context, svcCtx *svc.ServiceContext, authorization string) (*model.User, error) {
-	loginUser, err := LoadRequiredLoginUser(ctx, svcCtx, authorization)
+func LoadRequiredAdminUser(ctx context.Context, provider AccountProvider, authorization string) (*model.UserAccount, error) {
+	loginUser, err := LoadRequiredLoginUser(ctx, provider, authorization)
 	if err != nil {
 		return nil, err
 	}
-	if loginUser.UserRole != "admin" {
+	if !provider.IsAdminAccount(loginUser) {
 		return nil, commonresponse.Forbidden("仅管理员可访问")
 	}
 
 	return loginUser, nil
 }
 
-func LoadOptionalLoginUser(ctx context.Context, svcCtx *svc.ServiceContext, authorization string) (*model.User, error) {
+func LoadOptionalLoginUser(ctx context.Context, provider AccountProvider, authorization string) (*model.UserAccount, error) {
 	if strings.TrimSpace(authorization) == "" {
-		return nil, nil
+		if _, err := ExtractUserIDFromContext(ctx); err != nil {
+			return nil, nil
+		}
 	}
 
-	return LoadRequiredLoginUser(ctx, svcCtx, authorization)
+	return LoadRequiredLoginUser(ctx, provider, authorization)
 }
 
-func claimToInt64(value any) (int64, error) {
+func claimToInt64(value any) (uint64, error) {
 	switch v := value.(type) {
 	case float64:
-		return int64(v), nil
+		return positiveIntegerClaimFromFloat(float64(v))
 	case float32:
-		return int64(v), nil
-	case int64:
+		return positiveIntegerClaimFromFloat(float64(v))
+	case uint64:
+		if v == 0 {
+			return 0, errors.New("invalid userId claim")
+		}
 		return v, nil
+	case uint:
+		if v == 0 {
+			return 0, errors.New("invalid userId claim")
+		}
+		return uint64(v), nil
+	case int64:
+		if v <= 0 {
+			return 0, errors.New("invalid userId claim")
+		}
+		return uint64(v), nil
 	case int32:
-		return int64(v), nil
+		if v <= 0 {
+			return 0, errors.New("invalid userId claim")
+		}
+		return uint64(v), nil
 	case int:
-		return int64(v), nil
+		if v <= 0 {
+			return 0, errors.New("invalid userId claim")
+		}
+		return uint64(v), nil
 	case json.Number:
-		return v.Int64()
+		id, err := v.Int64()
+		if err != nil || id <= 0 {
+			return 0, errors.New("invalid userId claim")
+		}
+		return uint64(id), nil
 	case string:
-		return strconv.ParseInt(v, 10, 64)
+		id, err := strconv.ParseUint(v, 10, 64)
+		if err != nil || id == 0 {
+			return 0, errors.New("invalid userId claim")
+		}
+		return id, nil
 	default:
 		return 0, errors.New("invalid userId claim")
 	}
+}
+
+func positiveIntegerClaimFromFloat(value float64) (uint64, error) {
+	if value <= 0 || math.IsNaN(value) || math.IsInf(value, 0) || math.Trunc(value) != value {
+		return 0, errors.New("invalid userId claim")
+	}
+	return uint64(value), nil
 }

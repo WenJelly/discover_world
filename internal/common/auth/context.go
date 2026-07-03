@@ -3,12 +3,12 @@ package auth
 import (
 	"context"
 
-	"photo-album/model"
+	"discover_world/model"
 )
 
 type loginUserContextKey struct{}
 
-func WithLoginUser(ctx context.Context, user *model.User) context.Context {
+func WithLoginUser(ctx context.Context, user *model.UserAccount) context.Context {
 	if ctx == nil || user == nil {
 		return ctx
 	}
@@ -16,11 +16,11 @@ func WithLoginUser(ctx context.Context, user *model.User) context.Context {
 	return context.WithValue(ctx, loginUserContextKey{}, user)
 }
 
-func LoginUserFromContext(ctx context.Context) (*model.User, bool) {
+func LoginUserFromContext(ctx context.Context) (*model.UserAccount, bool) {
 	if ctx == nil {
 		return nil, false
 	}
 
-	user, ok := ctx.Value(loginUserContextKey{}).(*model.User)
+	user, ok := ctx.Value(loginUserContextKey{}).(*model.UserAccount)
 	return user, ok && user != nil
 }

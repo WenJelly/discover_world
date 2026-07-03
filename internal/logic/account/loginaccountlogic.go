@@ -1,0 +1,71 @@
+// Code scaffolded by goctl. Safe to edit.
+// goctl 1.10.1
+
+package account
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"time"
+
+	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/svc"
+	"discover_world/internal/types"
+	"discover_world/model"
+
+	"github.com/zeromicro/go-zero/core/logx"
+	"golang.org/x/crypto/bcrypt"
+)
+
+type LoginAccountLogic struct {
+	logx.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+func NewLoginAccountLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginAccountLogic {
+	return &LoginAccountLogic{
+		Logger: logx.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+
+func (l *LoginAccountLogic) LoginAccount(req *types.LoginRequest) (resp *types.LoginResponse, err error) {
+	if req == nil {
+		return nil, commonresponse.BadRequest("请求不能为空")
+	}
+
+	email, err := normalizeEmail(req.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	account, err := l.svcCtx.UserAccountModel.FindOneByEmail(l.ctx, sql.NullString{String: email, Valid: true})
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			return nil, commonresponse.Unauthorized("邮箱或密码错误")
+		}
+		return nil, commonresponse.InternalServerError("查询账号失败")
+	}
+	if account.Status != "active" || account.DeletedAt.Valid || !account.PasswordHash.Valid {
+		return nil, commonresponse.Unauthorized("账号不可用")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(account.PasswordHash.String), []byte(req.Password)); err != nil {
+		return nil, commonresponse.Unauthorized("邮箱或密码错误")
+	}
+
+	token, err := createToken(l.svcCtx, account)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("生成登录令牌失败")
+	}
+	_ = l.svcCtx.UserAccountModel.UpdateLastLogin(l.ctx, account.Id, time.Now())
+
+	detail, err := loadDetailAccountResponse(l.ctx, l.svcCtx, account)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildLoginResponse(token, detail), nil
+}

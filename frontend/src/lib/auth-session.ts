@@ -1,6 +1,6 @@
 export const TOKEN_KEY = "token"
 export const USER_KEY = "auth_user"
-export const AUTH_EXPIRED_EVENT = "photo-album:auth-expired"
+export const AUTH_EXPIRED_EVENT = "discover-world:auth-expired"
 
 export type AuthExpiredEventDetail = {
   message?: string

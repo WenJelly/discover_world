@@ -8,7 +8,8 @@ import {
   type ReactNode,
 } from "react"
 
-import { loginUser, registerUser } from "@/lib/api"
+import { loginUser, registerUser, fetchUserProfile } from "@/lib/api"
+import { mergeAccountDetailIntoAuthUser, toAuthUser } from "@/lib/auth-user"
 import {
   AUTH_EXPIRED_EVENT,
   clearAuthStorage,
@@ -21,8 +22,8 @@ import {
 } from "@/lib/auth-session"
 import type {
   AuthUser,
+  DetailUserResponse,
   LoginRequest,
-  LoginResponse,
   RegisterRequest,
   RegisterResponse,
 } from "@/lib/types"
@@ -40,22 +41,11 @@ type AuthContextValue = {
   ) => Promise<AuthUser>
   register: (req: RegisterRequest) => Promise<RegisterResponse>
   logout: () => void
+  refreshUser: () => Promise<void>
+  applyAccountDetail: (detail: DetailUserResponse) => AuthUser | null
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
-
-function toAuthUser(resp: LoginResponse): AuthUser {
-  return {
-    id: resp.id,
-    userEmail: resp.userEmail,
-    userName: resp.userName,
-    userAvatar: resp.userAvatar,
-    userProfile: resp.userProfile,
-    userRole: resp.userRole,
-    createTime: resp.createTime,
-    updateTime: resp.updateTime,
-  }
-}
 
 function safeGet(storage: Storage, key: string) {
   try {
@@ -131,6 +121,12 @@ function persistAuth(token: string, user: AuthUser, remember: boolean) {
   safeSet(targetStorage, USER_KEY, JSON.stringify(user))
 }
 
+function persistCurrentUser(user: AuthUser) {
+  const inLocalStorage = safeGet(localStorage, TOKEN_KEY) ?? safeGet(localStorage, USER_KEY)
+  const targetStorage = inLocalStorage ? localStorage : sessionStorage
+  safeSet(targetStorage, USER_KEY, JSON.stringify(user))
+}
+
 function clearStoredAuth() {
   clearAuthStorage()
 }
@@ -168,6 +164,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     clearAuthState()
   }, [clearAuthState])
+
+  const refreshUser = useCallback(async () => {
+    if (!auth.user?.id || !auth.token) {
+      return
+    }
+
+    try {
+      const profile = await fetchUserProfile({ id: auth.user.id })
+      const updatedUser = mergeAccountDetailIntoAuthUser(auth.user, profile)
+      persistCurrentUser(updatedUser)
+
+      setAuth({
+        token: auth.token,
+        user: updatedUser,
+      })
+    } catch (error) {
+      console.error('Failed to refresh user:', error)
+    }
+  }, [auth.user, auth.token])
+
+  const applyAccountDetail = useCallback(
+    (detail: DetailUserResponse) => {
+      if (!auth.user || !auth.token) {
+        return null
+      }
+
+      const updatedUser = mergeAccountDetailIntoAuthUser(auth.user, detail)
+      persistCurrentUser(updatedUser)
+      setAuth({
+        token: auth.token,
+        user: updatedUser,
+      })
+      return updatedUser
+    },
+    [auth.user, auth.token]
+  )
 
   useEffect(() => {
     function handleAuthExpired(event: Event) {
@@ -216,8 +248,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      refreshUser,
+      applyAccountDetail,
     }),
-    [auth.token, auth.user, login, logout, register]
+    [auth.token, auth.user, applyAccountDetail, login, logout, register, refreshUser]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
