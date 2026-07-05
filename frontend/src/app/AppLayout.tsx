@@ -6,7 +6,7 @@ import Features from "@/components/home/Features";
 import Stats from "@/components/home/Stats";
 import CTA from "@/components/home/CTA";
 import Footer from "@/components/Footer";
-import PublicGalleryPage from "@/pages/PublicGalleryPage";
+import DiscoverPage from "@/pages/DiscoverPage";
 import AccountDetailPage from "@/pages/AccountDetailPage";
 import UploadPage from "@/pages/UploadPage";
 
@@ -20,7 +20,8 @@ export function AppLayout() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  const isPublicRoute = pathname === "/public";
+  const isDiscoverRoute = pathname === "/discover";
+  const isLegacyPublicRoute = pathname === "/public";
   const isAccountRoute = pathname === "/account";
   const isUploadRoute = pathname === "/upload";
 
@@ -38,8 +39,8 @@ export function AppLayout() {
           <AccountDetailPage />
         ) : isUploadRoute ? (
           <UploadPage />
-        ) : isPublicRoute ? (
-          <PublicGalleryPage />
+        ) : isDiscoverRoute || isLegacyPublicRoute ? (
+          <DiscoverPage />
         ) : (
           <>
             <Hero />

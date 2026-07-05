@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { ImageOff, LayoutGrid, RefreshCw, Rows3 } from "lucide-react";
-import { PublicPictureCard } from "@/components/public/PublicPictureCard";
+import { DiscoverPictureCard } from "@/components/discover/DiscoverPictureCard";
+import { MediaDetailDialog } from "@/components/discover/MediaDetailDialog";
 import { useInView } from "@/hooks/useInView";
 import { useInfinitePictures } from "@/hooks/useInfinitePictures";
+import {
+  DISCOVER_NAVBAR_VISIBILITY_EVENT,
+  shouldShowDiscoverNavbar,
+} from "@/lib/discover-navbar";
 import {
   buildDiscoverSearch,
   buildJustifiedRows,
@@ -20,7 +25,7 @@ import {
   type DiscoverSearchState,
   type DiscoverSortKey,
   type DiscoverTabKey,
-} from "@/lib/public-discover";
+} from "@/lib/discover";
 
 type OpenMenu = "sort" | "photographer" | "category" | null;
 
@@ -59,14 +64,16 @@ function buildDiscoverSkeletonLayout(
 
 function getHref(nextState: DiscoverSearchState) {
   const query = buildDiscoverSearch(nextState);
-  return `/public${query}`;
+  return `/discover${query}`;
 }
 
-export default function PublicGalleryPage() {
+export default function DiscoverPage() {
   const [discoverState, setDiscoverState] = useState<DiscoverSearchState>(() =>
     parseDiscoverSearch(window.location.search)
   );
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
+  const [isSiteNavVisible, setIsSiteNavVisible] = useState(true);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [galleryWidth, setGalleryWidth] = useState(0);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const [sentinelRef, sentinelInView] = useInView<HTMLDivElement>({
@@ -83,12 +90,35 @@ export default function PublicGalleryPage() {
   }, []);
 
   useEffect(() => {
+    const publishNavVisibility = (visible: boolean) => {
+      setIsSiteNavVisible(visible);
+      window.dispatchEvent(
+        new CustomEvent(DISCOVER_NAVBAR_VISIBILITY_EVENT, {
+          detail: { visible },
+        })
+      );
+    };
+
+    const syncNavVisibility = () => {
+      publishNavVisibility(shouldShowDiscoverNavbar(window.scrollY));
+    };
+
+    syncNavVisibility();
+    window.addEventListener("scroll", syncNavVisibility, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", syncNavVisibility);
+      publishNavVisibility(true);
+    };
+  }, []);
+
+  useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) {
         return;
       }
-      if (!target.closest(".discovery_navigation")) {
+      if (!target.closest(".discover-filter-navigation")) {
         setOpenMenu(null);
       }
     };
@@ -230,9 +260,15 @@ export default function PublicGalleryPage() {
   };
 
   return (
-    <section className="public-discover-page">
-      <div className="profile_nav">
-        <div className="profile_nav__inner">
+    <section
+      className={
+        isSiteNavVisible
+          ? "discover-page"
+          : "discover-page discover-page--site-nav-hidden"
+      }
+    >
+      <div className="discover-toolbar">
+        <div className="discover-toolbar__inner">
           {canShowQueryBar ? (
             <div className="discover_layout_navigation">
               <div
@@ -291,12 +327,12 @@ export default function PublicGalleryPage() {
           </ul>
 
           {canShowQueryBar ? (
-            <div className="discovery_navigation">
-              <div className="discovery_options">
-                <div className="discovery_sort">
+            <div className="discover-filter-navigation">
+              <div className="discover-filter-options">
+                <div className="discover-filter">
                   <button
                     type="button"
-                    className="discovery_sort__target"
+                    className="discover-filter__target"
                     aria-expanded={openMenu === "sort"}
                     onClick={() =>
                       setOpenMenu((current) => (current === "sort" ? null : "sort"))
@@ -304,9 +340,8 @@ export default function PublicGalleryPage() {
                   >
                     {activeSortLabel}
                   </button>
-                  <div className="arrow" />
                   {openMenu === "sort" ? (
-                    <div className="popup popup-centered discovery_sort_popover">
+                    <div className="popup popup-centered discover-filter-popover">
                       <div className="contain">
                         <div className="inside">
                           <div className="sort_options">
@@ -340,10 +375,10 @@ export default function PublicGalleryPage() {
                   ) : null}
                 </div>
 
-                <div className="discovery_sort">
+                <div className="discover-filter">
                   <button
                     type="button"
-                    className="discovery_sort__target"
+                    className="discover-filter__target"
                     aria-expanded={openMenu === "photographer"}
                     onClick={() =>
                       setOpenMenu((current) =>
@@ -353,9 +388,8 @@ export default function PublicGalleryPage() {
                   >
                     {activePhotographerLabel}
                   </button>
-                  <div className="arrow" />
                   {openMenu === "photographer" ? (
-                    <div className="popup popup-centered discovery_sort_popover">
+                    <div className="popup popup-centered discover-filter-popover">
                       <div className="contain">
                         <div className="inside">
                           <div className="sort_options">
@@ -389,10 +423,10 @@ export default function PublicGalleryPage() {
                   ) : null}
                 </div>
 
-                <div className="category_region">
+                <div className="discover-category-region">
                   <button
                     type="button"
-                    className="category_picker"
+                    className="discover-category-picker"
                     aria-expanded={openMenu === "category"}
                     onClick={() =>
                       setOpenMenu((current) =>
@@ -400,8 +434,7 @@ export default function PublicGalleryPage() {
                       )
                     }
                   >
-                    <span className="category_target">{activeCategoryLabel}</span>
-                    <div className="arrow" />
+                    <span className="discover-category-target">{activeCategoryLabel}</span>
                   </button>
                   {openMenu === "category" ? (
                     <div className="popup popup-centered category_popover category_content">
@@ -498,7 +531,15 @@ export default function PublicGalleryPage() {
                         height: item.displayHeight,
                       }}
                     >
-                      <PublicPictureCard picture={item.picture} />
+                      <DiscoverPictureCard
+                        picture={item.picture}
+                        onOpen={(picture) => {
+                          const idx = filteredPictures.findIndex(
+                            (fp) => fp.id === picture.id
+                          );
+                          setPreviewIndex(idx >= 0 ? idx : null);
+                        }}
+                      />
                     </div>
                   ))}
                 </div>
@@ -534,7 +575,7 @@ export default function PublicGalleryPage() {
               <ImageOff size={40} aria-hidden="true" />
               <div>
                 <h2>加载失败</h2>
-                <p>公开图片暂时无法加载,请稍后重试。</p>
+                <p>发现图片暂时无法加载,请稍后重试。</p>
               </div>
               <button type="button" className="discover-feedback__button" onClick={retry}>
                 <RefreshCw size={14} aria-hidden="true" />
@@ -547,7 +588,7 @@ export default function PublicGalleryPage() {
             <div className="discover-feedback">
               <ImageOff size={40} aria-hidden="true" />
               <div>
-                <h2>暂时没有公开图片</h2>
+                <h2>暂时没有发现图片</h2>
                 <p>当前筛选条件下还没有可展示的作品。</p>
               </div>
             </div>
@@ -570,6 +611,16 @@ export default function PublicGalleryPage() {
           ) : null}
         </div>
       </div>
+
+      <MediaDetailDialog
+        assets={filteredPictures}
+        index={previewIndex ?? 0}
+        open={previewIndex !== null}
+        onOpenChange={(o) => {
+          if (!o) setPreviewIndex(null);
+        }}
+        onIndexChange={(i) => setPreviewIndex(i)}
+      />
     </section>
   );
 }

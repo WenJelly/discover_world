@@ -106,6 +106,11 @@ export interface MediaAssetStats {
   downloadCount: number;
 }
 
+export interface MediaAssetPermissions {
+  canViewOriginal?: boolean;
+  canDownload?: boolean;
+}
+
 export interface MediaAssetResponse {
   id: string;
   mediaType: string;
@@ -132,6 +137,7 @@ export interface MediaAssetResponse {
   blurHash: string;
   urls: MediaAssetUrls;
   stats: MediaAssetStats;
+  permissions?: MediaAssetPermissions;
   metadataJson: string;
   createdAt: string;
   updatedAt: string;

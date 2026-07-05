@@ -12,12 +12,12 @@ function PictureCardImpl({ picture }: PictureCardProps) {
 
   return (
     <a
-      href={`/media/${picture.id}`}
-      className="group relative block h-full overflow-hidden bg-slate-100 dark:bg-slate-900"
+      href="/discover"
+      className="group relative block h-full overflow-hidden bg-muted"
       style={{ backgroundColor: picColor || undefined }}
     >
       {errored ? (
-        <div className="flex h-full items-center justify-center text-slate-400">
+        <div className="flex h-full items-center justify-center text-muted-foreground">
           <ImageOff size={32} />
         </div>
       ) : (

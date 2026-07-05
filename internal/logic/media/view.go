@@ -16,7 +16,14 @@ func BuildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func buildMediaAssetResponse(ctx context.Context, svcCtx *svc.ServiceContext, asset *model.MediaAsset, object *model.MediaObject, owner *model.UserAccount, profile *model.UserProfile, stat *model.EntityStat, tags []string, viewer *model.UserAccount, variant types.MediaVariantRequest) (*types.MediaAssetResponse, error) {
-	return buildMediaAssetResponseWithBucket(ctx, svcCtx, asset, object, nil, owner, profile, stat, tags, viewer, variant)
+	resp, err := buildMediaAssetResponseWithBucket(ctx, svcCtx, asset, object, nil, owner, profile, stat, tags, viewer, variant)
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil {
+		resp.Owner.AvatarUrl = LoadAvatarURL(ctx, svcCtx, profile)
+	}
+	return resp, nil
 }
 
 func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceContext, asset *model.MediaAsset, object *model.MediaObject, bucket *model.StorageBucket, owner *model.UserAccount, profile *model.UserProfile, stat *model.EntityStat, tags []string, viewer *model.UserAccount, variant types.MediaVariantRequest) (*types.MediaAssetResponse, error) {
@@ -171,6 +178,11 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 		}
 	}
 
+	avatarURLs, err := loadAvatarURLsByOwner(ctx, svcCtx, profiles)
+	if err != nil {
+		return nil, err
+	}
+
 	resp := make([]types.MediaAssetResponse, 0, len(assets))
 	for _, asset := range assets {
 		if asset == nil {
@@ -185,6 +197,7 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 		if err != nil {
 			return nil, err
 		}
+		item.Owner.AvatarUrl = avatarURLs[asset.OwnerUserId]
 		resp = append(resp, *item)
 	}
 	return resp, nil
@@ -220,7 +233,6 @@ func buildAccountSummary(svcCtx *svc.ServiceContext, account *model.UserAccount,
 	}
 
 	nickname := ""
-	avatarURL := ""
 	bio := ""
 	if profile != nil {
 		nickname = nullStringValue(profile.Nickname)
@@ -230,16 +242,115 @@ func buildAccountSummary(svcCtx *svc.ServiceContext, account *model.UserAccount,
 		nickname = account.Username
 	}
 
+	// AvatarUrl is resolved by the caller (LoadAvatarURL for a single asset,
+	// loadAvatarURLsByOwner for lists) and assigned onto Owner.AvatarUrl after
+	// this summary is built — resolving it here would be N+1 queries per item.
 	return types.AccountSummary{
 		Id:        formatID(account.Id),
 		Username:  account.Username,
 		Email:     nullStringValue(account.Email),
 		Nickname:  nickname,
-		AvatarUrl: avatarURL,
+		AvatarUrl: "",
 		Bio:       bio,
 		Status:    account.Status,
 		Role:      accountRole(svcCtx, account),
 	}
+}
+
+// LoadAvatarURL resolves a user's avatar public URL from the avatar asset
+// referenced by their profile. Returns "" when the user has no avatar.
+func LoadAvatarURL(ctx context.Context, svcCtx *svc.ServiceContext, profile *model.UserProfile) string {
+	if profile == nil || !profile.AvatarAssetId.Valid || profile.AvatarAssetId.Int64 <= 0 {
+		return ""
+	}
+
+	object, err := svcCtx.MediaObjectModel.FindOriginalByAssetID(ctx, uint64(profile.AvatarAssetId.Int64))
+	if err != nil {
+		return ""
+	}
+	bucket, err := svcCtx.StorageBucketModel.FindOne(ctx, object.BucketId)
+	if err != nil {
+		return ""
+	}
+	return BuildPublicObjectURL(bucket, object.ObjectKey)
+}
+
+// collectAvatarAssetIDs extracts the unique, valid avatar asset IDs from a set
+// of user profiles (keyed by owner user ID).
+func collectAvatarAssetIDs(profiles map[uint64]*model.UserProfile) []uint64 {
+	seen := make(map[uint64]struct{}, len(profiles))
+	ids := make([]uint64, 0, len(profiles))
+	for _, profile := range profiles {
+		if profile == nil || !profile.AvatarAssetId.Valid || profile.AvatarAssetId.Int64 <= 0 {
+			continue
+		}
+		assetID := uint64(profile.AvatarAssetId.Int64)
+		if _, ok := seen[assetID]; ok {
+			continue
+		}
+		seen[assetID] = struct{}{}
+		ids = append(ids, assetID)
+	}
+	return ids
+}
+
+// loadAvatarURLsByOwner bulk-resolves avatar URLs for a set of user profiles
+// (keyed by owner user ID), so a page of N assets costs only two extra
+// queries regardless of how many distinct owners it has.
+func loadAvatarURLsByOwner(ctx context.Context, svcCtx *svc.ServiceContext, profiles map[uint64]*model.UserProfile) (map[uint64]string, error) {
+	out := make(map[uint64]string, len(profiles))
+	if len(profiles) == 0 {
+		return out, nil
+	}
+
+	assetIDs := collectAvatarAssetIDs(profiles)
+	if len(assetIDs) == 0 {
+		return out, nil
+	}
+
+	objects, err := svcCtx.MediaObjectModel.FindOriginalByAssetIDs(ctx, assetIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	bucketIDs := make([]uint64, 0, len(objects))
+	bucketSeen := make(map[uint64]struct{}, len(objects))
+	for _, object := range objects {
+		if object == nil || object.BucketId == 0 {
+			continue
+		}
+		if _, ok := bucketSeen[object.BucketId]; ok {
+			continue
+		}
+		bucketSeen[object.BucketId] = struct{}{}
+		bucketIDs = append(bucketIDs, object.BucketId)
+	}
+	buckets, err := svcCtx.StorageBucketModel.FindByIDs(ctx, bucketIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	urlByAsset := make(map[uint64]string, len(objects))
+	for assetID, object := range objects {
+		if object == nil {
+			continue
+		}
+		bucket := buckets[object.BucketId]
+		if bucket == nil {
+			continue
+		}
+		urlByAsset[assetID] = BuildPublicObjectURL(bucket, object.ObjectKey)
+	}
+
+	for ownerUserID, profile := range profiles {
+		if profile == nil || !profile.AvatarAssetId.Valid || profile.AvatarAssetId.Int64 <= 0 {
+			continue
+		}
+		if url, ok := urlByAsset[uint64(profile.AvatarAssetId.Int64)]; ok {
+			out[ownerUserID] = url
+		}
+	}
+	return out, nil
 }
 
 func buildMediaStats(stat *model.EntityStat) types.MediaAssetStats {

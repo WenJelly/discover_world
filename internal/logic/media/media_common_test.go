@@ -82,6 +82,33 @@ func TestCollectOriginalBucketIDsKeepsAssetOrderAndDedupes(t *testing.T) {
 	}
 }
 
+func TestCollectAvatarAssetIDsDedupesAndSkipsInvalid(t *testing.T) {
+	profiles := map[uint64]*model.UserProfile{
+		1: {AvatarAssetId: sql.NullInt64{Int64: 100, Valid: true}},
+		2: nil,
+		3: {AvatarAssetId: sql.NullInt64{}},                        // invalid (no avatar)
+		4: {AvatarAssetId: sql.NullInt64{Int64: 0, Valid: true}},   // zero ID
+		5: {AvatarAssetId: sql.NullInt64{Int64: 100, Valid: true}}, // duplicate of owner 1
+		6: {AvatarAssetId: sql.NullInt64{Int64: 200, Valid: true}},
+	}
+
+	got := collectAvatarAssetIDs(profiles)
+	// Map iteration order is non-deterministic, so compare as a set.
+	want := []uint64{100, 200}
+	if len(got) != len(want) {
+		t.Fatalf("collectAvatarAssetIDs length = %d, want %d: %#v", len(got), len(want), got)
+	}
+	gotSet := make(map[uint64]struct{}, len(got))
+	for _, id := range got {
+		gotSet[id] = struct{}{}
+	}
+	for _, id := range want {
+		if _, ok := gotSet[id]; !ok {
+			t.Fatalf("collectAvatarAssetIDs = %#v, want to contain %d", got, id)
+		}
+	}
+}
+
 func TestBuildVariantURLCompression(t *testing.T) {
 	got, err := buildVariantURL("https://cdn.example.com/a.jpg", 8<<20, 2400, 1600, types.MediaVariantRequest{CompressType: 1})
 	if err != nil {

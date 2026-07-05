@@ -1,9 +1,10 @@
-import { memo, useState } from "react";
+﻿import { memo, useState } from "react";
 import { Eye, Heart, ImageOff } from "lucide-react";
 import type { PictureResponse } from "@/lib/types";
 
-type PublicPictureCardProps = {
+type DiscoverPictureCardProps = {
   picture: PictureResponse;
+  onOpen?: (picture: PictureResponse) => void;
 };
 
 function formatCount(value: number) {
@@ -12,7 +13,7 @@ function formatCount(value: number) {
   return `${value}`;
 }
 
-function PublicPictureCardImpl({ picture }: PublicPictureCardProps) {
+function DiscoverPictureCardImpl({ picture, onOpen }: DiscoverPictureCardProps) {
   const [errored, setErrored] = useState(false);
   const imageSrc = picture.thumbnailUrl || picture.url;
   const authorName = picture.user?.userName?.trim() || "匿名摄影师";
@@ -21,16 +22,17 @@ function PublicPictureCardImpl({ picture }: PublicPictureCardProps) {
 
   return (
     <article
-      className="public-discover-tile photo_thumbnail jg-entry entry-visible index_rating"
+      className="discover-tile photo_thumbnail jg-entry entry-visible index_rating"
       style={{ backgroundColor: picture.picColor || "#b9c1c7" }}
     >
-      <a
-        href={`/media/${picture.id}`}
-        className="photo_link"
-        aria-label={`查看公开图片: ${picture.name || "未命名作品"}, 作者 ${authorName}`}
+      <button
+        type="button"
+        onClick={() => onOpen?.(picture)}
+        className="photo_link block h-full w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+        aria-label={`查看发现图片: ${picture.name || "未命名作品"}, 作者 ${authorName}`}
       >
         {errored || !imageSrc ? (
-          <div className="public-discover-tile__fallback">
+          <div className="discover-tile__fallback">
             <ImageOff size={30} aria-hidden="true" />
           </div>
         ) : (
@@ -43,7 +45,7 @@ function PublicPictureCardImpl({ picture }: PublicPictureCardProps) {
             className="copyright-contextmenu"
           />
         )}
-      </a>
+      </button>
 
       <div className="info">
         <div className="credits">
@@ -75,4 +77,4 @@ function PublicPictureCardImpl({ picture }: PublicPictureCardProps) {
   );
 }
 
-export const PublicPictureCard = memo(PublicPictureCardImpl);
+export const DiscoverPictureCard = memo(DiscoverPictureCardImpl);

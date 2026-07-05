@@ -98,7 +98,7 @@ export default function UploadPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center bg-background px-4">
+      <div className="flex min-h-[80vh] items-center justify-center bg-background px-4 pt-16">
         <div className="flex flex-col items-center text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <Upload className="size-6" />
@@ -121,7 +121,7 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <header className="border-b border-border bg-background">
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

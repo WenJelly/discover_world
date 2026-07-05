@@ -1,91 +1,47 @@
-import { motion, useReducedMotion } from "framer-motion";
-import {
-  Layers,
-  FileImage,
-  Maximize,
-  Tags,
-  ShieldCheck,
-  BarChart3,
-} from "lucide-react";
-
-const FEATURES = [
+const STEPS = [
   {
-    icon: Layers,
-    title: "智能游标分页",
-    desc: "大数据量下丝滑无限滚动，避免 offset 扫描性能瓶颈",
+    no: "01",
+    title: "上传你的作品",
+    desc: "把照片加入图库，自动识别主色、宽高比与格式。",
   },
   {
-    icon: FileImage,
-    title: "多格式支持",
-    desc: "JPG / PNG / WebP，自动提取主色与宽高比",
+    no: "02",
+    title: "社区审核",
+    desc: "管理员把关内容质量与安全，通过后即可公开。",
   },
   {
-    icon: Maximize,
-    title: "高清原图与按需缩略",
-    desc: "原图保留，compressPictureType 按场景生成缩略图",
-  },
-  {
-    icon: Tags,
-    title: "标签分类检索",
-    desc: "分类精确匹配，标签模糊匹配，searchText 跨字段搜索",
-  },
-  {
-    icon: ShieldCheck,
-    title: "审核机制",
-    desc: "用户上传进入待审核，管理员把关，社区质量保障",
-  },
-  {
-    icon: BarChart3,
-    title: "浏览统计",
-    desc: "viewCount 自动累加，likeCount 数据实时返回",
+    no: "03",
+    title: "向世界公开",
+    desc: "所有人可浏览与下载你的原图，作品被看见、被使用。",
   },
 ];
 
 export default function Features() {
-  const shouldReduceMotion = useReducedMotion();
-
   return (
-    <section
-      id="features"
-      className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8"
-    >
-      <div className="mb-12 text-center">
-        <h2 className="text-3xl font-bold tracking-tight text-zinc-950 dark:text-white sm:text-4xl">
-          为图库而生的基础能力
+    <section id="features" className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+      <div className="mb-12 max-w-2xl">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          从上传到被看见
         </h2>
-        <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-          从上传到浏览，每一层都为图片体验优化
+        <p className="mt-3 text-sm text-muted-foreground">
+          三步，你的照片就从本地走向社区。
         </p>
       </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map((f, i) => {
-          const Icon = f.icon;
-          return (
-            <motion.div
-              key={f.title}
-              initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
-              whileInView={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{
-                duration: shouldReduceMotion ? 0 : 0.4,
-                delay: shouldReduceMotion ? 0 : i * 0.04,
-              }}
-              className="group rounded-2xl border border-zinc-200 bg-white p-6 transition-all hover:-translate-y-1 hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-zinc-950 transition-transform group-hover:scale-110 dark:bg-zinc-800 dark:text-zinc-100">
-                <Icon size={20} aria-hidden="true" />
-              </div>
-              <h3 className="text-lg font-semibold text-zinc-950 dark:text-white">
-                {f.title}
-              </h3>
-              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                {f.desc}
-              </p>
-            </motion.div>
-          );
-        })}
-      </div>
+      <ol className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-3">
+        {STEPS.map((s) => (
+          <li key={s.no} className="bg-background p-6 sm:p-8">
+            <div className="text-xs font-semibold tabular-nums text-muted-foreground">
+              {s.no}
+            </div>
+            <h3 className="mt-3 text-base font-semibold text-foreground">
+              {s.title}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {s.desc}
+            </p>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

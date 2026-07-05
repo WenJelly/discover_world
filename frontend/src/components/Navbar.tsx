@@ -45,6 +45,10 @@ import {
 import type { MediaAssetResponse } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { UploadDialog } from "@/components/upload/UploadDialog";
+import {
+    DISCOVER_NAVBAR_VISIBILITY_EVENT,
+    type DiscoverNavbarVisibilityDetail,
+} from "@/lib/discover-navbar";
 
 const navItems = [
     {
@@ -55,7 +59,7 @@ const navItems = [
             { name: "实时监控看板", desc: "毫秒级吞吐量与性能可视化", icon: Monitor },
         ]
     },
-    { name: "公开", href: "/public" },
+    { name: "发现", href: "/discover" },
     { name: "旅游攻略", href: "/#architecture" },
     { name: "心得分享", href: "/#pricing" },
 ];
@@ -79,7 +83,7 @@ export default function FadingSiblingsNavbar() {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
     const [isOpen, setIsOpen] = useState(false);
-    const [isScrolled, setIsScrolled] = useState(false);
+    const [siteNavbarVisible, setSiteNavbarVisible] = useState(true);
     const [authOpen, setAuthOpen] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -176,7 +180,7 @@ export default function FadingSiblingsNavbar() {
     const handleSearchSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (deferredSearchQuery.trim()) {
-            const searchUrl = `/public?q=${encodeURIComponent(deferredSearchQuery.trim())}`;
+            const searchUrl = `/discover?q=${encodeURIComponent(deferredSearchQuery.trim())}`;
             window.location.href = searchUrl;
         }
     }, [deferredSearchQuery]);
@@ -271,14 +275,6 @@ export default function FadingSiblingsNavbar() {
     };
 
     useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10);
-        };
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
-
-    useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = "hidden";
         } else {
@@ -311,13 +307,30 @@ export default function FadingSiblingsNavbar() {
         }
     }, [isAuthenticated]);
 
+    useEffect(() => {
+        const handleDiscoverNavbarVisibility = (event: Event) => {
+            const detail = (event as CustomEvent<DiscoverNavbarVisibilityDetail>).detail;
+            setSiteNavbarVisible(detail?.visible !== false);
+        };
+
+        window.addEventListener(
+            DISCOVER_NAVBAR_VISIBILITY_EVENT,
+            handleDiscoverNavbarVisibility
+        );
+
+        return () => {
+            window.removeEventListener(
+                DISCOVER_NAVBAR_VISIBILITY_EVENT,
+                handleDiscoverNavbarVisibility
+            );
+        };
+    }, []);
+
     return (
         <LayoutGroup>
             <header
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-                    isScrolled
-                        ? "border-b border-slate-200/60 bg-white/75 backdrop-blur-xl shadow-sm dark:border-slate-800/60 dark:bg-slate-950/75"
-                        : "border-b border-transparent bg-transparent"
+                className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200/60 bg-white ${
+                    siteNavbarVisible ? "translate-y-0" : "-translate-y-full"
                 }`}
             >
                 <div className="w-full px-3 sm:px-5 lg:px-6">
@@ -332,7 +345,7 @@ export default function FadingSiblingsNavbar() {
                                 <img
                                     src="/logo.svg"
                                     alt="WenJelly"
-                                    className="h-8 w-auto max-w-[112px] object-contain transition-transform duration-300 hover:scale-[1.03] dark:invert sm:h-9 sm:max-w-[126px]"
+                                    className="h-8 w-auto max-w-[112px] object-contain transition-transform duration-300 hover:scale-[1.03] sm:h-9 sm:max-w-[126px]"
                                 />
                             </a>
 
@@ -431,7 +444,7 @@ export default function FadingSiblingsNavbar() {
                                 onSubmit={handleSearchSubmit}
                             >
                                 <label htmlFor="navbar-search-desktop" className="sr-only">
-                                    搜索公开图片、旅游攻略和心得分享
+                                    搜索发现图片、旅游攻略和心得分享
                                 </label>
                                 <div className={`relative transition-all duration-300 ${
                                     searchFocused ? 'w-80 lg:w-96' : 'w-64 lg:w-72 xl:w-80'
@@ -453,7 +466,7 @@ export default function FadingSiblingsNavbar() {
                                         onChange={handleSearchChange}
                                         onFocus={() => setSearchFocused(true)}
                                         onBlur={() => setSearchFocused(false)}
-                                        aria-label="搜索公开图片、旅游攻略和心得分享"
+                                        aria-label="搜索发现图片、旅游攻略和心得分享"
                                         placeholder="搜索图片、攻略、心得"
                                         autoComplete="off"
                                         className={`h-[42px] rounded-lg border border-slate-200/80 bg-white pl-[52px] pr-4 text-[15px] font-normal text-slate-900 placeholder:text-slate-400 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus:border-indigo-400 focus:shadow-md focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-indigo-500/60 dark:focus:ring-indigo-500/20 ${
@@ -629,7 +642,7 @@ export default function FadingSiblingsNavbar() {
                                         onSubmit={handleSearchSubmit}
                                     >
                                         <label htmlFor="navbar-search-mobile" className="sr-only">
-                                            搜索公开图片、旅游攻略和心得分享
+                                            搜索发现图片、旅游攻略和心得分享
                                         </label>
                                         <div className="pointer-events-none absolute left-3.5 top-1/2 flex -translate-y-1/2 items-center gap-2">
                                             <Search
@@ -645,7 +658,7 @@ export default function FadingSiblingsNavbar() {
                                             type="search"
                                             value={searchQuery}
                                             onChange={handleSearchChange}
-                                            aria-label="搜索公开图片、旅游攻略和心得分享"
+                                            aria-label="搜索发现图片、旅游攻略和心得分享"
                                             placeholder="搜索图片、攻略、心得"
                                             autoComplete="off"
                                             className={`h-11 rounded-lg border border-slate-200 bg-white pl-[52px] text-[15px] font-normal placeholder:text-slate-400 transition-all dark:border-slate-700 dark:bg-slate-900 dark:placeholder:text-slate-500 ${

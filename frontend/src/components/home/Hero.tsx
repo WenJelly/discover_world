@@ -1,83 +1,113 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
+import { fetchMediaAssetCursorList } from "@/lib/api";
+import { getMediaDetailUrl, getMediaUrl } from "@/lib/format";
+import {
+  HERO_WAVE_ASPECT_CLASS,
+  HERO_WAVE_PATH,
+  HERO_WAVE_VIEW_BOX,
+} from "@/lib/hero-wave";
+import type { MediaAssetResponse } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export default function Hero() {
-  const shouldReduceMotion = useReducedMotion();
+  const [photo, setPhoto] = useState<MediaAssetResponse | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-  const fadeIn = shouldReduceMotion
-    ? { initial: { opacity: 1 }, animate: { opacity: 1 } }
-    : {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-      };
+  useEffect(() => {
+    let cancelled = false;
+    fetchMediaAssetCursorList({ pageSize: 1, variantOption: { compressType: 1 } })
+      .then((resp) => {
+        if (!cancelled) setPhoto(resp.list[0] ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setPhoto(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const bgUrl = photo ? getMediaDetailUrl(photo) || getMediaUrl(photo) : "";
 
   return (
     <section
-      className="relative flex min-h-[60vh] items-center justify-center overflow-hidden bg-white md:min-h-[76vh]"
+      className="relative flex min-h-[70vh] items-center justify-center overflow-hidden bg-zinc-950 md:min-h-[82vh]"
       aria-labelledby="hero-heading"
     >
-      {/* Subtle grid background */}
+      {bgUrl ? (
+        <img
+          src={bgUrl}
+          alt=""
+          aria-hidden="true"
+          loading="eager"
+          fetchPriority="high"
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover object-[center_58%] transition-opacity duration-700 motion-reduce:transition-none",
+            loaded ? "opacity-100" : "opacity-0"
+          )}
+          onLoad={() => setLoaded(true)}
+        />
+      ) : null}
+      {/* Scrim for text contrast over a variable photo — functional, not decorative */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, rgba(24, 24, 27, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(24, 24, 27, 0.06) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
+        className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/25 to-black/55"
         aria-hidden="true"
       />
 
-      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
-        <motion.h1
-          id="hero-heading"
-          {...fadeIn}
-          transition={{ duration: shouldReduceMotion ? 0 : 0.6, ease: "easeOut" }}
-          className="text-5xl font-black tracking-tighter text-zinc-950 sm:text-7xl md:text-8xl lg:text-9xl"
+      {/* Wavy bottom edge — page bg laps up into the hero */}
+      <div
+        className={cn(
+          "absolute -bottom-px left-0 right-0 z-[1] w-full",
+          HERO_WAVE_ASPECT_CLASS
+        )}
+        aria-hidden="true"
+      >
+        <svg
+          viewBox={HERO_WAVE_VIEW_BOX}
+          preserveAspectRatio="none"
+          className="block h-full w-full"
         >
-          <span className="italic">发现</span>世界的
+          <path
+            style={{ fill: "var(--background)" }}
+            d={HERO_WAVE_PATH}
+          />
+        </svg>
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center text-white">
+        <h1
+          id="hero-heading"
+          className="text-4xl font-bold tracking-tight text-balance sm:text-6xl md:text-7xl"
+        >
+          发现世界的
           <br />
           高质量图库
-        </motion.h1>
-        <motion.p
-          {...fadeIn}
-          transition={{
-            duration: shouldReduceMotion ? 0 : 0.6,
-            delay: shouldReduceMotion ? 0 : 0.15,
-            ease: "easeOut",
-          }}
-          className="mx-auto mt-8 max-w-2xl text-lg text-zinc-600 sm:text-xl"
-        >
+        </h1>
+        <p className="mx-auto mt-6 max-w-2xl text-base text-white/85 text-pretty sm:text-lg">
           海量高清原图，免费浏览与下载，让创作更自由
-        </motion.p>
-        <motion.div
-          {...fadeIn}
-          transition={{
-            duration: shouldReduceMotion ? 0 : 0.6,
-            delay: shouldReduceMotion ? 0 : 0.3,
-            ease: "easeOut",
-          }}
-          className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row"
-        >
+        </p>
+        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
           <a
             href="#gallery"
-            className="group inline-flex items-center gap-2 rounded-xl bg-zinc-950 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-zinc-950/10 transition-all hover:bg-zinc-800 hover:shadow-xl focus-visible:outline-offset-2"
+            className="group inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-slate-950 shadow-lg transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             aria-label="开始探索图库"
           >
             开始探索
             <ArrowRight
-              size={18}
+              size={16}
               className="transition-transform group-hover:translate-x-0.5"
               aria-hidden="true"
             />
           </a>
           <a
             href="#features"
-            className="inline-flex items-center rounded-xl border-2 border-zinc-950 px-8 py-4 text-base font-semibold text-zinc-950 transition-all hover:bg-zinc-50 focus-visible:outline-offset-2"
-            aria-label="了解更多功能"
+            className="inline-flex items-center rounded-xl border border-white/30 px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            aria-label="了解更多"
           >
             了解更多
           </a>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

@@ -82,24 +82,8 @@ func loadDetailAccountResponse(ctx context.Context, svcCtx *svc.ServiceContext, 
 	}
 
 	resp := buildDetailAccountResponse(svcCtx, account, profile, stats)
-	resp.AvatarUrl = loadAvatarURL(ctx, svcCtx, profile)
+	resp.AvatarUrl = mediaLogic.LoadAvatarURL(ctx, svcCtx, profile)
 	return resp, nil
-}
-
-func loadAvatarURL(ctx context.Context, svcCtx *svc.ServiceContext, profile *model.UserProfile) string {
-	if profile == nil || !profile.AvatarAssetId.Valid || profile.AvatarAssetId.Int64 <= 0 {
-		return ""
-	}
-
-	object, err := svcCtx.MediaObjectModel.FindOriginalByAssetID(ctx, uint64(profile.AvatarAssetId.Int64))
-	if err != nil {
-		return ""
-	}
-	bucket, err := svcCtx.StorageBucketModel.FindOne(ctx, object.BucketId)
-	if err != nil {
-		return ""
-	}
-	return mediaLogic.BuildPublicObjectURL(bucket, object.ObjectKey)
 }
 
 func ensureUserProfile(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount) (*model.UserProfile, error) {

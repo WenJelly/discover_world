@@ -22,7 +22,6 @@ export default function InfiniteGallery() {
   const offsetRef = useRef(0);
   const lastFrameRef = useRef<number | null>(null);
   const frameRef = useRef<number | null>(null);
-  const [isHovered, setIsHovered] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -61,8 +60,8 @@ export default function InfiniteGallery() {
     ).matches;
     if (prefersReducedMotion) return;
 
-    // Pause animation when hovered or not visible
-    if (isHovered || !isVisible) {
+    // Pause animation when not visible
+    if (!isVisible) {
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
         frameRef.current = null;
@@ -135,7 +134,7 @@ export default function InfiniteGallery() {
         window.cancelAnimationFrame(frameRef.current);
       }
     };
-  }, [displayPictures.length, isHovered, isVisible]);
+  }, [displayPictures.length, isVisible]);
 
   return (
     <section
@@ -145,21 +144,21 @@ export default function InfiniteGallery() {
       aria-label="照片画廊"
     >
       <div className="mx-auto mb-8 max-w-7xl px-4 text-center sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-bold tracking-tight text-zinc-950 dark:text-white sm:text-4xl">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           精选作品流
         </h2>
-        <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-          控制首屏加载数量，保留顺滑浏览体验
+        <p className="mt-3 text-sm text-muted-foreground">
+          来自社区的最新公开作品
         </p>
       </div>
 
       {pictures.length === 0 && !loading && error ? (
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-20 sm:px-6 lg:px-8">
-          <ImageOff size={48} className="text-zinc-300" aria-hidden="true" />
-          <p className="text-zinc-600">暂时无法加载作品</p>
+          <ImageOff size={48} className="text-muted-foreground/50" aria-hidden="true" />
+          <p className="text-muted-foreground">暂时无法加载作品</p>
           <button
             onClick={() => retry()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-950 px-4 py-2 text-sm text-white transition-colors hover:bg-zinc-800 focus-visible:outline-offset-2 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/80 focus-visible:outline-offset-2"
             aria-label="重试加载作品"
           >
             <RefreshCw size={14} aria-hidden="true" />
@@ -167,16 +166,12 @@ export default function InfiniteGallery() {
           </button>
         </div>
       ) : pictures.length === 0 && !loading ? (
-        <div className="mx-auto max-w-7xl px-4 py-20 text-center text-zinc-600 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-20 text-center text-muted-foreground sm:px-6 lg:px-8">
           暂无作品
         </div>
       ) : (
         <>
-          <div
-            className="w-full overflow-hidden"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-          >
+          <div className="w-full overflow-hidden">
             <div
               ref={trackRef}
               className="flex w-max gap-4 will-change-transform [--photo-height:220px] lg:[--photo-height:300px]"
@@ -202,7 +197,7 @@ export default function InfiniteGallery() {
           <div className="flex h-14 items-center justify-center">
             {loading && (
               <div
-                className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950 dark:border-zinc-700 dark:border-t-white"
+                className="h-6 w-6 animate-spin rounded-full border-2 border-muted border-t-foreground"
                 role="status"
                 aria-label="加载中"
               />
@@ -211,10 +206,10 @@ export default function InfiniteGallery() {
 
           {error && pictures.length > 0 && (
             <div className="mt-4 flex items-center justify-center gap-3">
-              <span className="text-sm text-zinc-600">加载失败</span>
+              <span className="text-sm text-muted-foreground">加载失败</span>
               <button
                 onClick={() => retry()}
-                className="inline-flex items-center gap-1 text-sm text-zinc-950 transition-colors hover:underline focus-visible:outline-offset-2 dark:text-zinc-400"
+                className="inline-flex items-center gap-1 text-sm text-foreground transition-colors hover:underline focus-visible:outline-offset-2"
                 aria-label="重试加载更多作品"
               >
                 <RefreshCw size={14} aria-hidden="true" />

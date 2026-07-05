@@ -55,3 +55,16 @@ export function getMediaUrl(media?: MediaAssetResponse | null) {
     ""
   );
 }
+
+/** Highest-fidelity URL for a detail view — prefers detail/original over thumbnail. */
+export function getMediaDetailUrl(media?: MediaAssetResponse | null) {
+  if (!media) return "";
+  return (
+    media.urls?.detail ||
+    media.urls?.preview ||
+    media.urls?.original ||
+    media.thumbnailUrl ||
+    media.url ||
+    ""
+  );
+}
