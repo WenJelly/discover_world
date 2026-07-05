@@ -10,6 +10,7 @@ import (
 	admin "discover_world/internal/handler/admin"
 	media "discover_world/internal/handler/media"
 	overview "discover_world/internal/handler/overview"
+	post "discover_world/internal/handler/post"
 	profile "discover_world/internal/handler/profile"
 	"discover_world/internal/svc"
 
@@ -156,6 +157,56 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/comment/create",
+				Handler: post.CreatePostCommentHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/comment/list/cursor",
+				Handler: post.GetPostCommentCursorListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/create",
+				Handler: post.CreatePostHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/delete",
+				Handler: post.DeletePostHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/detail",
+				Handler: post.GetPostDetailHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/favorite/toggle",
+				Handler: post.TogglePostFavoriteHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/pin",
+				Handler: post.PinPostHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/reaction/toggle",
+				Handler: post.TogglePostReactionHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/unpin",
+				Handler: post.UnpinPostHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/post/update",
+				Handler: post.UpdatePostHandler(serverCtx),
+			},
 			{
 				Method:  http.MethodPost,
 				Path:    "/profile/album/list",

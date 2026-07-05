@@ -81,14 +81,18 @@ type ProfileAlbumResponse struct {
 }
 
 type ProfilePostResponse struct {
-	Id         string               `json:"id"`
-	UserId     string               `json:"userId"`
-	Content    string               `json:"content"`
-	Visibility string               `json:"visibility"`
-	Status     string               `json:"status"`
-	Location   string               `json:"location"`
-	Images     []MediaAssetResponse `json:"images"`
-	Stats      MediaAssetStats      `json:"stats"`
-	CreatedAt  string               `json:"createdAt"`
-	UpdatedAt  string               `json:"updatedAt"`
+	Id          string               `json:"id"`
+	UserId      string               `json:"userId"`
+	Content     string               `json:"content"`
+	Visibility  string               `json:"visibility"`
+	Status      string               `json:"status"`
+	Location    string               `json:"location"`
+	IsPinned    bool                 `json:"isPinned"`
+	PinnedAt    string               `json:"pinnedAt"`
+	Images      []MediaAssetResponse `json:"images"`
+	Stats       MediaAssetStats      `json:"stats"`
+	IsLiked     bool                 `json:"isLiked"`
+	IsFavorited bool                 `json:"isFavorited"`
+	CreatedAt   string               `json:"createdAt"`
+	UpdatedAt   string               `json:"updatedAt"`
 }

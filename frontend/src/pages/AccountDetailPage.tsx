@@ -12,7 +12,6 @@ import {
   Camera,
   Heart,
   ImageIcon,
-  ImageOff,
   Loader2,
   MessageCircle,
   Pencil,
@@ -40,13 +39,24 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { ImagePreviewModal } from "@/components/ImagePreviewModal";
+import { PostTimeline } from "@/components/post/PostTimeline";
+import {
+  PostComposerDialog,
+  type PostAuthor,
+} from "@/components/post/PostComposerDialog";
+import {
+  formatCount,
+  formatDate,
+  getAvatarFallback,
+  getMediaUrl,
+} from "@/lib/format";
 import type {
   ImageItem,
-  MediaAssetResponse,
   ProfileAlbumResponse,
   ProfilePostResponse,
   UserProfile,
 } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type AccountTab = "posts" | "pictures" | "featured" | "albums";
 
@@ -62,41 +72,6 @@ const PICTURES_PAGE_SIZE = 20;
 const FEATURED_PAGE_SIZE = 12;
 const ALBUM_PAGE_SIZE = 12;
 
-function formatCount(value: number) {
-  if (value >= 10000) {
-    return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万`;
-  }
-  return new Intl.NumberFormat("zh-CN").format(value);
-}
-
-function formatDate(value: string) {
-  if (!value) return "未知时间";
-  const date = new Date(value.replace(" ", "T"));
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(date);
-}
-
-function getAvatarFallback(name: string) {
-  return name.trim().slice(0, 2).toUpperCase() || "U";
-}
-
-function getMediaUrl(media?: MediaAssetResponse | null) {
-  if (!media) return "";
-  return (
-    media.thumbnailUrl ||
-    media.urls?.thumbnail ||
-    media.urls?.preview ||
-    media.urls?.detail ||
-    media.urls?.original ||
-    media.url ||
-    ""
-  );
-}
-
 function getImageUrl(image: ImageItem) {
   return image.url;
 }
@@ -107,14 +82,14 @@ function errorMessage(error: unknown, fallback: string) {
 
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-slate-200 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
-      <div className="flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+    <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-border bg-card p-8 text-center">
+      <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <ImageIcon className="size-6" />
       </div>
-      <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-slate-100">
+      <h3 className="mt-4 text-base font-semibold text-foreground">
         {title}
       </h3>
-      <p className="mt-2 max-w-sm text-sm text-slate-500 dark:text-slate-400">
+      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
         {description}
       </p>
     </div>
@@ -124,7 +99,7 @@ function EmptyState({ title, description }: { title: string; description: string
 function LoadingBlock() {
   return (
     <div className="flex min-h-64 items-center justify-center">
-      <Loader2 className="size-6 animate-spin text-slate-400" />
+      <Loader2 className="size-6 animate-spin text-muted-foreground" />
     </div>
   );
 }
@@ -142,8 +117,6 @@ export default function AccountDetailPage() {
 
   // New post dialog state
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
-  const [newPostContent, setNewPostContent] = useState("");
-  const [newPostSubmitting, setNewPostSubmitting] = useState(false);
 
   // Pictures state
   const [pictures, setPictures] = useState<ImageItem[]>([]);
@@ -335,6 +308,13 @@ export default function AccountDetailPage() {
     void loadAlbums();
   }, [loadAlbums, loadFeatured, loadPictures, loadPosts, loadProfile]);
 
+  // Reload profile when user changes (e.g., avatar upload)
+  useEffect(() => {
+    if (isAuthenticated && ownerId) {
+      void loadProfile();
+    }
+  }, [user?.userAvatar, isAuthenticated, ownerId, loadProfile]);
+
   const stats = useMemo(() => {
     if (!profile) return [];
     return [
@@ -404,48 +384,31 @@ export default function AccountDetailPage() {
     setShowNewPostDialog(true);
   };
 
-  const handleCloseNewPostDialog = () => {
-    setShowNewPostDialog(false);
-    setNewPostContent("");
+  const handlePostPublished = (post: ProfilePostResponse) => {
+    setPosts((prev) => [post, ...prev]);
   };
 
-  const handleSubmitNewPost = async () => {
-    if (!newPostContent.trim()) {
-      alert("请输入动态内容");
-      return;
-    }
-
-    setNewPostSubmitting(true);
-    try {
-      // TODO: Call API to create new post
-      console.log("Creating new post:", newPostContent);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Close dialog and reload posts
-      handleCloseNewPostDialog();
-      await loadPosts(true);
-
-      // Show success message
-      console.log("动态发布成功");
-    } catch (error) {
-      console.error("发布失败:", error);
-      alert(`发布失败: ${error instanceof ApiError ? error.message : "未知错误"}`);
-    } finally {
-      setNewPostSubmitting(false);
-    }
+  const handlePostDeleted = (id: string) => {
+    setPosts((prev) => prev.filter((post) => post.id !== id));
   };
+
+  const postAuthor: PostAuthor | null = profile
+    ? {
+        username: profile.username,
+        avatarUrl: profile.avatarUrl,
+        handle: profile.handle,
+      }
+    : null;
 
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center bg-white px-4 dark:bg-slate-950">
+      <div className="flex min-h-[80vh] items-center justify-center bg-background px-4">
         <div className="text-center">
-          <UserRound className="mx-auto size-12 text-slate-300 dark:text-slate-700" />
-          <h1 className="mt-4 text-xl font-semibold text-slate-900 dark:text-slate-100">
+          <UserRound className="mx-auto size-12 text-muted-foreground/60" />
+          <h1 className="mt-4 text-xl font-semibold text-foreground">
             需要登录
           </h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-2 text-sm text-muted-foreground">
             登录后可以查看个人主页
           </p>
         </div>
@@ -455,7 +418,7 @@ export default function AccountDetailPage() {
 
   if (profileLoading && !profile) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center bg-white dark:bg-slate-950">
+      <div className="flex min-h-[80vh] items-center justify-center bg-background">
         <LoadingBlock />
       </div>
     );
@@ -463,12 +426,12 @@ export default function AccountDetailPage() {
 
   if (!profile) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center bg-white px-4 dark:bg-slate-950">
+      <div className="flex min-h-[80vh] items-center justify-center bg-background px-4">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+          <h1 className="text-xl font-semibold text-foreground">
             加载失败
           </h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-2 text-sm text-muted-foreground">
             {profileError ?? "请稍后重试"}
           </p>
           <Button
@@ -486,22 +449,22 @@ export default function AccountDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <div className="border-b border-slate-200 dark:border-slate-800">
-        {/* Cover (optional placeholder for future) */}
-        <div className="h-40 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 sm:h-48" />
+      <div className="border-b border-border">
+        {/* Cover — calm, structural neutral contour. No brand gradient. */}
+        <div className="profile-cover h-40 sm:h-48" aria-hidden="true" />
 
         {/* Profile Info */}
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <div className="relative">
             {/* Avatar */}
             <div className="absolute -top-12 sm:-top-14">
-              <Avatar className="size-24 border-4 border-white ring-2 ring-slate-200 dark:border-slate-950 dark:ring-slate-800 sm:size-28">
+              <Avatar className="size-24 border-4 border-background shadow-sm ring-1 ring-border sm:size-28">
                 {profile.avatarUrl ? (
                   <AvatarImage src={profile.avatarUrl} alt={profile.username} />
                 ) : null}
-                <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-xl font-bold text-white sm:text-2xl">
+                <AvatarFallback className="text-xl font-bold text-foreground sm:text-2xl">
                   {getAvatarFallback(profile.username)}
                 </AvatarFallback>
               </Avatar>
@@ -511,18 +474,18 @@ export default function AccountDetailPage() {
             <div className="pb-3 pt-14 sm:pt-16">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  <h1 className="text-xl font-bold text-foreground">
                     {profile.username}
                   </h1>
-                  <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                  <p className="mt-0.5 text-sm text-muted-foreground">
                     {profile.handle}
                   </p>
                   {profile.bio ? (
-                    <p className="mt-3 text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
+                    <p className="mt-3 text-[15px] leading-relaxed text-foreground/80">
                       {profile.bio}
                     </p>
                   ) : null}
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     {profile.location ? (
                       <span className="inline-flex items-center gap-1">
                         <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -540,10 +503,10 @@ export default function AccountDetailPage() {
                   <div className="mt-3 flex items-center gap-5 text-sm">
                     {stats.map((stat) => (
                       <div key={stat.label}>
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                        <span className="font-semibold text-foreground">
                           {formatCount(stat.value)}
                         </span>{" "}
-                        <span className="text-slate-500 dark:text-slate-400">{stat.label}</span>
+                        <span className="text-muted-foreground">{stat.label}</span>
                       </div>
                     ))}
                   </div>
@@ -555,7 +518,7 @@ export default function AccountDetailPage() {
 
         {/* Tabs */}
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <div className="flex gap-8 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex gap-8 border-b border-border">
             {TAB_ITEMS.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -563,16 +526,17 @@ export default function AccountDetailPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`group relative flex items-center gap-2 px-1 py-3 text-[15px] font-medium transition-colors ${
+                  className={cn(
+                    "group relative flex items-center gap-2 px-1 py-3 text-[15px] font-medium transition-colors",
                     activeTab === tab.id
-                      ? "text-slate-900 dark:text-slate-100"
-                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-                  }`}
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
                 >
                   <Icon className="size-[18px]" strokeWidth={2} />
                   {tab.label}
                   {activeTab === tab.id ? (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 rounded-full bg-indigo-600" />
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-foreground" />
                   ) : null}
                 </button>
               );
@@ -587,22 +551,15 @@ export default function AccountDetailPage() {
           <>
             {/* New Post Button */}
             <div className="mb-6">
-              <button
+              <Button
                 type="button"
+                size="lg"
+                className="w-full"
                 onClick={handleNewPost}
-                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 p-[1px] transition-all hover:shadow-lg hover:shadow-indigo-500/25"
               >
-                <div className="flex items-center justify-center gap-2 rounded-[11px] bg-white px-6 py-4 transition-colors group-hover:bg-gradient-to-r group-hover:from-indigo-50 group-hover:to-purple-50 dark:bg-slate-900 dark:group-hover:from-indigo-950/30 dark:group-hover:to-purple-950/30">
-                  <Plus
-                    size={20}
-                    className="text-indigo-600 transition-transform group-hover:rotate-90 dark:text-indigo-400"
-                    aria-hidden="true"
-                  />
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    发表新动态
-                  </span>
-                </div>
-              </button>
+                <Plus />
+                发表新动态
+              </Button>
             </div>
 
             {postLoading ? (
@@ -613,87 +570,11 @@ export default function AccountDetailPage() {
               <EmptyState title="暂无动态" description="发布的动态会展示在这里" />
             ) : (
               <div className="space-y-4">
-              {posts.map((post) => (
-                <article
-                  key={post.id}
-                  className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <div className="flex items-start gap-3">
-                    <Avatar className="size-10">
-                      {profile.avatarUrl ? (
-                        <AvatarImage src={profile.avatarUrl} alt={profile.username} />
-                      ) : null}
-                      <AvatarFallback>{getAvatarFallback(profile.username)}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">
-                          {profile.username}
-                        </span>
-                        <span className="text-sm text-slate-500 dark:text-slate-400">
-                          {profile.handle}
-                        </span>
-                        <span className="text-sm text-slate-500 dark:text-slate-400">·</span>
-                        <time className="text-sm text-slate-500 dark:text-slate-400">
-                          {formatDate(post.createdAt)}
-                        </time>
-                      </div>
-                      {post.content ? (
-                        <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
-                          {post.content}
-                        </p>
-                      ) : null}
-                      {post.images.length > 0 ? (
-                        <div className={`mt-3 grid gap-2 ${
-                          post.images.length === 1 ? "grid-cols-1" :
-                          post.images.length === 2 ? "grid-cols-2" :
-                          "grid-cols-2"
-                        }`}>
-                          {post.images.slice(0, 4).map((image) => {
-                            const src = getMediaUrl(image);
-                            return (
-                              <div
-                                key={image.id}
-                                className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
-                              >
-                                {src ? (
-                                  <img
-                                    src={src}
-                                    alt={image.title}
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="h-64 w-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="flex h-64 items-center justify-center text-slate-400">
-                                    <ImageOff className="size-8" />
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                      <div className="mt-3 flex items-center gap-6 text-slate-500 dark:text-slate-400">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-2 text-sm transition-colors hover:text-indigo-600"
-                        >
-                          <Heart className="size-[18px]" />
-                          <span>{formatCount(post.stats.reactionCount)}</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-2 text-sm transition-colors hover:text-indigo-600"
-                        >
-                          <MessageCircle className="size-[18px]" />
-                          <span>{formatCount(post.stats.commentCount)}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
+              <PostTimeline
+                posts={posts}
+                author={postAuthor}
+                onDeleted={handlePostDeleted}
+              />
               {postError ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
                   {postError}
@@ -728,7 +609,7 @@ export default function AccountDetailPage() {
                 {pictures.map((image, index) => (
                   <article
                     key={image.id}
-                    className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-900"
+                    className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-muted"
                     onClick={() => handleImageClick(image, index)}
                   >
                     <img
@@ -783,7 +664,7 @@ export default function AccountDetailPage() {
               {featuredImages.map((image, index) => (
                 <article
                   key={image.id}
-                  className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-900"
+                  className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-muted"
                   onClick={() => handleImageClick(image, index)}
                 >
                   <img
@@ -821,9 +702,9 @@ export default function AccountDetailPage() {
                 return (
                   <article
                     key={album.id}
-                    className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+                    className="overflow-hidden rounded-lg border border-border bg-card"
                   >
-                    <div className="aspect-video bg-slate-100 dark:bg-slate-800">
+                    <div className="aspect-video bg-muted">
                       {coverUrl ? (
                         <img
                           src={coverUrl}
@@ -833,21 +714,21 @@ export default function AccountDetailPage() {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-slate-400">
+                        <div className="flex h-full items-center justify-center text-muted-foreground">
                           <BookOpen className="size-8" />
                         </div>
                       )}
                     </div>
                     <div className="p-4">
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
+                      <h3 className="font-semibold text-foreground line-clamp-1">
                         {album.name}
                       </h3>
                       {album.description ? (
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
+                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
                           {album.description}
                         </p>
                       ) : null}
-                      <div className="mt-3 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+                      <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
                         <span>{formatCount(album.itemCount)} 张</span>
                         <span>{formatDate(album.updatedAt)}</span>
                       </div>
@@ -915,123 +796,12 @@ export default function AccountDetailPage() {
       )}
 
       {/* New Post Dialog */}
-      {showNewPostDialog && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="new-post-title"
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
-            onClick={handleCloseNewPostDialog}
-            aria-hidden="true"
-          />
-
-          {/* Dialog Content */}
-          <div className="relative z-10 w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
-            {/* Header */}
-            <div className="relative overflow-hidden rounded-t-2xl bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-8">
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNjAgMTAgTSAxMCAwIEwgMTAgNjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30" />
-              <div className="relative flex items-center justify-between">
-                <h2
-                  id="new-post-title"
-                  className="text-2xl font-bold text-white"
-                >
-                  发表新动态
-                </h2>
-                <button
-                  type="button"
-                  onClick={handleCloseNewPostDialog}
-                  className="rounded-lg p-2 text-white/80 transition-all hover:bg-white/20 hover:text-white"
-                  aria-label="关闭"
-                >
-                  <svg
-                    className="size-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="p-6">
-              <div className="flex gap-4">
-                <Avatar className="size-12 ring-2 ring-indigo-100 dark:ring-indigo-900">
-                  {profile?.avatarUrl ? (
-                    <AvatarImage src={profile.avatarUrl} alt={profile.username} />
-                  ) : null}
-                  <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                    {profile ? getAvatarFallback(profile.username) : "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-4">
-                  <textarea
-                    value={newPostContent}
-                    onChange={(e) => setNewPostContent(e.target.value)}
-                    placeholder="分享你的想法..."
-                    maxLength={500}
-                    rows={6}
-                    className="w-full resize-none rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 placeholder-slate-400 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
-                    autoFocus
-                    disabled={newPostSubmitting}
-                  />
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      <span className={newPostContent.length > 450 ? "font-semibold text-amber-600 dark:text-amber-400" : ""}>
-                        {newPostContent.length}
-                      </span>
-                      {" / 500"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-3 rounded-b-2xl border-t border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-800 dark:bg-slate-800/50">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCloseNewPostDialog}
-                disabled={newPostSubmitting}
-                className="border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
-              >
-                取消
-              </Button>
-              <button
-                type="button"
-                onClick={handleSubmitNewPost}
-                disabled={newPostSubmitting || !newPostContent.trim()}
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-              >
-                {newPostSubmitting ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    发布中...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} aria-hidden="true" />
-                    发布动态
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PostComposerDialog
+        open={showNewPostDialog}
+        onOpenChange={setShowNewPostDialog}
+        onPublished={handlePostPublished}
+        author={postAuthor}
+      />
     </div>
   );
 }

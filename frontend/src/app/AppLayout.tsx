@@ -8,6 +8,7 @@ import CTA from "@/components/home/CTA";
 import Footer from "@/components/Footer";
 import PublicGalleryPage from "@/pages/PublicGalleryPage";
 import AccountDetailPage from "@/pages/AccountDetailPage";
+import UploadPage from "@/pages/UploadPage";
 
 export function AppLayout() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
@@ -21,6 +22,7 @@ export function AppLayout() {
 
   const isPublicRoute = pathname === "/public";
   const isAccountRoute = pathname === "/account";
+  const isUploadRoute = pathname === "/upload";
 
   return (
     <>
@@ -34,6 +36,8 @@ export function AppLayout() {
       <main id="main-content">
         {isAccountRoute ? (
           <AccountDetailPage />
+        ) : isUploadRoute ? (
+          <UploadPage />
         ) : isPublicRoute ? (
           <PublicGalleryPage />
         ) : (

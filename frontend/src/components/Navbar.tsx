@@ -13,8 +13,6 @@ import {
     ArrowRight,
     Camera,
     ChevronDown,
-    ImagePlus,
-    Link2,
     Loader2,
     LogOut,
     Menu,
@@ -42,12 +40,11 @@ import { useAuth } from "@/context/AuthContext";
 import {
     ApiError,
     uploadAccountAvatar,
-    uploadMediaAsset,
-    uploadMediaAssetByUrl,
     updateUserProfile,
 } from "@/lib/api";
-import { notifyMediaAssetUploaded } from "@/lib/media-events";
+import type { MediaAssetResponse } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { UploadDialog } from "@/components/upload/UploadDialog";
 
 const navItems = [
     {
@@ -87,7 +84,6 @@ export default function FadingSiblingsNavbar() {
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [urlUploadOpen, setUrlUploadOpen] = useState(false);
-    const [uploadUrl, setUploadUrl] = useState("");
     const [uploading, setUploading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
@@ -99,7 +95,6 @@ export default function FadingSiblingsNavbar() {
     });
     const deferredSearchQuery = useDeferredValue(searchQuery);
     const accountMenuRef = useRef<HTMLDivElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const { user, isAuthenticated, logout, refreshUser, applyAccountDetail } = useAuth();
@@ -154,78 +149,21 @@ export default function FadingSiblingsNavbar() {
         handleInternalNavigation(event, "/account", closeMenu);
     };
 
-    const openFilePicker = () => {
-        setAccountMenuOpen(false);
-        setIsOpen(false);
-        fileInputRef.current?.click();
-    };
-
     const openUploadDialog = () => {
         setAccountMenuOpen(false);
         setIsOpen(false);
         setUrlUploadOpen(true);
     };
 
-    const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        event.target.value = "";
-
-        if (!file) {
-            return;
-        }
-
-        if (!file.type.startsWith("image/")) {
-            toast({
-                title: "请选择图片文件",
-                description: "当前仅支持上传图片类型的文件。",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        setUploading(true);
-        try {
-            const asset = await uploadMediaAsset(file, { visibility: "public" });
-            notifyMediaAssetUploaded(asset);
-            toast({
-                title: "图片上传成功",
-                description: asset.title ? `${asset.title} 已加入你的图片库。` : "图片已加入你的图片库。",
-                variant: "success",
-            });
-        } catch (error) {
-            toast({
-                title: "图片上传失败",
-                description: getUploadErrorMessage(error),
-                variant: "destructive",
-            });
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const handleUrlUpload = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-
-        setUploading(true);
-        try {
-            const asset = await uploadMediaAssetByUrl(uploadUrl, { visibility: "public" });
-            notifyMediaAssetUploaded(asset);
-            setUploadUrl("");
-            setUrlUploadOpen(false);
-            toast({
-                title: "图片上传成功",
-                description: asset.title ? `${asset.title} 已加入你的图片库。` : "远程图片已加入你的图片库。",
-                variant: "success",
-            });
-        } catch (error) {
-            toast({
-                title: "URL 上传失败",
-                description: getUploadErrorMessage(error),
-                variant: "destructive",
-            });
-        } finally {
-            setUploading(false);
-        }
+    const handleImageUploadComplete = (asset: MediaAssetResponse) => {
+        setUploading(false);
+        toast({
+            title: "图片上传成功",
+            description: asset.title
+                ? `「${asset.title}」已加入你的图片库，审核通过后公开。`
+                : "图片已加入你的图片库，审核通过后公开。",
+            variant: "success",
+        });
     };
 
     const handleLogout = () => {
@@ -782,32 +720,20 @@ export default function FadingSiblingsNavbar() {
                                                         </div>
                                                     </div>
                                                 </a>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        className="h-10 rounded-xl"
-                                                        disabled={uploading}
-                                                        onClick={openFilePicker}
-                                                    >
-                                                        {uploading ? (
-                                                            <Loader2 className="size-4 animate-spin" />
-                                                        ) : (
-                                                            <Upload className="size-4" />
-                                                        )}
-                                                        本地上传
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        className="h-10 rounded-xl"
-                                                        disabled={uploading}
-                                                        onClick={openUploadDialog}
-                                                    >
-                                                        <Link2 className="size-4" />
-                                                        URL 上传
-                                                    </Button>
-                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className="h-10 w-full rounded-xl"
+                                                    disabled={uploading}
+                                                    onClick={openUploadDialog}
+                                                >
+                                                    {uploading ? (
+                                                        <Loader2 className="size-4 animate-spin" />
+                                                    ) : (
+                                                        <Upload className="size-4" />
+                                                    )}
+                                                    上传图片
+                                                </Button>
                                                 <Button
                                                     type="button"
                                                     variant="outline"
@@ -851,14 +777,6 @@ export default function FadingSiblingsNavbar() {
             </header>
             {isAuthenticated && user ? (
                 <>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="sr-only"
-                        tabIndex={-1}
-                        onChange={handleFileUpload}
-                    />
                     <input
                         ref={avatarInputRef}
                         type="file"
@@ -1004,107 +922,12 @@ export default function FadingSiblingsNavbar() {
                 </DialogContent>
             </Dialog>
 
-            {/* URL Upload Dialog */}
-            {/* Upload Dialog - Combined Local + URL */}
-            <Dialog
+            {/* Upload Dialog */}
+            <UploadDialog
                 open={urlUploadOpen}
-                onOpenChange={(open) => {
-                    if (!uploading) {
-                        setUrlUploadOpen(open);
-                        if (!open) {
-                            setUploadUrl("");
-                        }
-                    }
-                }}
-            >
-                <DialogContent className="max-w-md rounded-xl border-slate-200 bg-white p-0 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-                    <div className="border-b border-slate-200 px-6 py-5 dark:border-slate-800">
-                        <DialogHeader className="text-left">
-                            <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-                                <Upload className="size-6" />
-                            </div>
-                            <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-                                上传图片
-                            </DialogTitle>
-                            <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
-                                选择本地文件或输入图片 URL
-                            </DialogDescription>
-                        </DialogHeader>
-                    </div>
-
-                    <div className="space-y-5 px-6 py-6">
-                        {/* Local File Upload */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                                本地文件
-                            </label>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="mt-2 w-full gap-2"
-                                disabled={uploading}
-                                onClick={openFilePicker}
-                            >
-                                {uploading ? (
-                                    <Loader2 className="size-4 animate-spin" />
-                                ) : (
-                                    <ImagePlus className="size-4" />
-                                )}
-                                选择文件上传
-                            </Button>
-                        </div>
-
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-slate-200 dark:border-slate-800" />
-                            </div>
-                            <div className="relative flex justify-center text-xs">
-                                <span className="bg-white px-2 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-                                    或
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* URL Upload */}
-                        <form onSubmit={handleUrlUpload}>
-                            <label htmlFor="navbar-url-upload" className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                                图片 URL
-                            </label>
-                            <Input
-                                id="navbar-url-upload"
-                                type="url"
-                                value={uploadUrl}
-                                placeholder="https://example.com/photo.jpg"
-                                className="mt-2 h-10 rounded-lg"
-                                disabled={uploading}
-                                onChange={(event) => setUploadUrl(event.target.value)}
-                            />
-                            <div className="mt-4 flex justify-end gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    disabled={uploading}
-                                    onClick={() => setUrlUploadOpen(false)}
-                                >
-                                    取消
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={uploading || !uploadUrl.trim()}
-                                    className="gap-2"
-                                >
-                                    {uploading ? (
-                                        <Loader2 className="size-4 animate-spin" />
-                                    ) : (
-                                        <Link2 className="size-4" />
-                                    )}
-                                    上传
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
-                </DialogContent>
-            </Dialog>
+                onOpenChange={setUrlUploadOpen}
+                onUploaded={handleImageUploadComplete}
+            />
         </LayoutGroup>
     );
 }

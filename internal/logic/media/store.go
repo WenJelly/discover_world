@@ -11,6 +11,8 @@ import (
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
+
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 type mediaWriteRequest struct {
@@ -118,6 +120,7 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 	}
 
 	asset := existing
+	createdAsset := false
 	if asset == nil {
 		asset = &model.MediaAsset{
 			OwnerUserId:      loginUser.Id,
@@ -139,6 +142,7 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 			return nil, commonresponse.InternalServerError("读取媒体资源ID失败")
 		}
 		asset.Id = uint64(id)
+		createdAsset = true
 	} else {
 		asset.Title = optionalString(resolveMediaTitle(req.Title, originalFilename))
 		asset.Description = optionalString(req.Description)
@@ -149,12 +153,19 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 		asset.MetadataJson = metadataJSON(metadata)
 	}
 
+	failUpload := func(err error) error {
+		if !createdAsset {
+			return err
+		}
+		return markMediaAssetUploadFailed(ctx, asset, err, svcCtx.MediaAssetModel.Update)
+	}
+
 	objectKey, err := buildMediaObjectKey(nullStringValue(target.Bucket.BasePath), "image", asset.Id, fileMetadata.Format)
 	if err != nil {
-		return nil, err
+		return nil, failUpload(err)
 	}
 	if err := uploadFileToObjectStorage(ctx, target, tempPath, objectKey, contentTypeForFormat(fileMetadata.Format)); err != nil {
-		return nil, err
+		return nil, failUpload(err)
 	}
 
 	if existing != nil {
@@ -193,6 +204,21 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 
 	profile, _ := svcCtx.UserProfileModel.FindOneByUserId(ctx, loginUser.Id)
 	return buildMediaAssetResponse(ctx, svcCtx, asset, object, loginUser, profile, nil, normalizeTags(req.Tags), loginUser, types.MediaVariantRequest{})
+}
+
+func markMediaAssetUploadFailed(ctx context.Context, asset *model.MediaAsset, cause error, update func(context.Context, *model.MediaAsset) error) error {
+	if cause == nil {
+		cause = commonresponse.InternalServerError("media asset upload failed")
+	}
+	if asset == nil || asset.Id == 0 || update == nil {
+		return cause
+	}
+
+	asset.Status = "failed"
+	if err := update(ctx, asset); err != nil {
+		logx.WithContext(ctx).Errorf("mark media asset upload failed status error: assetId=%d cause=%v err=%v", asset.Id, cause, err)
+	}
+	return cause
 }
 
 func replaceAssetTags(ctx context.Context, svcCtx *svc.ServiceContext, assetID uint64, tags []string) error {

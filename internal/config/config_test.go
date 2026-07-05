@@ -15,6 +15,11 @@ func TestApplicationConfigAllowsConfiguredMediaUploads(t *testing.T) {
 	if c.MaxBytes < minMediaUploadRequestBytes {
 		t.Fatalf("MaxBytes = %d, want at least %d for media uploads", c.MaxBytes, minMediaUploadRequestBytes)
 	}
+
+	const minMediaUploadRequestTimeout = int64(65_000)
+	if c.Timeout < minMediaUploadRequestTimeout {
+		t.Fatalf("Timeout = %d, want at least %d for media uploads", c.Timeout, minMediaUploadRequestTimeout)
+	}
 }
 
 func TestApplicationConfigLoadsDefaultStorageSecret(t *testing.T) {

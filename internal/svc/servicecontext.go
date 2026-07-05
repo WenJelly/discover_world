@@ -6,6 +6,7 @@ package svc
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 
 	"discover_world/internal/config"
@@ -20,6 +21,7 @@ type ServiceContext struct {
 	Config config.Config
 
 	AdminCheck rest.Middleware
+	dbConn     sqlx.SqlConn
 
 	UserAccountModel     model.UserAccountModel
 	UserProfileModel     model.UserProfileModel
@@ -33,6 +35,9 @@ type ServiceContext struct {
 	AssetLinkModel       model.AssetLinkModel
 	PostModel            model.PostModel
 	AlbumModel           model.AlbumModel
+	ReactionModel        model.ReactionModel
+	FavoriteModel        model.FavoriteModel
+	CommentRecordModel   model.CommentRecordModel
 	SiteStatsModel       model.SiteStatsModel
 }
 
@@ -42,6 +47,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	svcCtx := &ServiceContext{
 		Config: c,
+		dbConn: conn,
 
 		UserAccountModel:     model.NewUserAccountModel(conn),
 		UserProfileModel:     model.NewUserProfileModel(conn),
@@ -55,11 +61,49 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		AssetLinkModel:       model.NewAssetLinkModel(conn),
 		PostModel:            model.NewPostModel(conn),
 		AlbumModel:           model.NewAlbumModel(conn),
+		ReactionModel:        model.NewReactionModel(conn),
+		FavoriteModel:        model.NewFavoriteModel(conn),
+		CommentRecordModel:   model.NewCommentRecordModel(conn),
 		SiteStatsModel:       model.NewSiteStatsModel(conn),
 	}
 	svcCtx.AdminCheck = middleware.NewAdminCheckMiddleware(svcCtx).Handle
 
 	return svcCtx
+}
+
+func (s *ServiceContext) Transact(ctx context.Context, fn func(context.Context, *ServiceContext) error) error {
+	if s == nil || s.dbConn == nil {
+		return errors.New("service context database connection is nil")
+	}
+	return s.dbConn.TransactCtx(ctx, func(ctx context.Context, session sqlx.Session) error {
+		return fn(ctx, s.withSession(session))
+	})
+}
+
+func (s *ServiceContext) withSession(session sqlx.Session) *ServiceContext {
+	conn := sqlx.NewSqlConnFromSession(session)
+	return &ServiceContext{
+		Config:     s.Config,
+		AdminCheck: s.AdminCheck,
+		dbConn:     conn,
+
+		UserAccountModel:     model.NewUserAccountModel(conn),
+		UserProfileModel:     model.NewUserProfileModel(conn),
+		StorageProviderModel: model.NewStorageProviderModel(conn),
+		StorageBucketModel:   model.NewStorageBucketModel(conn),
+		MediaAssetModel:      model.NewMediaAssetModel(conn),
+		MediaObjectModel:     model.NewMediaObjectModel(conn),
+		EntityStatModel:      model.NewEntityStatModel(conn),
+		TagModel:             model.NewTagModel(conn),
+		TaggingModel:         model.NewTaggingModel(conn),
+		AssetLinkModel:       model.NewAssetLinkModel(conn),
+		PostModel:            model.NewPostModel(conn),
+		AlbumModel:           model.NewAlbumModel(conn),
+		ReactionModel:        model.NewReactionModel(conn),
+		FavoriteModel:        model.NewFavoriteModel(conn),
+		CommentRecordModel:   model.NewCommentRecordModel(conn),
+		SiteStatsModel:       model.NewSiteStatsModel(conn),
+	}
 }
 
 func (s *ServiceContext) AuthSecret() string {
@@ -97,10 +141,16 @@ func (s *ServiceContext) StorageSecret(ref string) config.StorageSecretConfig {
 	if ref == "" {
 		ref = "default"
 	}
-	if s.Config.StorageSecrets == nil {
+	if s.Config.StorageSecrets != nil {
+		if secret, ok := s.Config.StorageSecrets[ref]; ok {
+			return secret
+		}
+	}
+	secret, err := config.LoadStorageSecretFile(ref)
+	if err != nil {
 		return config.StorageSecretConfig{}
 	}
-	return s.Config.StorageSecrets[ref]
+	return secret
 }
 
 func nullStringValue(value sql.NullString) string {

@@ -2,13 +2,13 @@ Name: DiscoverWorld
 Host: localhost
 Port: 8888
 MaxBytes: 33554432
+Timeout: 70000
 
 Mysql:
-  DataSource: root:a@tcp(localhost:3306)/discover_world?charset=utf8mb4&parseTime=true
+  DataSource: root:root@tcp(localhost:3306)/discover_world?charset=utf8mb4&parseTime=true
 
 CacheRedis:
   - Host: localhost:6379
-    Pass: root
 
 Auth:
   AccessSecret: "this-is-wen-jelly-jwt"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -15,7 +16,9 @@ type (
 	// and implement the added methods in customEntityStatModel.
 	EntityStatModel interface {
 		entityStatModel
+		Ensure(ctx context.Context, targetType string, targetID uint64) error
 		FindByTargetIDs(ctx context.Context, targetType string, targetIDs []uint64) (map[uint64]*EntityStat, error)
+		IncrementCounter(ctx context.Context, targetType string, targetID uint64, counter string, delta int64) error
 		IncrementViewCount(ctx context.Context, targetType string, targetID uint64) error
 		withSession(session sqlx.Session) EntityStatModel
 	}
@@ -34,6 +37,12 @@ func NewEntityStatModel(conn sqlx.SqlConn) EntityStatModel {
 
 func (m *customEntityStatModel) withSession(session sqlx.Session) EntityStatModel {
 	return NewEntityStatModel(sqlx.NewSqlConnFromSession(session))
+}
+
+func (m *customEntityStatModel) Ensure(ctx context.Context, targetType string, targetID uint64) error {
+	query := fmt.Sprintf("insert into %s (`target_type`,`target_id`) values (?, ?) on duplicate key update `target_id` = `target_id`", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, targetType, targetID)
+	return err
 }
 
 func (m *customEntityStatModel) FindByTargetIDs(ctx context.Context, targetType string, targetIDs []uint64) (map[uint64]*EntityStat, error) {
@@ -82,4 +91,48 @@ func (m *customEntityStatModel) IncrementViewCount(ctx context.Context, targetTy
 	query := fmt.Sprintf("update %s set `view_count` = `view_count` + 1 where `id` = ?", m.table)
 	_, err = m.conn.ExecCtx(ctx, query, stat.Id)
 	return err
+}
+
+func (m *customEntityStatModel) IncrementCounter(ctx context.Context, targetType string, targetID uint64, counter string, delta int64) error {
+	if delta == 0 {
+		return nil
+	}
+
+	counter, err := normalizeEntityStatCounter(counter)
+	if err != nil {
+		return err
+	}
+	if err := m.Ensure(ctx, targetType, targetID); err != nil {
+		return err
+	}
+
+	if delta > 0 {
+		query := fmt.Sprintf("update %s set `%s` = `%s` + ? where `target_type` = ? and `target_id` = ?", m.table, counter, counter)
+		_, err = m.conn.ExecCtx(ctx, query, delta, targetType, targetID)
+		return err
+	}
+
+	amount := -delta
+	query := fmt.Sprintf("update %s set `%s` = case when `%s` >= ? then `%s` - ? else 0 end where `target_type` = ? and `target_id` = ?", m.table, counter, counter, counter)
+	_, err = m.conn.ExecCtx(ctx, query, amount, amount, targetType, targetID)
+	return err
+}
+
+func normalizeEntityStatCounter(counter string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(counter)) {
+	case "view_count":
+		return "view_count", nil
+	case "reaction_count":
+		return "reaction_count", nil
+	case "favorite_count":
+		return "favorite_count", nil
+	case "comment_count":
+		return "comment_count", nil
+	case "share_count":
+		return "share_count", nil
+	case "download_count":
+		return "download_count", nil
+	default:
+		return "", fmt.Errorf("unsupported entity stat counter: %s", counter)
+	}
 }

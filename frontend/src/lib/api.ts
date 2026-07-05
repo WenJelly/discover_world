@@ -1,6 +1,7 @@
 import type {
   AccountSummary,
   ApiResponse,
+  CreatePostRequest,
   DetailAccountResponse,
   DetailUserResponse,
   LoginRequest,
@@ -15,11 +16,13 @@ import type {
   PictureCursorPageResponse,
   PictureListReq,
   PicturePageResponse,
+  PostToggleResponse,
   ProfileAlbumListReq,
   ProfileAlbumPageResponse,
   ProfileFeaturedMediaListReq,
   ProfilePostCursorPageResponse,
   ProfilePostListReq,
+  ProfilePostResponse,
   RegisterRequest,
   RegisterResponse,
   UpdateUserRequest,
@@ -35,6 +38,10 @@ import {
   notifyAuthExpired,
   TOKEN_KEY,
 } from "./auth-session";
+import {
+  normalizeApiErrorMessage,
+  type ApiErrorContext,
+} from "./api-error";
 
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8888";
@@ -61,6 +68,7 @@ function getToken(): string | null {
 type RequestOptions = {
   requireAuth?: boolean;
   timeoutMs?: number;
+  errorContext?: ApiErrorContext;
 };
 
 function isWrappedResponse<T>(value: unknown): value is ApiResponse<T> {
@@ -77,6 +85,7 @@ async function request<T>(
   body: unknown,
   options: RequestOptions = {}
 ): Promise<T> {
+  const errorContext = options.errorContext ?? "request";
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -109,7 +118,10 @@ async function request<T>(
       error instanceof DOMException &&
       error.name === "AbortError"
     ) {
-      throw new ApiError(0, "服务响应超时,请稍后重试");
+      throw new ApiError(
+        0,
+        normalizeApiErrorMessage("服务响应超时", errorContext)
+      );
     }
 
     throw new ApiError(0, "服务暂时不可用,请稍后重试");
@@ -138,7 +150,10 @@ async function request<T>(
 
   if (isWrappedResponse<T>(json)) {
     if (json.code !== 200) {
-      throw new ApiError(json.code, json.message);
+      throw new ApiError(
+        json.code,
+        normalizeApiErrorMessage(json.message, errorContext)
+      );
     }
     return json.data;
   }
@@ -154,6 +169,7 @@ async function requestFormData<T>(
   body: FormData,
   options: RequestOptions = {}
 ): Promise<T> {
+  const errorContext = options.errorContext ?? "upload";
   const headers: Record<string, string> = {};
   if (options.requireAuth) {
     const token = getToken();
@@ -181,7 +197,10 @@ async function requestFormData<T>(
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new ApiError(0, "上传超时,请稍后重试");
+      throw new ApiError(
+        0,
+        normalizeApiErrorMessage("上传超时", errorContext)
+      );
     }
 
     throw new ApiError(0, "服务暂时不可用,请稍后重试");
@@ -210,7 +229,10 @@ async function requestFormData<T>(
 
   if (isWrappedResponse<T>(json)) {
     if (json.code !== 200) {
-      throw new ApiError(json.code, json.message);
+      throw new ApiError(
+        json.code,
+        normalizeApiErrorMessage(json.message, errorContext)
+      );
     }
     return json.data;
   }
@@ -330,23 +352,29 @@ function normalizeMediaAssetPage<T extends MediaAssetPageResponse | MediaAssetCu
   };
 }
 
+function normalizeProfilePost(post: ProfilePostResponse): ProfilePostResponse {
+  return {
+    ...post,
+    images: (post.images ?? []).map(normalizeMediaAsset),
+    stats: post.stats ?? {
+      viewCount: 0,
+      reactionCount: 0,
+      favoriteCount: 0,
+      commentCount: 0,
+      shareCount: 0,
+      downloadCount: 0,
+    },
+    isLiked: post.isLiked ?? false,
+    isFavorited: post.isFavorited ?? false,
+  };
+}
+
 function normalizeProfilePostPage(
   page: ProfilePostCursorPageResponse
 ): ProfilePostCursorPageResponse {
   return {
     ...page,
-    list: (page.list ?? []).map((post) => ({
-      ...post,
-      images: (post.images ?? []).map(normalizeMediaAsset),
-      stats: post.stats ?? {
-        viewCount: 0,
-        reactionCount: 0,
-        favoriteCount: 0,
-        commentCount: 0,
-        shareCount: 0,
-        downloadCount: 0,
-      },
-    })),
+    list: (page.list ?? []).map(normalizeProfilePost),
   };
 }
 
@@ -448,7 +476,11 @@ export async function uploadMediaAssetByUrl(
   const resp = await request<MediaAssetResponse>(
     "/api/media/upload/url",
     buildMediaAssetUrlUploadRequest(fileUrl, metadata),
-    { requireAuth: true, timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS }
+    {
+      requireAuth: true,
+      timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
+      errorContext: "upload",
+    }
   );
   return normalizeMediaAsset(resp);
 }
@@ -471,6 +503,40 @@ export async function fetchProfilePostCursorList(
     { requireAuth: true }
   );
   return normalizeProfilePostPage(page);
+}
+
+export async function createPost(
+  req: CreatePostRequest
+): Promise<ProfilePostResponse> {
+  const resp = await request<ProfilePostResponse>("/api/post/create", req, {
+    requireAuth: true,
+  });
+  return normalizeProfilePost(resp);
+}
+
+export async function deletePost(id: string): Promise<void> {
+  return request<void>("/api/post/delete", { id }, { requireAuth: true });
+}
+
+export async function togglePostReaction(
+  id: string,
+  reactionType: string = "like"
+): Promise<PostToggleResponse> {
+  return request<PostToggleResponse>(
+    "/api/post/reaction/toggle",
+    { id, reactionType },
+    { requireAuth: true }
+  );
+}
+
+export async function togglePostFavorite(
+  id: string
+): Promise<PostToggleResponse> {
+  return request<PostToggleResponse>(
+    "/api/post/favorite/toggle",
+    { id },
+    { requireAuth: true }
+  );
 }
 
 export async function fetchProfileFeaturedMediaList(

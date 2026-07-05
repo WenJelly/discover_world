@@ -179,13 +179,29 @@ export interface ProfilePostResponse {
   id: string;
   userId: string;
   content: string;
-  visibility: "public" | "followers" | "private" | "unlisted" | string;
+  visibility: "public" | "private" | string;
   status: string;
   location: string;
+  isPinned: boolean;
+  pinnedAt: string;
   images: MediaAssetResponse[];
   stats: MediaAssetStats;
+  isLiked: boolean;
+  isFavorited: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreatePostRequest {
+  content?: string;
+  visibility?: string;
+  location?: string;
+  imageIds?: string[];
+}
+
+export interface PostToggleResponse {
+  active: boolean;
+  stats: MediaAssetStats;
 }
 
 export interface ProfilePostCursorPageResponse {

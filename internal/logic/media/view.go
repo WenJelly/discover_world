@@ -58,15 +58,15 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 		baseURL = buildPublicObjectURL(bucket, object.ObjectKey)
 	}
 
-	thumbnail, err := buildVariantURL(baseURL, fileSize, variantOrDefault(variant, 2))
+	thumbnail, err := buildVariantURL(baseURL, fileSize, width, height, variantOrDefault(variant, 2))
 	if err != nil {
 		return nil, err
 	}
-	preview, err := buildVariantURL(baseURL, fileSize, types.MediaVariantRequest{CompressType: 1})
+	preview, err := buildVariantURL(baseURL, fileSize, width, height, types.MediaVariantRequest{CompressType: 1})
 	if err != nil {
 		return nil, err
 	}
-	detail, err := buildVariantURL(baseURL, fileSize, variant)
+	detail, err := buildVariantURL(baseURL, fileSize, width, height, variant)
 	if err != nil {
 		return nil, err
 	}

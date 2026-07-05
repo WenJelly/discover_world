@@ -1,7 +1,9 @@
 package media
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -81,22 +83,46 @@ func TestCollectOriginalBucketIDsKeepsAssetOrderAndDedupes(t *testing.T) {
 }
 
 func TestBuildVariantURLCompression(t *testing.T) {
-	got, err := buildVariantURL("https://cdn.example.com/a.jpg", 8<<20, types.MediaVariantRequest{CompressType: 1})
+	got, err := buildVariantURL("https://cdn.example.com/a.jpg", 8<<20, 2400, 1600, types.MediaVariantRequest{CompressType: 1})
 	if err != nil {
 		t.Fatalf("buildVariantURL returned error: %v", err)
 	}
-	if !strings.Contains(got, "imageMogr2/thumbnail/1920x1920>") {
+	if !strings.Contains(got, "imageMogr2/auto-orient/strip/thumbnail/1920x1920>") {
 		t.Fatalf("variant URL = %q, want 1920 thumbnail processing", got)
+	}
+	if !strings.Contains(got, "imageMogr2/auto-orient/strip/thumbnail/") {
+		t.Fatalf("variant URL = %q, want auto-orient and strip processing", got)
+	}
+}
+
+func TestBuildVariantURLCompressesOversizedDimensions(t *testing.T) {
+	got, err := buildVariantURL("https://cdn.example.com/a.webp", 1<<20, 5000, 1800, types.MediaVariantRequest{CompressType: 1})
+	if err != nil {
+		t.Fatalf("buildVariantURL returned error: %v", err)
+	}
+	if !strings.Contains(got, "imageMogr2/auto-orient/strip/thumbnail/2560x2560>") {
+		t.Fatalf("variant URL = %q, want oversized dimensions to use 2560 thumbnail processing", got)
 	}
 }
 
 func TestBuildVariantURLKeepsEmptyBaseURL(t *testing.T) {
-	got, err := buildVariantURL("", 8<<20, types.MediaVariantRequest{CompressType: 2})
+	got, err := buildVariantURL("", 8<<20, 2400, 1600, types.MediaVariantRequest{CompressType: 2})
 	if err != nil {
 		t.Fatalf("buildVariantURL returned error: %v", err)
 	}
 	if got != "" {
 		t.Fatalf("variant URL = %q, want empty URL", got)
+	}
+}
+
+func TestBuildVariantURLRejectsOversizedCrop(t *testing.T) {
+	_, err := buildVariantURL("https://cdn.example.com/a.jpg", 1<<20, 1200, 800, types.MediaVariantRequest{
+		CompressType: 3,
+		CutWidth:     4097,
+		CutHeight:    800,
+	})
+	if err == nil {
+		t.Fatal("buildVariantURL should reject oversized crop dimensions")
 	}
 }
 
@@ -156,5 +182,30 @@ func TestStorageUsageCandidatesRequireAvatarBucket(t *testing.T) {
 func TestInitialUploadAuditStatusIsApproved(t *testing.T) {
 	if got := initialUploadAuditStatus(); got != "approved" {
 		t.Fatalf("initialUploadAuditStatus() = %q, want approved", got)
+	}
+}
+
+func TestMarkMediaAssetUploadFailedPersistsFailedStatusAndReturnsOriginalError(t *testing.T) {
+	asset := &model.MediaAsset{Id: 42, Status: "uploading"}
+	originalErr := errors.New("cos upload failed")
+
+	var updated *model.MediaAsset
+	got := markMediaAssetUploadFailed(context.Background(), asset, originalErr, func(ctx context.Context, data *model.MediaAsset) error {
+		copied := *data
+		updated = &copied
+		return nil
+	})
+
+	if !errors.Is(got, originalErr) {
+		t.Fatalf("markMediaAssetUploadFailed() error = %v, want original error", got)
+	}
+	if asset.Status != "failed" {
+		t.Fatalf("asset status = %q, want failed", asset.Status)
+	}
+	if updated == nil {
+		t.Fatal("update was not called")
+	}
+	if updated.Status != "failed" {
+		t.Fatalf("updated status = %q, want failed", updated.Status)
 	}
 }

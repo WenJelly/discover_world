@@ -27,6 +27,8 @@ const (
 	compressedImageThreshold  = 2 << 20
 	mediumCompressedThreshold = 5 << 20
 	largeCompressedThreshold  = 10 << 20
+	compressedImageMaxEdge    = 2560
+	maxVariantCropDimension   = 4096
 
 	targetTypeMediaAsset = "media_asset"
 )

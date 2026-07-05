@@ -40,12 +40,12 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 	if err != nil {
 		return nil, err
 	}
-	cursorID, err := decodeProfileCursor(req.Cursor)
+	cursor, err := decodeProfilePinCursor(req.Cursor)
 	if err != nil {
 		return nil, err
 	}
 
-	posts, err := l.svcCtx.PostModel.FindByUserBeforeID(l.ctx, target.Id, includePrivate, int64(cursorID), pageSize+1)
+	posts, err := l.svcCtx.PostModel.FindByUserBeforePinCursor(l.ctx, target.Id, includePrivate, cursor, pageSize+1)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态失败")
 	}
@@ -79,6 +79,11 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 		return nil, commonresponse.InternalServerError("查询动态统计失败")
 	}
 
+	viewerState, err := loadPostViewerState(l.ctx, l.svcCtx, loginUser, postIDs)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query post viewer state failed")
+	}
+
 	list := make([]types.ProfilePostResponse, 0, len(posts))
 	for _, post := range posts {
 		if post == nil {
@@ -90,23 +95,28 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 				images = append(images, image)
 			}
 		}
-		list = append(list, types.ProfilePostResponse{
+		isPinned, pinnedAt := buildPostPinState(post)
+		item := types.ProfilePostResponse{
 			Id:         formatID(post.Id),
 			UserId:     formatID(post.UserId),
 			Content:    nullStringValue(post.Content),
 			Visibility: post.Visibility,
 			Status:     post.Status,
 			Location:   nullStringValue(post.Location),
+			IsPinned:   isPinned,
+			PinnedAt:   pinnedAt,
 			Images:     images,
 			Stats:      buildStats(statsByPost[post.Id]),
 			CreatedAt:  formatTime(post.CreatedAt),
 			UpdatedAt:  formatTime(post.UpdatedAt),
-		})
+		}
+		applyPostViewerState(&item, post.Id, viewerState)
+		list = append(list, item)
 	}
 
 	nextCursor := ""
 	if hasMore && len(posts) > 0 {
-		nextCursor, err = encodeProfileCursor(posts[len(posts)-1].Id)
+		nextCursor, err = encodeProfileCursor(posts[len(posts)-1])
 		if err != nil {
 			return nil, err
 		}

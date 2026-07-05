@@ -12,6 +12,7 @@ import (
 const DefaultConfigPath = "etc/application.yaml"
 
 const defaultStorageSecretPath = "etc/storage/config/default.yaml"
+const legacyDefaultStorageSecretPath = "etc/storage/default.yaml"
 
 func Load(path string) (Config, error) {
 	var c Config
@@ -38,7 +39,7 @@ func Load(path string) (Config, error) {
 		return c, err
 	}
 
-	if err := loadStorageSecrets(&c, storageSecretPathForConfig(path)); err != nil {
+	if err := loadStorageSecrets(&c, storageSecretPathsForConfig(path)...); err != nil {
 		return c, err
 	}
 
@@ -55,24 +56,59 @@ func localConfigPath(path string) string {
 	return strings.TrimSuffix(path, ext) + ".local" + ext
 }
 
-func storageSecretPathForConfig(configPath string) string {
+func storageSecretPathsForConfig(configPath string) []string {
 	configDir := filepath.Dir(configPath)
 	if filepath.Base(configDir) == "etc" {
-		return filepath.Join(filepath.Dir(configDir), "etc", "storage", "config", "default.yaml")
+		projectRoot := filepath.Dir(configDir)
+		return []string{
+			filepath.Join(projectRoot, "etc", "storage", "config", "default.yaml"),
+			filepath.Join(projectRoot, "etc", "storage", "default.yaml"),
+		}
 	}
-	return defaultStorageSecretPath
+	return []string{defaultStorageSecretPath, legacyDefaultStorageSecretPath}
 }
 
-func loadStorageSecrets(c *Config, path string) error {
+func loadStorageSecrets(c *Config, paths ...string) error {
+	for _, path := range paths {
+		if err := loadStorageSecret(c, path); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return err
+		}
+		return nil
+	}
+	return nil
+}
+
+func loadStorageSecret(c *Config, path string) error {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return err
 		}
 		return err
 	}
 
+	secret, err := LoadStorageSecretFile(path)
+	if err != nil {
+		return err
+	}
+	c.ApplyStorageSecret("default", secret)
+	c.ApplyStorageSecret(defaultStorageSecretPath, secret)
+	c.ApplyStorageSecret("/"+defaultStorageSecretPath, secret)
+	c.ApplyStorageSecret(legacyDefaultStorageSecretPath, secret)
+	c.ApplyStorageSecret("/"+legacyDefaultStorageSecretPath, secret)
+	c.ApplyStorageSecret(path, secret)
+	return nil
+}
+
+func LoadStorageSecretFile(path string) (StorageSecretConfig, error) {
 	var storage struct {
-		Default struct {
+		SecretId       string `yaml:"SecretId"`
+		SecretKey      string `yaml:"SecretKey"`
+		LowerSecretId  string `yaml:"secretId"`
+		LowerSecretKey string `yaml:"secretKey"`
+		Default        struct {
 			SecretId       string `yaml:"SecretId"`
 			SecretKey      string `yaml:"SecretKey"`
 			LowerSecretId  string `yaml:"secretId"`
@@ -81,21 +117,17 @@ func loadStorageSecrets(c *Config, path string) error {
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return StorageSecretConfig{}, err
 	}
 	if err := yaml.Unmarshal(data, &storage); err != nil {
-		return err
+		return StorageSecretConfig{}, err
 	}
 
 	secret := StorageSecretConfig{
-		SecretId:  firstNonEmpty(storage.Default.SecretId, storage.Default.LowerSecretId),
-		SecretKey: firstNonEmpty(storage.Default.SecretKey, storage.Default.LowerSecretKey),
+		SecretId:  firstNonEmpty(storage.Default.SecretId, storage.Default.LowerSecretId, storage.SecretId, storage.LowerSecretId),
+		SecretKey: firstNonEmpty(storage.Default.SecretKey, storage.Default.LowerSecretKey, storage.SecretKey, storage.LowerSecretKey),
 	}
-	c.ApplyStorageSecret("default", secret)
-	c.ApplyStorageSecret(defaultStorageSecretPath, secret)
-	c.ApplyStorageSecret("/"+defaultStorageSecretPath, secret)
-	c.ApplyStorageSecret(path, secret)
-	return nil
+	return secret, nil
 }
 
 func firstNonEmpty(values ...string) string {

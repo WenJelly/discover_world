@@ -33,10 +33,18 @@ const (
 	linkRoleAttachment    = "attachment"
 	linkRoleAlbumItem     = "album_item"
 	linkRoleFeaturedMedia = "featured"
+	defaultPostReaction   = "like"
 )
 
 type profileCursorPayload struct {
-	ID uint64 `json:"id"`
+	ID       uint64 `json:"id"`
+	IsPinned bool   `json:"isPinned,omitempty"`
+	PinnedAt string `json:"pinnedAt,omitempty"`
+}
+
+type postViewerState struct {
+	liked     map[uint64]bool
+	favorited map[uint64]bool
 }
 
 func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserID string) (*model.UserAccount, *model.UserAccount, bool, error) {
@@ -91,8 +99,16 @@ func normalizeProfilePage(pageNum, pageSize int64) (int64, int64, error) {
 	return pageNum, pageSize, nil
 }
 
-func encodeProfileCursor(id uint64) (string, error) {
-	data, err := json.Marshal(profileCursorPayload{ID: id})
+func encodeProfileCursor(post *model.Post) (string, error) {
+	if post == nil {
+		return "", nil
+	}
+	_, pinnedAt := buildPostPinState(post)
+	data, err := json.Marshal(profileCursorPayload{
+		ID:       post.Id,
+		IsPinned: post.IsPinned == 1,
+		PinnedAt: pinnedAt,
+	})
 	if err != nil {
 		return "", err
 	}
@@ -115,6 +131,36 @@ func decodeProfileCursor(raw string) (uint64, error) {
 		return 0, commonresponse.BadRequest("cursor 无效")
 	}
 	return payload.ID, nil
+}
+
+func decodeProfilePinCursor(raw string) (model.PostPinCursor, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return model.PostPinCursor{}, nil
+	}
+
+	data, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return model.PostPinCursor{}, commonresponse.BadRequest("cursor invalid")
+	}
+
+	var payload profileCursorPayload
+	if err := json.Unmarshal(data, &payload); err != nil || payload.ID == 0 {
+		return model.PostPinCursor{}, commonresponse.BadRequest("cursor invalid")
+	}
+
+	cursor := model.PostPinCursor{
+		ID:       payload.ID,
+		IsPinned: payload.IsPinned,
+	}
+	if strings.TrimSpace(payload.PinnedAt) != "" {
+		pinnedAt, err := time.ParseInLocation("2006-01-02 15:04:05", payload.PinnedAt, time.Local)
+		if err != nil {
+			return model.PostPinCursor{}, commonresponse.BadRequest("cursor invalid")
+		}
+		cursor.PinnedAt = sql.NullTime{Time: pinnedAt, Valid: true}
+	}
+	return cursor, nil
 }
 
 func parseRequiredID(raw, field string) (uint64, error) {
@@ -162,6 +208,43 @@ func buildStats(stat *model.EntityStat) types.MediaAssetStats {
 		ShareCount:    uint64ToInt64(stat.ShareCount),
 		DownloadCount: uint64ToInt64(stat.DownloadCount),
 	}
+}
+
+func buildPostPinState(post *model.Post) (bool, string) {
+	if post == nil || post.IsPinned != 1 {
+		return false, ""
+	}
+	return true, formatTime(post.PinnedAt.Time)
+}
+
+func loadPostViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *model.UserAccount, postIDs []uint64) (postViewerState, error) {
+	state := postViewerState{
+		liked:     map[uint64]bool{},
+		favorited: map[uint64]bool{},
+	}
+	if viewer == nil || viewer.Id == 0 || len(postIDs) == 0 {
+		return state, nil
+	}
+
+	liked, err := svcCtx.ReactionModel.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs, defaultPostReaction)
+	if err != nil {
+		return state, err
+	}
+	favorited, err := svcCtx.FavoriteModel.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs)
+	if err != nil {
+		return state, err
+	}
+	state.liked = liked
+	state.favorited = favorited
+	return state, nil
+}
+
+func applyPostViewerState(resp *types.ProfilePostResponse, postID uint64, state postViewerState) {
+	if resp == nil {
+		return
+	}
+	resp.IsLiked = state.liked[postID]
+	resp.IsFavorited = state.favorited[postID]
 }
 
 func uint64ToInt64(value uint64) int64 {

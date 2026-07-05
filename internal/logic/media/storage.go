@@ -29,6 +29,8 @@ import (
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
+
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 type storageTarget struct {
@@ -182,7 +184,7 @@ func mediaTypePath(mediaType string) string {
 	}
 }
 
-func buildVariantURL(baseURL string, size int64, option types.MediaVariantRequest) (string, error) {
+func buildVariantURL(baseURL string, size, width, height int64, option types.MediaVariantRequest) (string, error) {
 	switch option.CompressType {
 	case 0:
 		return baseURL, nil
@@ -190,27 +192,37 @@ func buildVariantURL(baseURL string, size int64, option types.MediaVariantReques
 		if strings.TrimSpace(baseURL) == "" {
 			return "", nil
 		}
-		if size > compressedImageThreshold {
+		if shouldCompressImage(size, width, height) {
 			maxEdge, quality := compressedThumbnailProfile(size)
-			return fmt.Sprintf("%s?imageMogr2/thumbnail/%dx%d>/format/webp/quality/%d!/minsize/1/ignore-error/1", baseURL, maxEdge, maxEdge, quality), nil
+			return fmt.Sprintf("%s?imageMogr2/auto-orient/strip/thumbnail/%dx%d>/format/webp/quality/%d!/minsize/1/ignore-error/1", baseURL, maxEdge, maxEdge, quality), nil
 		}
 		return baseURL, nil
 	case 2:
 		if strings.TrimSpace(baseURL) == "" {
 			return "", nil
 		}
-		return fmt.Sprintf("%s?imageMogr2/thumbnail/1200x1200>/format/webp/quality/70!/minsize/1/ignore-error/1", baseURL), nil
+		return fmt.Sprintf("%s?imageMogr2/auto-orient/strip/thumbnail/1200x1200>/format/webp/quality/70!/minsize/1/ignore-error/1", baseURL), nil
 	case 3:
 		if option.CutWidth <= 0 || option.CutHeight <= 0 {
 			return "", commonresponse.BadRequest("compressType=3 时 cutWidth 和 cutHeight 必须为正整数")
 		}
+		if option.CutWidth > maxVariantCropDimension || option.CutHeight > maxVariantCropDimension {
+			return "", commonresponse.BadRequest("compressType=3 裁剪尺寸不能超过 4096")
+		}
 		if strings.TrimSpace(baseURL) == "" {
 			return "", nil
 		}
-		return fmt.Sprintf("%s?imageMogr2/thumbnail/%dx%d^>/gravity/center/crop/%dx%d/format/webp/ignore-error/1", baseURL, option.CutWidth, option.CutHeight, option.CutWidth, option.CutHeight), nil
+		return fmt.Sprintf("%s?imageMogr2/auto-orient/strip/thumbnail/%dx%d^>/gravity/center/crop/%dx%d/format/webp/ignore-error/1", baseURL, option.CutWidth, option.CutHeight, option.CutWidth, option.CutHeight), nil
 	default:
 		return "", commonresponse.BadRequest("compressType 只能是 0、1、2、3")
 	}
+}
+
+func shouldCompressImage(size, width, height int64) bool {
+	if size > compressedImageThreshold {
+		return true
+	}
+	return width > compressedImageMaxEdge || height > compressedImageMaxEdge
 }
 
 func compressedThumbnailProfile(size int64) (maxEdge int, quality int) {
@@ -566,12 +578,15 @@ func uploadFileToObjectStorage(ctx context.Context, target *storageTarget, local
 
 	resp, err := (&http.Client{Timeout: 60 * time.Second}).Do(req)
 	if err != nil {
+		logx.WithContext(ctx).Errorf("COS upload request failed: objectKey=%s url=%s size=%d err=%v", objectKey, targetURL, info.Size(), err)
 		return commonresponse.InternalServerError("上传 COS 失败")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		bodyText := strings.TrimSpace(string(body))
+		logx.WithContext(ctx).Errorf("COS upload rejected: objectKey=%s url=%s status=%d requestId=%s response=%q", objectKey, targetURL, resp.StatusCode, resp.Header.Get("x-cos-request-id"), bodyText)
 		return commonresponse.InternalServerError(fmt.Sprintf("COS 上传失败: %s", strings.TrimSpace(string(body))))
 	}
 	return nil
