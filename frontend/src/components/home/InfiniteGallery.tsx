@@ -35,7 +35,6 @@ export default function InfiniteGallery() {
   const offsetRef = useRef(0);
   const lastFrameRef = useRef<number | null>(null);
   const frameRef = useRef<number | null>(null);
-  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,25 +63,6 @@ export default function InfiniteGallery() {
     }
   }, [displayPictures]);
 
-  // Intersection Observer to pause when not visible
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsVisible(entry.isIntersecting);
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(track);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
   useEffect(() => {
     const track = trackRef.current;
     if (!track || displayPictures.length <= 1) return;
@@ -91,16 +71,6 @@ export default function InfiniteGallery() {
       "(prefers-reduced-motion: reduce)"
     ).matches;
     if (prefersReducedMotion) return;
-
-    // Pause animation when not visible
-    if (!isVisible) {
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      }
-      lastFrameRef.current = null;
-      return;
-    }
 
     const getFirstItemDistance = () => {
       const firstItem = track.firstElementChild;
@@ -166,7 +136,7 @@ export default function InfiniteGallery() {
         window.cancelAnimationFrame(frameRef.current);
       }
     };
-  }, [displayPictures.length, isVisible]);
+  }, [displayPictures.length]);
 
   return (
     <section

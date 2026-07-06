@@ -18,6 +18,7 @@ import {
   DISCOVER_SORT_OPTIONS,
   DISCOVER_TABS,
   filterAndSortDiscoverPictures,
+  getDiscoverCategoryQuery,
   parseDiscoverSearch,
   type DiscoverCategoryKey,
   type DiscoverLayoutKey,
@@ -145,9 +146,15 @@ export default function DiscoverPage() {
     return () => observer.disconnect();
   }, []);
 
+  const discoverCategoryQuery = useMemo(
+    () => getDiscoverCategoryQuery(discoverState.category),
+    [discoverState.category]
+  );
+
   const { pictures, loading, error, hasMore, loadMore, retry } =
     useInfinitePictures({
       pageSize: 30,
+      category: discoverCategoryQuery,
     });
 
   useEffect(() => {

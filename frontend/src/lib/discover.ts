@@ -169,6 +169,14 @@ export function buildDiscoverSearch(state: DiscoverSearchState) {
   return query ? `?${query}` : "";
 }
 
+export function getDiscoverCategoryQuery(category: DiscoverCategoryKey) {
+  if (category === "all") {
+    return undefined;
+  }
+
+  return DISCOVER_CATEGORY_OPTIONS.find((item) => item.key === category)?.title;
+}
+
 export function matchesDiscoverCategory(
   picture: PictureResponse,
   category: DiscoverCategoryKey

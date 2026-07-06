@@ -129,3 +129,13 @@ test("discover toolbar filters do not render caret arrows", async () => {
   assert.doesNotMatch(discoverPage, /className="arrow"/);
   assert.doesNotMatch(css, /\.discover-page \.arrow/);
 });
+
+test("discover category filters are sent to cursor requests before local filtering", async () => {
+  const discoverPage = await readFile(pageUrl, "utf8");
+  const discoverLib = await readFile(libUrl, "utf8");
+
+  assert.match(discoverLib, /export function getDiscoverCategoryQuery/);
+  assert.match(discoverPage, /getDiscoverCategoryQuery/);
+  assert.match(discoverPage, /const discoverCategoryQuery = useMemo/);
+  assert.match(discoverPage, /category:\s*discoverCategoryQuery/);
+});
