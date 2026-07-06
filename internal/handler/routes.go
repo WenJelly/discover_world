@@ -8,10 +8,12 @@ import (
 
 	account "discover_world/internal/handler/account"
 	admin "discover_world/internal/handler/admin"
+	homepage "discover_world/internal/handler/homepage"
 	media "discover_world/internal/handler/media"
 	overview "discover_world/internal/handler/overview"
 	post "discover_world/internal/handler/post"
 	profile "discover_world/internal/handler/profile"
+	search "discover_world/internal/handler/search"
 	"discover_world/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -77,6 +79,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			[]rest.Route{
 				{
 					Method:  http.MethodPost,
+					Path:    "/homepage/featured/update",
+					Handler: admin.UpdateHomepageFeaturedHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/homepage/hero/update",
+					Handler: admin.UpdateHomepageHeroHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
 					Path:    "/media/list",
 					Handler: admin.GetAdminMediaAssetListHandler(serverCtx),
 				},
@@ -84,6 +96,28 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		),
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api/admin"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/homepage/config",
+				Handler: homepage.GetHomepageConfigHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/search",
+				Handler: search.GlobalSearchHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api"),
 	)
 
 	server.AddRoutes(
@@ -207,6 +241,13 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/post/update",
 				Handler: post.UpdatePostHandler(serverCtx),
 			},
+		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
 			{
 				Method:  http.MethodPost,
 				Path:    "/profile/album/list",

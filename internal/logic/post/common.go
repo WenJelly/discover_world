@@ -442,7 +442,7 @@ func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, asse
 	return resp, nil
 }
 
-func buildAccountSummary(svcCtx *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile) types.AccountSummary {
+func buildAccountSummary(_ *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}
@@ -455,9 +455,9 @@ func buildAccountSummary(svcCtx *svc.ServiceContext, account *model.UserAccount,
 	if nickname == "" {
 		nickname = account.Username
 	}
-	role := "user"
-	if svcCtx.IsAdminAccount(account) {
-		role = "admin"
+	role := strings.TrimSpace(account.Role)
+	if role == "" {
+		role = "user"
 	}
 	return types.AccountSummary{
 		Id:       formatID(account.Id),

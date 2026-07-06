@@ -119,6 +119,7 @@ func TestBuildAccountSummaryKeepsEmailPrivate(t *testing.T) {
 			Valid:  true,
 		},
 		Status: "active",
+		Role:   "editor",
 	}, &model.UserProfile{
 		Nickname: sql.NullString{
 			String: "Alice Chen",
@@ -134,6 +135,9 @@ func TestBuildAccountSummaryKeepsEmailPrivate(t *testing.T) {
 	}
 	if summary.Email != "" {
 		t.Fatalf("summary.Email = %q, want empty private email", summary.Email)
+	}
+	if summary.Role != "editor" {
+		t.Fatalf("summary.Role = %q, want role column value", summary.Role)
 	}
 }
 
@@ -241,9 +245,25 @@ func TestStorageUsageCandidatesRequireAvatarBucket(t *testing.T) {
 	}
 }
 
-func TestInitialUploadAuditStatusIsApproved(t *testing.T) {
-	if got := initialUploadAuditStatus(); got != "approved" {
-		t.Fatalf("initialUploadAuditStatus() = %q, want approved", got)
+func TestInitialUploadAuditStatusDependsOnRoleAndUsage(t *testing.T) {
+	tests := []struct {
+		name       string
+		assetUsage string
+		isAdmin    bool
+		want       string
+	}{
+		{name: "ordinary work upload requires review", assetUsage: assetUsageWork, want: "pending"},
+		{name: "admin work upload is approved", assetUsage: assetUsageWork, isAdmin: true, want: "approved"},
+		{name: "public post attachment is approved for ordinary user", assetUsage: assetUsagePost, want: "approved"},
+		{name: "public post attachment is approved for admin", assetUsage: assetUsagePost, isAdmin: true, want: "approved"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := initialUploadAuditStatus(tt.assetUsage, tt.isAdmin); got != tt.want {
+				t.Fatalf("initialUploadAuditStatus(%q, %v) = %q, want %q", tt.assetUsage, tt.isAdmin, got, tt.want)
+			}
+		})
 	}
 }
 

@@ -37,12 +37,12 @@ func (l *LoginAccountLogic) LoginAccount(req *types.LoginRequest) (resp *types.L
 		return nil, commonresponse.BadRequest("请求不能为空")
 	}
 
-	email, err := normalizeEmail(req.Email)
+	email, err := normalizeLoginEmail(req.Email)
 	if err != nil {
 		return nil, err
 	}
 
-	account, err := l.svcCtx.UserAccountModel.FindOneByEmail(l.ctx, sql.NullString{String: email, Valid: true})
+	account, err := l.svcCtx.UserAccountModel.FindOneByEmailCaseSensitive(l.ctx, sql.NullString{String: email, Valid: true})
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
 			return nil, commonresponse.Unauthorized("邮箱或密码错误")

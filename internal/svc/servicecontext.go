@@ -5,7 +5,6 @@ package svc
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"strings"
 
@@ -39,6 +38,8 @@ type ServiceContext struct {
 	FavoriteModel        model.FavoriteModel
 	CommentRecordModel   model.CommentRecordModel
 	SiteStatsModel       model.SiteStatsModel
+	SiteConfigModel      model.SiteConfigModel
+	SearchModel          model.SearchModel
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -65,6 +66,8 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		FavoriteModel:        model.NewFavoriteModel(conn),
 		CommentRecordModel:   model.NewCommentRecordModel(conn),
 		SiteStatsModel:       model.NewSiteStatsModel(conn),
+		SiteConfigModel:      model.NewSiteConfigModel(conn),
+		SearchModel:          model.NewSearchModel(conn),
 	}
 	svcCtx.AdminCheck = middleware.NewAdminCheckMiddleware(svcCtx).Handle
 
@@ -103,6 +106,8 @@ func (s *ServiceContext) withSession(session sqlx.Session) *ServiceContext {
 		FavoriteModel:        model.NewFavoriteModel(conn),
 		CommentRecordModel:   model.NewCommentRecordModel(conn),
 		SiteStatsModel:       model.NewSiteStatsModel(conn),
+		SiteConfigModel:      model.NewSiteConfigModel(conn),
+		SearchModel:          model.NewSearchModel(conn),
 	}
 }
 
@@ -119,21 +124,7 @@ func (s *ServiceContext) IsAdminAccount(account *model.UserAccount) bool {
 		return false
 	}
 
-	username := strings.TrimSpace(account.Username)
-	email := nullStringValue(account.Email)
-
-	for _, configured := range s.Config.Admin.Usernames {
-		if strings.EqualFold(strings.TrimSpace(configured), username) {
-			return true
-		}
-	}
-	for _, configured := range s.Config.Admin.Emails {
-		if strings.EqualFold(strings.TrimSpace(configured), email) {
-			return true
-		}
-	}
-
-	return strings.EqualFold(username, "admin")
+	return strings.EqualFold(strings.TrimSpace(account.Role), "admin")
 }
 
 func (s *ServiceContext) StorageSecret(ref string) config.StorageSecretConfig {
@@ -151,11 +142,4 @@ func (s *ServiceContext) StorageSecret(ref string) config.StorageSecretConfig {
 		return config.StorageSecretConfig{}
 	}
 	return secret
-}
-
-func nullStringValue(value sql.NullString) string {
-	if !value.Valid {
-		return ""
-	}
-	return strings.TrimSpace(value.String)
 }

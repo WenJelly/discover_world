@@ -18,6 +18,7 @@ import {
     Menu,
     Search,
     Settings,
+    ShieldCheck,
     Upload,
     UserRound,
     X,
@@ -93,6 +94,11 @@ export default function FadingSiblingsNavbar() {
     const { toast } = useToast();
     const displayName = user?.userName?.trim() || user?.userEmail || "用户";
     const avatarFallback = getAvatarFallback(user?.userName, user?.userEmail);
+    // Admin console entry is only rendered for the admin role; the /admin
+    // page itself re-checks the role before rendering anything.
+    const isAdmin =
+        isAuthenticated &&
+        (user?.role || user?.userRole || "").trim().toLowerCase() === "admin";
 
     const handleInternalNavigation = (
         event: MouseEvent<HTMLAnchorElement>,
@@ -168,8 +174,11 @@ export default function FadingSiblingsNavbar() {
     const handleSearchSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (deferredSearchQuery.trim()) {
-            const searchUrl = `/discover?q=${encodeURIComponent(deferredSearchQuery.trim())}`;
-            window.location.href = searchUrl;
+            const searchUrl = `/search?q=${encodeURIComponent(deferredSearchQuery.trim())}`;
+            window.history.pushState({}, "", searchUrl);
+            window.dispatchEvent(new Event("popstate"));
+            setIsOpen(false);
+            searchInputRef.current?.blur();
         }
     }, [deferredSearchQuery]);
 
@@ -383,7 +392,7 @@ export default function FadingSiblingsNavbar() {
                                 onSubmit={handleSearchSubmit}
                             >
                                 <label htmlFor="navbar-search-desktop" className="sr-only">
-                                    搜索发现图片
+                                    搜索全站内容
                                 </label>
                                 <div className={`relative transition-all duration-300 ${
                                     searchFocused ? 'w-80 lg:w-96' : 'w-64 lg:w-72 xl:w-80'
@@ -405,8 +414,8 @@ export default function FadingSiblingsNavbar() {
                                         onChange={handleSearchChange}
                                         onFocus={() => setSearchFocused(true)}
                                         onBlur={() => setSearchFocused(false)}
-                                        aria-label="搜索发现图片"
-                                        placeholder="搜索图片"
+                                        aria-label="搜索全站内容"
+                                        placeholder="搜索图片、动态、用户"
                                         autoComplete="off"
                                         className={`h-[42px] rounded-lg border border-slate-200/80 bg-white pl-[52px] pr-4 text-[15px] font-normal text-slate-900 placeholder:text-slate-400 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus:border-indigo-400 focus:shadow-md focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-indigo-500/60 dark:focus:ring-indigo-500/20 ${
                                             searchQuery ? 'pr-10' : ''
@@ -505,6 +514,21 @@ export default function FadingSiblingsNavbar() {
                                                         )}
                                                         上传图片
                                                     </button>
+                                                    {isAdmin ? (
+                                                        <a
+                                                            role="menuitem"
+                                                            href="/admin"
+                                                            aria-label="进入后台管理"
+                                                            className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[15px] font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20 dark:text-slate-200 dark:hover:bg-slate-800/50 dark:hover:text-white"
+                                                            onClick={(event) => {
+                                                                setAccountMenuOpen(false);
+                                                                handleInternalNavigation(event, "/admin");
+                                                            }}
+                                                        >
+                                                            <ShieldCheck className="size-[17px] text-slate-400 dark:text-slate-500" strokeWidth={2} />
+                                                            后台管理
+                                                        </a>
+                                                    ) : null}
                                                     <div className="my-1.5 border-t border-slate-100 dark:border-slate-800/50" />
                                                     <button
                                                         role="menuitem"
@@ -581,7 +605,7 @@ export default function FadingSiblingsNavbar() {
                                         onSubmit={handleSearchSubmit}
                                     >
                                         <label htmlFor="navbar-search-mobile" className="sr-only">
-                                            搜索发现图片
+                                            搜索全站内容
                                         </label>
                                         <div className="pointer-events-none absolute left-3.5 top-1/2 flex -translate-y-1/2 items-center gap-2">
                                             <Search
@@ -597,8 +621,8 @@ export default function FadingSiblingsNavbar() {
                                             type="search"
                                             value={searchQuery}
                                             onChange={handleSearchChange}
-                                            aria-label="搜索发现图片"
-                                            placeholder="搜索图片"
+                                            aria-label="搜索全站内容"
+                                            placeholder="搜索图片、动态、用户"
                                             autoComplete="off"
                                             className={`h-11 rounded-lg border border-slate-200 bg-white pl-[52px] text-[15px] font-normal placeholder:text-slate-400 transition-all dark:border-slate-700 dark:bg-slate-900 dark:placeholder:text-slate-500 ${
                                                 searchQuery ? 'pr-10' : 'pr-3'
@@ -672,6 +696,19 @@ export default function FadingSiblingsNavbar() {
                                                     )}
                                                     上传图片
                                                 </Button>
+                                                {isAdmin ? (
+                                                    <a
+                                                        href="/admin"
+                                                        aria-label="进入后台管理"
+                                                        className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background text-sm font-medium text-slate-700 transition-colors hover:bg-muted dark:text-slate-200"
+                                                        onClick={(event) =>
+                                                            handleInternalNavigation(event, "/admin", true)
+                                                        }
+                                                    >
+                                                        <ShieldCheck className="size-4" strokeWidth={2} />
+                                                        后台管理
+                                                    </a>
+                                                ) : null}
                                                 <Button
                                                     type="button"
                                                     variant="outline"

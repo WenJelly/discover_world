@@ -1,3 +1,5 @@
+//go:build legacy_types
+
 // Code scaffolded by goctl. Safe to edit.
 // goctl 1.10.1
 

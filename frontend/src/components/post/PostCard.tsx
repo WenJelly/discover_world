@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import {
   Bookmark,
+  Globe2,
   Heart,
   ImageOff,
   Loader2,
+  Lock,
   MapPin,
   MessageCircle,
   Pin,
@@ -15,6 +17,7 @@ import {
   deletePost,
   togglePostFavorite,
   togglePostReaction,
+  updatePost,
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -30,7 +33,9 @@ import type { PostAuthor } from "./PostComposerDialog";
 export type PostCardProps = {
   post: ProfilePostResponse;
   author?: PostAuthor | null;
+  canManage?: boolean;
   onDeleted?: (id: string) => void;
+  onUpdated?: (post: ProfilePostResponse) => void;
 };
 
 function imageGridClass(count: number) {
@@ -79,13 +84,27 @@ function PostImageGrid({ images }: { images: MediaAssetResponse[] }) {
   );
 }
 
-export function PostCard({ post, author, onDeleted }: PostCardProps) {
+function normalizePostVisibilityValue(value: string) {
+  return value === "private" ? "private" : "public";
+}
+
+export function PostCard({
+  post,
+  author,
+  canManage = false,
+  onDeleted,
+  onUpdated,
+}: PostCardProps) {
   const { toast } = useToast();
   const [stats, setStats] = useState(post.stats);
   const [liked, setLiked] = useState(Boolean(post.isLiked));
   const [favorited, setFavorited] = useState(Boolean(post.isFavorited));
+  const [visibility, setVisibility] = useState(
+    normalizePostVisibilityValue(post.visibility)
+  );
   const [togglingLike, setTogglingLike] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -93,8 +112,9 @@ export function PostCard({ post, author, onDeleted }: PostCardProps) {
     setStats(post.stats);
     setLiked(Boolean(post.isLiked));
     setFavorited(Boolean(post.isFavorited));
+    setVisibility(normalizePostVisibilityValue(post.visibility));
     setConfirmDelete(false);
-  }, [post.id, post.isLiked, post.isFavorited, post.stats]);
+  }, [post.id, post.isLiked, post.isFavorited, post.stats, post.visibility]);
 
   const handleLike = async () => {
     if (togglingLike) return;
@@ -153,6 +173,42 @@ export function PostCard({ post, author, onDeleted }: PostCardProps) {
       });
     } finally {
       setTogglingFav(false);
+    }
+  };
+
+  const handleVisibilityChange = async (nextVisibility: string) => {
+    nextVisibility = normalizePostVisibilityValue(nextVisibility);
+    if (nextVisibility === visibility || updatingVisibility) return;
+
+    const previousVisibility = visibility;
+    setVisibility(nextVisibility);
+    setUpdatingVisibility(true);
+    try {
+      const updated = await updatePost({
+        id: post.id,
+        content: post.content,
+        location: post.location,
+        visibility: nextVisibility,
+      });
+      setVisibility(normalizePostVisibilityValue(updated.visibility));
+      onUpdated?.(updated);
+      toast({
+        title: "可见范围已更新",
+        description:
+          nextVisibility === "private"
+            ? "这条动态现在仅自己可见。"
+            : "这条动态现在公开展示。",
+        variant: "success",
+      });
+    } catch (err) {
+      setVisibility(previousVisibility);
+      toast({
+        title: "修改失败",
+        description: err instanceof ApiError ? err.message : "请稍后重试。",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingVisibility(false);
     }
   };
 
@@ -218,7 +274,7 @@ export function PostCard({ post, author, onDeleted }: PostCardProps) {
                 置顶
               </span>
             ) : null}
-            {post.visibility === "private" ? (
+            {visibility === "private" ? (
               <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 仅自己可见
               </span>
@@ -232,42 +288,68 @@ export function PostCard({ post, author, onDeleted }: PostCardProps) {
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
-          {confirmDelete ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(false)}
-                disabled={deleting}
-                className="inline-flex items-center rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteClick}
-                disabled={deleting}
-                className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/20 disabled:opacity-50"
-              >
-                {deleting ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="size-3.5" />
-                )}
-                确认删除
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={handleDeleteClick}
-              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
-              aria-label="删除动态"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          )}
-        </div>
+        {canManage ? (
+          <div className="flex shrink-0 items-center gap-1">
+            {confirmDelete ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="inline-flex items-center rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteClick}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/20 disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="size-3.5" />
+                  )}
+                  确认删除
+                </button>
+              </>
+            ) : (
+              <>
+                <label className="relative inline-flex h-8 items-center">
+                  {visibility === "private" ? (
+                    <Lock className="pointer-events-none absolute left-2 size-3.5 text-muted-foreground" />
+                  ) : (
+                    <Globe2 className="pointer-events-none absolute left-2 size-3.5 text-muted-foreground" />
+                  )}
+                  <select
+                    value={visibility}
+                    onChange={(event) =>
+                      void handleVisibilityChange(event.target.value)
+                    }
+                    disabled={updatingVisibility}
+                    aria-label="修改动态可见范围"
+                    className="h-8 w-[7.5rem] appearance-none rounded-md border border-border bg-background pl-7 pr-2 text-xs text-muted-foreground shadow-xs outline-none transition-[border-color,box-shadow,color] hover:text-foreground focus-visible:border-blue-500 focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="public">公开</option>
+                    <option value="private">仅自己可见</option>
+                  </select>
+                  {updatingVisibility ? (
+                    <Loader2 className="pointer-events-none absolute right-2 size-3.5 animate-spin text-muted-foreground" />
+                  ) : null}
+                </label>
+                <button
+                  type="button"
+                  onClick={handleDeleteClick}
+                  className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                  aria-label="删除动态"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
       </header>
 
       {post.content ? (

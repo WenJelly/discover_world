@@ -84,16 +84,16 @@ type (
 		AuditStatus   string `json:"auditStatus"`
 		ReviewMessage string `json:"reviewMessage,optional"`
 	}
-		MediaAssetUploadByUrlRequest {
-			Id          string   `json:"id,optional"`
-			FileUrl     string   `json:"fileUrl"`
-			Title       string   `json:"title,optional"`
-			Description string   `json:"description,optional"`
-			Category    string   `json:"category,optional"`
-			Tags        []string `json:"tags,optional"`
-			Visibility  string   `json:"visibility,optional"`
-			AssetUsage  string   `json:"assetUsage,optional"`
-		}
+	MediaAssetUploadByUrlRequest {
+		Id          string   `json:"id,optional"`
+		FileUrl     string   `json:"fileUrl"`
+		Title       string   `json:"title,optional"`
+		Description string   `json:"description,optional"`
+		Category    string   `json:"category,optional"`
+		Tags        []string `json:"tags,optional"`
+		Visibility  string   `json:"visibility,optional"`
+		AssetUsage  string   `json:"assetUsage,optional"`
+	}
 	AccountSummary {
 		Id        string `json:"id"`
 		Username  string `json:"username"`
@@ -122,11 +122,11 @@ type (
 		ShareCount    int64 `json:"shareCount"`
 		DownloadCount int64 `json:"downloadCount"`
 	}
-		MediaAssetResponse {
-			Id               string                `json:"id"`
-			MediaType        string                `json:"mediaType"`
-			AssetUsage       string                `json:"assetUsage"`
-			Title            string                `json:"title"`
+	MediaAssetResponse {
+		Id               string                `json:"id"`
+		MediaType        string                `json:"mediaType"`
+		AssetUsage       string                `json:"assetUsage"`
+		Title            string                `json:"title"`
 		Description      string                `json:"description"`
 		Category         string                `json:"category"`
 		Tags             []string              `json:"tags"`
@@ -214,6 +214,7 @@ type (
 		Nickname  string `json:"nickname,optional"`
 		AvatarUrl string `json:"avatarUrl,optional"`
 		Bio       string `json:"bio,optional"`
+		Role      string `json:"role,optional"`
 		Status    string `json:"status,optional"`
 	}
 	DetailAccountResponse {
@@ -240,20 +241,20 @@ type (
 		PageSize int64  `json:"pageSize,optional"`
 	}
 	ProfilePostResponse {
-		Id         string               `json:"id"`
-		UserId     string               `json:"userId"`
-		Content    string               `json:"content"`
-		Visibility string               `json:"visibility"`
-		Status     string               `json:"status"`
-		Location   string               `json:"location"`
-		IsPinned   bool                 `json:"isPinned"`
-		PinnedAt   string               `json:"pinnedAt"`
-		Images     []MediaAssetResponse `json:"images"`
-		Stats      MediaAssetStats      `json:"stats"`
-		IsLiked    bool                 `json:"isLiked"`
-		IsFavorited bool                `json:"isFavorited"`
-		CreatedAt  string               `json:"createdAt"`
-		UpdatedAt  string               `json:"updatedAt"`
+		Id          string               `json:"id"`
+		UserId      string               `json:"userId"`
+		Content     string               `json:"content"`
+		Visibility  string               `json:"visibility"`
+		Status      string               `json:"status"`
+		Location    string               `json:"location"`
+		IsPinned    bool                 `json:"isPinned"`
+		PinnedAt    string               `json:"pinnedAt"`
+		Images      []MediaAssetResponse `json:"images"`
+		Stats       MediaAssetStats      `json:"stats"`
+		IsLiked     bool                 `json:"isLiked"`
+		IsFavorited bool                 `json:"isFavorited"`
+		CreatedAt   string               `json:"createdAt"`
+		UpdatedAt   string               `json:"updatedAt"`
 	}
 	ProfilePostCursorPageResponse {
 		PageSize   int64                 `json:"pageSize"`
@@ -279,6 +280,43 @@ type (
 	}
 	GetPostDetailRequest {
 		Id string `json:"id"`
+	}
+	GlobalSearchRequest {
+		Q            string              `json:"q,optional"`
+		Types        []string            `json:"types,optional"`
+		PageSize     int64               `json:"pageSize,optional"`
+		Variant      MediaVariantRequest `json:"variantOption,optional"`
+		SearchText   string              `json:"searchText,optional"`
+		CompressType int64               `json:"compressType,optional"`
+	}
+	GlobalSearchPostResponse {
+		Id        string          `json:"id"`
+		UserId    string          `json:"userId"`
+		Author    AccountSummary  `json:"author"`
+		Content   string          `json:"content"`
+		Location  string          `json:"location"`
+		Stats     MediaAssetStats `json:"stats"`
+		CreatedAt string          `json:"createdAt"`
+		UpdatedAt string          `json:"updatedAt"`
+	}
+	GlobalSearchAlbumResponse {
+		Id          string             `json:"id"`
+		UserId      string             `json:"userId"`
+		Author      AccountSummary     `json:"author"`
+		Name        string             `json:"name"`
+		Description string             `json:"description"`
+		Cover       MediaAssetResponse `json:"cover"`
+		CreatedAt   string             `json:"createdAt"`
+		UpdatedAt   string             `json:"updatedAt"`
+	}
+	GlobalSearchResponse {
+		Q        string                      `json:"q"`
+		Types    []string                    `json:"types"`
+		PageSize int64                       `json:"pageSize"`
+		Media    []MediaAssetResponse        `json:"media"`
+		Posts    []GlobalSearchPostResponse  `json:"posts"`
+		Albums   []GlobalSearchAlbumResponse `json:"albums"`
+		Users    []AccountSummary            `json:"users"`
 	}
 	PinPostRequest {
 		Id string `json:"id"`
@@ -358,6 +396,27 @@ type (
 		CreatorCount          int64 `json:"creatorCount"`
 		PublicPostCount       int64 `json:"publicPostCount"`
 		PublicAlbumCount      int64 `json:"publicAlbumCount"`
+	}
+	GetHomepageConfigRequest {
+		Variant MediaVariantRequest `json:"variantOption,optional"`
+	}
+	HomepageHeroConfig {
+		AssetId string             `json:"assetId"`
+		FocalX  float64            `json:"focalX"`
+		FocalY  float64            `json:"focalY"`
+		Media   MediaAssetResponse `json:"media"`
+	}
+	HomepageConfigResponse {
+		Hero     HomepageHeroConfig   `json:"hero"`
+		Featured []MediaAssetResponse `json:"featured"`
+	}
+	UpdateHomepageHeroRequest {
+		AssetId string  `json:"assetId,optional"`
+		FocalX  float64 `json:"focalX,default=50"`
+		FocalY  float64 `json:"focalY,default=50"`
+	}
+	UpdateHomepageFeaturedRequest {
+		MediaAssetIds []string `json:"mediaAssetIds,optional"`
 	}
 )
 
@@ -479,6 +538,24 @@ service DiscoverWorld {
 
 @server (
 	prefix: /api
+	group:  homepage
+)
+service DiscoverWorld {
+	@handler GetHomepageConfig
+	post /homepage/config (GetHomepageConfigRequest) returns (HomepageConfigResponse)
+}
+
+@server (
+	prefix: /api
+	group:  search
+)
+service DiscoverWorld {
+	@handler GlobalSearch
+	post /search (GlobalSearchRequest) returns (GlobalSearchResponse)
+}
+
+@server (
+	prefix: /api
 	group:  media
 	jwt:    Auth
 )
@@ -505,6 +582,12 @@ service DiscoverWorld {
 service DiscoverWorld {
 	@handler GetAdminMediaAssetList
 	post /media/list (AdminQueryMediaAssetRequest) returns (MediaAssetPageResponse)
+
+	@handler UpdateHomepageHero
+	post /homepage/hero/update (UpdateHomepageHeroRequest) returns (HomepageConfigResponse)
+
+	@handler UpdateHomepageFeatured
+	post /homepage/featured/update (UpdateHomepageFeaturedRequest) returns (HomepageConfigResponse)
 }
 
 @server (

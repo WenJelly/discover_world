@@ -1,6 +1,7 @@
 import { ImageOff, RefreshCw } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useInfinitePictures } from "@/hooks/useInfinitePictures";
+import { fetchHomepageConfig } from "@/lib/api";
 import type { PictureResponse } from "@/lib/types";
 import { PictureCard } from "./PictureCard";
 
@@ -17,7 +18,19 @@ function getPhotoRatio(picture: PictureResponse) {
 
 export default function InfiniteGallery() {
   const { pictures, loading, error, retry } = useInfinitePictures(20);
-  const displayPictures = pictures.slice(0, 20);
+  const [configuredFeatured, setConfiguredFeatured] = useState<PictureResponse[]>([]);
+  const [configLoading, setConfigLoading] = useState(true);
+  const galleryPictures = useMemo(
+    () => configuredFeatured.length > 0 ? configuredFeatured : pictures,
+    [configuredFeatured, pictures]
+  );
+  const displayPictures = useMemo(
+    () => galleryPictures.slice(0, 20),
+    [galleryPictures]
+  );
+  const showingConfiguredFeatured = configuredFeatured.length > 0;
+  const galleryLoading = !showingConfiguredFeatured && (configLoading || loading);
+  const galleryError = showingConfiguredFeatured ? null : error;
   const trackRef = useRef<HTMLDivElement | null>(null);
   const offsetRef = useRef(0);
   const lastFrameRef = useRef<number | null>(null);
@@ -25,12 +38,31 @@ export default function InfiniteGallery() {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
+    fetchHomepageConfig({ variantOption: { compressType: 2 } })
+      .then((config) => {
+        if (!cancelled) setConfiguredFeatured(config.featured);
+      })
+      .catch(() => {
+        if (!cancelled) setConfiguredFeatured([]);
+      })
+      .finally(() => {
+        if (!cancelled) setConfigLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     offsetRef.current = 0;
     lastFrameRef.current = null;
     if (trackRef.current) {
       trackRef.current.style.transform = "translate3d(0, 0, 0)";
     }
-  }, [pictures]);
+  }, [displayPictures]);
 
   // Intersection Observer to pause when not visible
   useEffect(() => {
@@ -148,11 +180,13 @@ export default function InfiniteGallery() {
           精选作品流
         </h2>
         <p className="mt-3 text-sm text-muted-foreground">
-          来自社区的最新公开作品
+          {showingConfiguredFeatured
+            ? "由站点管理员精选的公开作品"
+            : "来自社区的最新公开作品"}
         </p>
       </div>
 
-      {pictures.length === 0 && !loading && error ? (
+      {displayPictures.length === 0 && !galleryLoading && galleryError ? (
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-20 sm:px-6 lg:px-8">
           <ImageOff size={48} className="text-muted-foreground/50" aria-hidden="true" />
           <p className="text-muted-foreground">暂时无法加载作品</p>
@@ -165,7 +199,7 @@ export default function InfiniteGallery() {
             重试
           </button>
         </div>
-      ) : pictures.length === 0 && !loading ? (
+      ) : displayPictures.length === 0 && !galleryLoading ? (
         <div className="mx-auto max-w-7xl px-4 py-20 text-center text-muted-foreground sm:px-6 lg:px-8">
           暂无作品
         </div>
@@ -195,7 +229,7 @@ export default function InfiniteGallery() {
           </div>
 
           <div className="flex h-14 items-center justify-center">
-            {loading && (
+            {galleryLoading && (
               <div
                 className="h-6 w-6 animate-spin rounded-full border-2 border-muted border-t-foreground"
                 role="status"
@@ -204,7 +238,7 @@ export default function InfiniteGallery() {
             )}
           </div>
 
-          {error && pictures.length > 0 && (
+          {galleryError && displayPictures.length > 0 && (
             <div className="mt-4 flex items-center justify-center gap-3">
               <span className="text-sm text-muted-foreground">加载失败</span>
               <button

@@ -26,9 +26,11 @@ const (
 	maxNicknameLength = 100
 	maxBioLength      = 512
 	minPasswordLength = 8
+	maxRoleLength     = 50
+	defaultRole       = "user"
 )
 
-func buildDetailAccountResponse(svcCtx *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile, stats *model.MediaAssetOwnerStats, publicMediaAssetCount int64) *types.DetailAccountResponse {
+func buildDetailAccountResponse(_ *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile, stats *model.MediaAssetOwnerStats, publicMediaAssetCount int64) *types.DetailAccountResponse {
 	if account == nil {
 		return &types.DetailAccountResponse{}
 	}
@@ -47,11 +49,6 @@ func buildDetailAccountResponse(svcCtx *svc.ServiceContext, account *model.UserA
 		nickname = account.Username
 	}
 
-	role := "user"
-	if svcCtx != nil && svcCtx.IsAdminAccount(account) {
-		role = "admin"
-	}
-
 	return &types.DetailAccountResponse{
 		Id:                      formatID(account.Id),
 		Username:                account.Username,
@@ -61,7 +58,7 @@ func buildDetailAccountResponse(svcCtx *svc.ServiceContext, account *model.UserA
 		AvatarUrl:               avatarURL,
 		Bio:                     bio,
 		Status:                  account.Status,
-		Role:                    role,
+		Role:                    accountRole(account),
 		CreatedAt:               formatTime(account.CreatedAt),
 		UpdatedAt:               formatTime(account.UpdatedAt),
 		MediaAssetCount:         stats.Total,
@@ -89,6 +86,39 @@ func loadDetailAccountResponse(ctx context.Context, svcCtx *svc.ServiceContext, 
 	resp := buildDetailAccountResponse(svcCtx, account, profile, stats, publicMediaAssetCount)
 	resp.AvatarUrl = mediaLogic.LoadAvatarURL(ctx, svcCtx, profile)
 	return resp, nil
+}
+
+func canViewAccountDetail(svcCtx *svc.ServiceContext, viewer, target *model.UserAccount) bool {
+	if viewer == nil || target == nil {
+		return false
+	}
+	if viewer.Id == target.Id || isAdminAccountForDetail(svcCtx, viewer) {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(target.Status), "active") && !target.DeletedAt.Valid
+}
+
+func maskDetailAccountForViewer(svcCtx *svc.ServiceContext, viewer, target *model.UserAccount, resp *types.DetailAccountResponse) {
+	if resp == nil || viewer == nil || target == nil {
+		return
+	}
+	if viewer.Id == target.Id || isAdminAccountForDetail(svcCtx, viewer) {
+		return
+	}
+
+	resp.Email = ""
+	resp.Phone = ""
+	resp.MediaAssetCount = resp.PublicMediaAssetCount
+	resp.ApprovedMediaAssetCount = resp.PublicMediaAssetCount
+	resp.PendingMediaAssetCount = 0
+	resp.RejectedMediaAssetCount = 0
+}
+
+func isAdminAccountForDetail(svcCtx *svc.ServiceContext, account *model.UserAccount) bool {
+	if svcCtx != nil {
+		return svcCtx.IsAdminAccount(account)
+	}
+	return account != nil && strings.EqualFold(strings.TrimSpace(account.Role), "admin")
 }
 
 func ensureUserProfile(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount) (*model.UserProfile, error) {
@@ -192,12 +222,45 @@ func normalizeEmail(email string) (string, error) {
 	return email, nil
 }
 
+func normalizeLoginEmail(email string) (string, error) {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return "", commonresponse.BadRequest("email 不能为空")
+	}
+	if _, err := mail.ParseAddress(email); err != nil {
+		return "", commonresponse.BadRequest("email 格式无效")
+	}
+	return email, nil
+}
+
 func normalizePassword(password string) (string, error) {
 	password = strings.TrimSpace(password)
 	if len(password) < minPasswordLength {
 		return "", commonresponse.BadRequest("password 长度不能少于 8")
 	}
 	return password, nil
+}
+
+func accountRole(account *model.UserAccount) string {
+	if account == nil {
+		return defaultRole
+	}
+	role := strings.TrimSpace(account.Role)
+	if role == "" {
+		return defaultRole
+	}
+	return role
+}
+
+func normalizeRole(role string) (string, error) {
+	role = strings.ToLower(strings.TrimSpace(role))
+	if role == "" {
+		return "", commonresponse.BadRequest("role 不能为空")
+	}
+	if utf8.RuneCountInString(role) > maxRoleLength {
+		return "", commonresponse.BadRequest("role 长度不能超过 50")
+	}
+	return role, nil
 }
 
 func normalizeUsername(username, email string) (string, error) {
@@ -284,7 +347,7 @@ func updateAccountByAdmin(ctx context.Context, svcCtx *svc.ServiceContext, req *
 		return nil, commonresponse.InternalServerError("查询账号失败")
 	}
 
-	if err := applyAccountPatch(ctx, svcCtx, account, req.Username, req.Email, req.Password, req.Status, true); err != nil {
+	if err := applyAccountPatch(ctx, svcCtx, account, req.Username, req.Email, req.Password, req.Role, req.Status, true, true); err != nil {
 		return nil, err
 	}
 	profile, err := ensureUserProfile(ctx, svcCtx, account)
@@ -307,7 +370,7 @@ func UpdateAccountByAdmin(ctx context.Context, svcCtx *svc.ServiceContext, req *
 	return updateAccountByAdmin(ctx, svcCtx, req)
 }
 
-func applyAccountPatch(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount, username, email, password, status string, allowStatus bool) error {
+func applyAccountPatch(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount, username, email, password, role, status string, allowRole, allowStatus bool) error {
 	if value := strings.TrimSpace(username); value != "" {
 		username, err := normalizeUsername(value, nullStringValue(account.Email))
 		if err != nil {
@@ -340,6 +403,16 @@ func applyAccountPatch(ctx context.Context, svcCtx *svc.ServiceContext, account 
 			return commonresponse.InternalServerError("密码加密失败")
 		}
 		account.PasswordHash = sql.NullString{String: string(hash), Valid: true}
+	}
+
+	if allowRole {
+		if value := strings.TrimSpace(role); value != "" {
+			normalized, err := normalizeRole(value)
+			if err != nil {
+				return err
+			}
+			account.Role = normalized
+		}
 	}
 
 	if allowStatus {

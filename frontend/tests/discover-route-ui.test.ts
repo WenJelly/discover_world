@@ -65,7 +65,7 @@ test("navbar exposes discover and stays opaque white", async () => {
 
   assert.match(navbar, /name: "发现",\s*href: "\/discover"/);
   assert.doesNotMatch(navbar, /name: "公开",\s*href: "\/public"/);
-  assert.match(navbar, /const searchUrl = `\/discover\?q=/);
+  assert.match(navbar, /const searchUrl = `\/search\?q=/);
   assert.match(navbar, /border-b border-slate-200\/60 bg-white/);
   const headerClass = navbar.match(/<header\s+className=\{`([\s\S]*?)`\}/)?.[1] ?? "";
   assert.doesNotMatch(headerClass, /\bshadow-[^\s`]+/);

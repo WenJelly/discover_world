@@ -312,8 +312,11 @@ func normalizeAuditStatus(status string, fallback string) (string, error) {
 	}
 }
 
-func initialUploadAuditStatus() string {
-	return "approved"
+func initialUploadAuditStatus(assetUsage string, isAdmin bool) string {
+	if isAdmin || normalizeAssetUsage(assetUsage) != assetUsageWork {
+		return "approved"
+	}
+	return "pending"
 }
 
 func variantOrDefault(option types.MediaVariantRequest, fallback int64) types.MediaVariantRequest {

@@ -124,6 +124,7 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 
 	asset := existing
 	createdAsset := false
+	auditStatus := initialUploadAuditStatus(assetUsage, svcCtx.IsAdminAccount(loginUser))
 	if asset == nil {
 		asset = &model.MediaAsset{
 			OwnerUserId:      loginUser.Id,
@@ -134,7 +135,7 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 			OriginalFilename: optionalString(originalFilename),
 			Visibility:       normalizeVisibility(req.Visibility),
 			Status:           "uploading",
-			AuditStatus:      initialUploadAuditStatus(),
+			AuditStatus:      auditStatus,
 			MetadataJson:     metadataJSON(metadata),
 		}
 		result, err := svcCtx.MediaAssetModel.Insert(ctx, asset)
@@ -154,7 +155,7 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 		asset.OriginalFilename = optionalString(originalFilename)
 		asset.Visibility = normalizeVisibility(req.Visibility)
 		asset.Status = "uploading"
-		asset.AuditStatus = initialUploadAuditStatus()
+		asset.AuditStatus = auditStatus
 		asset.MetadataJson = metadataJSON(metadata)
 	}
 

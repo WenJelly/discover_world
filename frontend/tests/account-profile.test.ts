@@ -15,6 +15,7 @@ test("toAccountProfile maps backend account detail without mock profile defaults
     username: "alice",
     email: "alice@example.com",
     nickname: "Alice Chen",
+    role: "admin",
     avatarUrl: "https://cdn.example.com/avatar.jpg",
     bio: "backend bio",
     createdAt: "2026-07-01 10:00:00",
@@ -27,6 +28,7 @@ test("toAccountProfile maps backend account detail without mock profile defaults
 
   assert.equal(profile.id, "42");
   assert.equal(profile.username, "Alice Chen");
+  assert.equal(profile.role, "admin");
   assert.equal(profile.handle, "@alice");
   assert.equal(profile.email, "");
   assert.equal(profile.avatarUrl, "https://cdn.example.com/avatar.jpg");

@@ -26,6 +26,7 @@ export function toAccountProfile(detail: DetailUserResponse): UserProfile {
     detail.userName?.trim() ||
     accountUsername ||
     "用户";
+  const role = (detail.role || detail.userRole || "user").trim().toLowerCase();
   const approvedCount =
     detail.publicMediaAssetCount ??
     detail.publicPictureCount ??
@@ -42,7 +43,8 @@ export function toAccountProfile(detail: DetailUserResponse): UserProfile {
     avatarUrl: detail.avatarUrl || detail.userAvatar || "",
     coverUrl: "",
     bio: detail.bio || detail.userProfile || "",
-    title: detail.role === "admin" || detail.userRole === "admin" ? "管理员" : "创作者",
+    role,
+    title: role === "admin" ? "管理员" : "创作者",
     level: 0,
     location: "",
     joinedAt: detail.createdAt || detail.createTime || "",

@@ -43,15 +43,15 @@ func (l *DetailAccountLogic) DetailAccount(req *types.DetailAccountRequest) (res
 		if err != nil {
 			return nil, err
 		}
-		if id != loginUser.Id && !l.svcCtx.IsAdminAccount(loginUser) {
-			return nil, commonresponse.Forbidden("无权查看该账号")
-		}
 		target, err = l.svcCtx.UserAccountModel.FindOne(l.ctx, id)
 		if err != nil {
 			if errors.Is(err, model.ErrNotFound) {
 				return nil, commonresponse.NotFound("账号不存在")
 			}
 			return nil, commonresponse.InternalServerError("查询账号失败")
+		}
+		if !canViewAccountDetail(l.svcCtx, loginUser, target) {
+			return nil, commonresponse.Forbidden("无权查看该账号")
 		}
 	} else if req != nil && strings.TrimSpace(req.Email) != "" {
 		if !l.svcCtx.IsAdminAccount(loginUser) {
@@ -70,5 +70,10 @@ func (l *DetailAccountLogic) DetailAccount(req *types.DetailAccountRequest) (res
 		}
 	}
 
-	return loadDetailAccountResponse(l.ctx, l.svcCtx, target)
+	resp, err = loadDetailAccountResponse(l.ctx, l.svcCtx, target)
+	if err != nil {
+		return nil, err
+	}
+	maskDetailAccountForViewer(l.svcCtx, loginUser, target, resp)
+	return resp, nil
 }

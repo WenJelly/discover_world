@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
@@ -228,7 +229,7 @@ func collectOriginalBucketIDs(assets []*model.MediaAsset, objects map[uint64]*mo
 	return ids
 }
 
-func buildAccountSummary(svcCtx *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile) types.AccountSummary {
+func buildAccountSummary(_ *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}
@@ -254,7 +255,7 @@ func buildAccountSummary(svcCtx *svc.ServiceContext, account *model.UserAccount,
 		AvatarUrl: "",
 		Bio:       bio,
 		Status:    account.Status,
-		Role:      accountRole(svcCtx, account),
+		Role:      accountRole(account),
 	}
 }
 
@@ -389,11 +390,15 @@ func canViewOriginal(asset *model.MediaAsset, user *model.UserAccount, svcCtx *s
 	return canViewMediaAsset(asset, user, svcCtx)
 }
 
-func accountRole(svcCtx *svc.ServiceContext, account *model.UserAccount) string {
-	if svcCtx.IsAdminAccount(account) {
-		return "admin"
+func accountRole(account *model.UserAccount) string {
+	if account == nil {
+		return "user"
 	}
-	return "user"
+	role := strings.TrimSpace(account.Role)
+	if role == "" {
+		return "user"
+	}
+	return role
 }
 
 func commonNotFound() error {

@@ -45,6 +45,7 @@ type (
 		Email        sql.NullString `db:"email"`         // 邮箱，可用于登录
 		Phone        sql.NullString `db:"phone"`         // 手机号，可用于登录
 		PasswordHash sql.NullString `db:"password_hash"` // 密码哈希，不存明文密码
+		Role         string         `db:"role"`          // 权限角色：初版使用 admin / user，后续可扩展
 		Status       string         `db:"status"`        // 账号状态：active正常 / disabled禁用 / deleted已删除
 		LastLoginAt  sql.NullTime   `db:"last_login_at"` // 最后登录时间
 		CreatedAt    time.Time      `db:"created_at"`    // 创建时间
@@ -123,14 +124,14 @@ func (m *defaultUserAccountModel) FindOneByUsername(ctx context.Context, usernam
 }
 
 func (m *defaultUserAccountModel) Insert(ctx context.Context, data *UserAccount) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?)", m.table, userAccountRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Username, data.Email, data.Phone, data.PasswordHash, data.Status, data.LastLoginAt, data.DeletedAt)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?)", m.table, userAccountRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Username, data.Email, data.Phone, data.PasswordHash, data.Role, data.Status, data.LastLoginAt, data.DeletedAt)
 	return ret, err
 }
 
 func (m *defaultUserAccountModel) Update(ctx context.Context, newData *UserAccount) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, userAccountRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Username, newData.Email, newData.Phone, newData.PasswordHash, newData.Status, newData.LastLoginAt, newData.DeletedAt, newData.Id)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Username, newData.Email, newData.Phone, newData.PasswordHash, newData.Role, newData.Status, newData.LastLoginAt, newData.DeletedAt, newData.Id)
 	return err
 }
 

@@ -17,6 +17,7 @@ type (
 	UserAccountModel interface {
 		userAccountModel
 		FindOneActive(ctx context.Context, id uint64) (*UserAccount, error)
+		FindOneByEmailCaseSensitive(ctx context.Context, email sql.NullString) (*UserAccount, error)
 		FindByIDs(ctx context.Context, ids []uint64) ([]*UserAccount, error)
 		UpdateLastLogin(ctx context.Context, id uint64, loginAt time.Time) error
 		withSession(session sqlx.Session) UserAccountModel
@@ -42,6 +43,20 @@ func (m *customUserAccountModel) FindOneActive(ctx context.Context, id uint64) (
 	query := fmt.Sprintf("select %s from %s where `id` = ? and `status` = 'active' and `deleted_at` is null limit 1", userAccountRows, m.table)
 	var resp UserAccount
 	err := m.conn.QueryRowCtx(ctx, &resp, query, id)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+func (m *customUserAccountModel) FindOneByEmailCaseSensitive(ctx context.Context, email sql.NullString) (*UserAccount, error) {
+	query := fmt.Sprintf("select %s from %s where binary `email` = ? limit 1", userAccountRows, m.table)
+	var resp UserAccount
+	err := m.conn.QueryRowCtx(ctx, &resp, query, email)
 	switch err {
 	case nil:
 		return &resp, nil

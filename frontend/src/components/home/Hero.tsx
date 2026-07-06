@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { fetchMediaAssetCursorList } from "@/lib/api";
+import { fetchHomepageConfig, fetchMediaAssetCursorList } from "@/lib/api";
 import { getMediaDetailUrl, getMediaUrl } from "@/lib/format";
 import {
   HERO_WAVE_ASPECT_CLASS,
@@ -11,8 +11,16 @@ import {
 import type { MediaAssetResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const FALLBACK_HERO_FOCAL = { x: 50, y: 58 };
+
+type HeroPhoto = {
+  asset: MediaAssetResponse;
+  focalX: number;
+  focalY: number;
+};
+
 export default function Hero() {
-  const [photo, setPhoto] = useState<MediaAssetResponse | null>(null);
+  const [heroPhoto, setHeroPhoto] = useState<HeroPhoto | null>(null);
   const [loaded, setLoaded] = useState(false);
   const reduceMotion = useReducedMotion();
 
@@ -36,38 +44,96 @@ export default function Hero() {
     },
   };
 
+  const handleHeroImageRef = useCallback((node: HTMLImageElement | null) => {
+    if (node && node.complete && node.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    fetchMediaAssetCursorList({ pageSize: 1, variantOption: { compressType: 1 } })
-      .then((resp) => {
-        if (!cancelled) setPhoto(resp.list[0] ?? null);
-      })
-      .catch(() => {
-        if (!cancelled) setPhoto(null);
-      });
+
+    const applyHeroPhoto = (nextHeroPhoto: HeroPhoto | null) => {
+      setLoaded(false);
+      setHeroPhoto(nextHeroPhoto);
+    };
+
+    const loadLatestHero = async () => {
+      try {
+        const resp = await fetchMediaAssetCursorList({
+          pageSize: 1,
+          variantOption: { compressType: 1 },
+        });
+        if (cancelled) return;
+
+        const asset = resp.list[0] ?? null;
+        applyHeroPhoto(
+          asset
+            ? {
+                asset,
+                focalX: FALLBACK_HERO_FOCAL.x,
+                focalY: FALLBACK_HERO_FOCAL.y,
+              }
+            : null
+        );
+      } catch {
+        if (!cancelled) applyHeroPhoto(null);
+      }
+    };
+
+    const loadHero = async () => {
+      try {
+        const config = await fetchHomepageConfig({
+          variantOption: { compressType: 1 },
+        });
+        if (cancelled) return;
+
+        if (config.hero.media) {
+          applyHeroPhoto({
+            asset: config.hero.media,
+            focalX: config.hero.focalX,
+            focalY: config.hero.focalY,
+          });
+          return;
+        }
+      } catch {
+        // Fall through to the previous latest-public-work behaviour.
+      }
+
+      await loadLatestHero();
+    };
+
+    loadHero();
+
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const bgUrl = photo ? getMediaDetailUrl(photo) || getMediaUrl(photo) : "";
+  const bgUrl = heroPhoto
+    ? getMediaDetailUrl(heroPhoto.asset) || getMediaUrl(heroPhoto.asset)
+    : "";
 
   return (
     <section
       className="relative flex min-h-[70vh] items-center justify-center overflow-hidden bg-zinc-950 md:min-h-[82vh]"
       aria-labelledby="hero-heading"
     >
-      {bgUrl ? (
+      {heroPhoto && bgUrl ? (
         <img
           src={bgUrl}
           alt=""
           aria-hidden="true"
           loading="eager"
           fetchPriority="high"
+          ref={handleHeroImageRef}
           className={cn(
             "absolute inset-0 h-full w-full object-cover object-[center_58%] transition-opacity duration-700 motion-reduce:transition-none",
             loaded ? "opacity-100" : "opacity-0"
           )}
+          style={{
+            objectPosition: `${heroPhoto.focalX}% ${heroPhoto.focalY}%`,
+          }}
           onLoad={() => setLoaded(true)}
         />
       ) : null}

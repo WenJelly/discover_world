@@ -67,6 +67,7 @@ func (l *RegisterAccountLogic) RegisterAccount(req *types.RegisterRequest) (resp
 		Username:     username,
 		Email:        sql.NullString{String: email, Valid: true},
 		PasswordHash: sql.NullString{String: string(hash), Valid: true},
+		Role:         defaultRole,
 		Status:       "active",
 	}
 	result, err := l.svcCtx.UserAccountModel.Insert(l.ctx, account)

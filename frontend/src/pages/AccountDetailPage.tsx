@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   ArrowUp,
+  BadgeCheck,
   BookOpen,
   CalendarDays,
   Camera,
@@ -81,6 +82,10 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof ApiError ? error.message : fallback;
 }
 
+function readAccountTargetUserId() {
+  return new URLSearchParams(window.location.search).get("userId")?.trim() ?? "";
+}
+
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (
     <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-border bg-card p-8 text-center">
@@ -108,6 +113,7 @@ function LoadingBlock() {
 export default function AccountDetailPage() {
   const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<AccountTab>("posts");
+  const [targetUserId, setTargetUserId] = useState(() => readAccountTargetUserId());
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -145,7 +151,17 @@ export default function AccountDetailPage() {
   const [albumLoading, setAlbumLoading] = useState(false);
   const [albumError, setAlbumError] = useState<string | null>(null);
 
-  const ownerId = user?.id;
+  const ownerId = targetUserId || user?.id;
+  const isOwnProfile = Boolean(user?.id && ownerId === user.id);
+
+  useEffect(() => {
+    const syncTargetUserId = () => {
+      setTargetUserId(readAccountTargetUserId());
+    };
+
+    window.addEventListener("popstate", syncTargetUserId);
+    return () => window.removeEventListener("popstate", syncTargetUserId);
+  }, []);
 
   const loadProfile = useCallback(async () => {
     if (!isAuthenticated || !ownerId) {
@@ -311,10 +327,10 @@ export default function AccountDetailPage() {
 
   // Reload profile when user changes (e.g., avatar upload)
   useEffect(() => {
-    if (isAuthenticated && ownerId) {
+    if (isAuthenticated && isOwnProfile && ownerId) {
       void loadProfile();
     }
-  }, [user?.userAvatar, isAuthenticated, ownerId, loadProfile]);
+  }, [user?.userAvatar, isAuthenticated, isOwnProfile, ownerId, loadProfile]);
 
   const stats = useMemo(() => {
     if (!profile) return [];
@@ -407,6 +423,10 @@ export default function AccountDetailPage() {
     setPosts((prev) => prev.filter((post) => post.id !== id));
   };
 
+  const handlePostUpdated = (post: ProfilePostResponse) => {
+    setPosts((prev) => prev.map((item) => (item.id === post.id ? post : item)));
+  };
+
   const postAuthor: PostAuthor | null = profile
     ? {
         username: profile.username,
@@ -489,8 +509,19 @@ export default function AccountDetailPage() {
             <div className="pb-3 pt-14 sm:pt-16">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl font-bold text-foreground">
+                  <h1 className="flex min-w-0 items-center gap-1.5 text-xl font-bold text-foreground">
                     {profile.username}
+                    {profile.role === "admin" ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-yellow-500">
+                        <BadgeCheck
+                          aria-label="管理员认证"
+                          role="img"
+                          className="size-[18px] fill-yellow-500/20"
+                          strokeWidth={2.4}
+                        />
+                        <span>管理员</span>
+                      </span>
+                    ) : null}
                   </h1>
                   <p className="mt-0.5 text-sm text-muted-foreground">
                     {profile.handle}
@@ -564,18 +595,19 @@ export default function AccountDetailPage() {
       <main className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
         {activeTab === "posts" ? (
           <>
-            {/* New Post Button */}
-            <div className="mb-6">
-              <Button
-                type="button"
-                size="lg"
-                className="w-full"
-                onClick={handleNewPost}
-              >
-                <Plus />
-                发表新动态
-              </Button>
-            </div>
+            {isOwnProfile ? (
+              <div className="mb-6">
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full"
+                  onClick={handleNewPost}
+                >
+                  <Plus />
+                  发表新动态
+                </Button>
+              </div>
+            ) : null}
 
             {postLoading ? (
               <LoadingBlock />
@@ -585,11 +617,13 @@ export default function AccountDetailPage() {
               <EmptyState title="暂无动态" description="发布的动态会展示在这里" />
             ) : (
               <div className="space-y-4">
-              <PostTimeline
-                posts={posts}
-                author={postAuthor}
-                onDeleted={handlePostDeleted}
-              />
+                <PostTimeline
+                  posts={posts}
+                  author={postAuthor}
+                  canManage={isOwnProfile}
+                  onDeleted={handlePostDeleted}
+                  onUpdated={handlePostUpdated}
+                />
               {postError ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
                   {postError}
@@ -786,6 +820,7 @@ export default function AccountDetailPage() {
           }
           showUserInfo={false}
           actions={
+            isOwnProfile ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -806,6 +841,7 @@ export default function AccountDetailPage() {
                 删除
               </button>
             </div>
+            ) : null
           }
         />
       )}

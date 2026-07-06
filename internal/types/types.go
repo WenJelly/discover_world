@@ -14,6 +14,84 @@ type AccountSummary struct {
 	Role      string `json:"role"`
 }
 
+type AdminQueryMediaAssetRequest struct {
+	Id            string              `json:"id,optional"`
+	Title         string              `json:"title,optional"`
+	Category      string              `json:"category,optional"`
+	AuditStatus   string              `json:"auditStatus,default=pending"`
+	Tags          []string            `json:"tags,optional"`
+	FileSize      int64               `json:"fileSize,optional"`
+	Width         int64               `json:"width,optional"`
+	Height        int64               `json:"height,optional"`
+	AspectRatio   float64             `json:"aspectRatio,optional"`
+	FileExt       string              `json:"fileExt,optional"`
+	OwnerUserId   string              `json:"ownerUserId,optional"`
+	SearchText    string              `json:"searchText,optional"`
+	CreatedAtFrom string              `json:"createdAtFrom,optional"`
+	CreatedAtTo   string              `json:"createdAtTo,optional"`
+	Variant       MediaVariantRequest `json:"variantOption,optional"`
+	PageNum       int64               `json:"pageNum,optional"`
+	PageSize      int64               `json:"pageSize,optional"`
+}
+
+type AdminUpdateAccountRequest struct {
+	Id        string `json:"id"`
+	Username  string `json:"username,optional"`
+	Email     string `json:"email,optional"`
+	Password  string `json:"password,optional"`
+	Nickname  string `json:"nickname,optional"`
+	AvatarUrl string `json:"avatarUrl,optional"`
+	Bio       string `json:"bio,optional"`
+	Role      string `json:"role,optional"`
+	Status    string `json:"status,optional"`
+}
+
+type CreatePostCommentRequest struct {
+	PostId  string `json:"postId"`
+	Content string `json:"content"`
+}
+
+type CreatePostRequest struct {
+	Content    string   `json:"content,optional"`
+	Visibility string   `json:"visibility,optional"`
+	Location   string   `json:"location,optional"`
+	ImageIds   []string `json:"imageIds,optional"`
+}
+
+type CursorQueryMediaAssetRequest struct {
+	Id            string              `json:"id,optional"`
+	Title         string              `json:"title,optional"`
+	Category      string              `json:"category,optional"`
+	AuditStatus   string              `json:"auditStatus,default=approved"`
+	Tags          []string            `json:"tags,optional"`
+	FileSize      int64               `json:"fileSize,optional"`
+	Width         int64               `json:"width,optional"`
+	Height        int64               `json:"height,optional"`
+	AspectRatio   float64             `json:"aspectRatio,optional"`
+	FileExt       string              `json:"fileExt,optional"`
+	OwnerUserId   string              `json:"ownerUserId,optional"`
+	SearchText    string              `json:"searchText,optional"`
+	CreatedAtFrom string              `json:"createdAtFrom,optional"`
+	CreatedAtTo   string              `json:"createdAtTo,optional"`
+	Variant       MediaVariantRequest `json:"variantOption,optional"`
+	Cursor        string              `json:"cursor,optional"`
+	PageSize      int64               `json:"pageSize,optional"`
+}
+
+type DeleteMediaAssetRequest struct {
+	Id    string `json:"id"`
+	Force bool   `json:"force,optional"`
+}
+
+type DeletePostRequest struct {
+	Id string `json:"id"`
+}
+
+type DetailAccountRequest struct {
+	Id    string `json:"id,optional"`
+	Email string `json:"email,optional"`
+}
+
 type DetailAccountResponse struct {
 	Id                      string `json:"id"`
 	Username                string `json:"username"`
@@ -33,6 +111,99 @@ type DetailAccountResponse struct {
 	RejectedMediaAssetCount int64  `json:"rejectedMediaAssetCount"`
 }
 
+type GetHomepageConfigRequest struct {
+	Variant MediaVariantRequest `json:"variantOption,optional"`
+}
+
+type GetMediaAssetRequest struct {
+	Id      string              `json:"id"`
+	Variant MediaVariantRequest `json:"variantOption,optional"`
+}
+
+type GetPostDetailRequest struct {
+	Id string `json:"id"`
+}
+
+type GlobalSearchAlbumResponse struct {
+	Id          string             `json:"id"`
+	UserId      string             `json:"userId"`
+	Author      AccountSummary     `json:"author"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Cover       MediaAssetResponse `json:"cover"`
+	CreatedAt   string             `json:"createdAt"`
+	UpdatedAt   string             `json:"updatedAt"`
+}
+
+type GlobalSearchPostResponse struct {
+	Id        string          `json:"id"`
+	UserId    string          `json:"userId"`
+	Author    AccountSummary  `json:"author"`
+	Content   string          `json:"content"`
+	Location  string          `json:"location"`
+	Stats     MediaAssetStats `json:"stats"`
+	CreatedAt string          `json:"createdAt"`
+	UpdatedAt string          `json:"updatedAt"`
+}
+
+type GlobalSearchRequest struct {
+	Q            string              `json:"q,optional"`
+	Types        []string            `json:"types,optional"`
+	PageSize     int64               `json:"pageSize,optional"`
+	Variant      MediaVariantRequest `json:"variantOption,optional"`
+	SearchText   string              `json:"searchText,optional"`
+	CompressType int64               `json:"compressType,optional"`
+}
+
+type GlobalSearchResponse struct {
+	Q        string                      `json:"q"`
+	Types    []string                    `json:"types"`
+	PageSize int64                       `json:"pageSize"`
+	Media    []MediaAssetResponse        `json:"media"`
+	Posts    []GlobalSearchPostResponse  `json:"posts"`
+	Albums   []GlobalSearchAlbumResponse `json:"albums"`
+	Users    []AccountSummary            `json:"users"`
+}
+
+type HomepageConfigResponse struct {
+	Hero     HomepageHeroConfig   `json:"hero"`
+	Featured []MediaAssetResponse `json:"featured"`
+}
+
+type HomepageHeroConfig struct {
+	AssetId string             `json:"assetId"`
+	FocalX  float64            `json:"focalX"`
+	FocalY  float64            `json:"focalY"`
+	Media   MediaAssetResponse `json:"media"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	Token     string `json:"token"`
+	Id        string `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
+	Nickname  string `json:"nickname"`
+	AvatarUrl string `json:"avatarUrl"`
+	Bio       string `json:"bio"`
+	Status    string `json:"status"`
+	Role      string `json:"role"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
+}
+
+type MediaAssetCursorPageResponse struct {
+	PageSize   int64                `json:"pageSize"`
+	HasMore    bool                 `json:"hasMore"`
+	NextCursor string               `json:"nextCursor"`
+	List       []MediaAssetResponse `json:"list"`
+}
+
 type MediaAssetPageResponse struct {
 	PageNum  int64                `json:"pageNum"`
 	PageSize int64                `json:"pageSize"`
@@ -45,6 +216,39 @@ type MediaAssetPermissions struct {
 	CanDownload     bool `json:"canDownload"`
 }
 
+type MediaAssetResponse struct {
+	Id               string                `json:"id"`
+	MediaType        string                `json:"mediaType"`
+	AssetUsage       string                `json:"assetUsage"`
+	Title            string                `json:"title"`
+	Description      string                `json:"description"`
+	Category         string                `json:"category"`
+	Tags             []string              `json:"tags"`
+	OwnerUserId      string                `json:"ownerUserId"`
+	Owner            AccountSummary        `json:"owner"`
+	OriginalFilename string                `json:"originalFilename"`
+	Visibility       string                `json:"visibility"`
+	Status           string                `json:"status"`
+	AuditStatus      string                `json:"auditStatus"`
+	ReviewMessage    string                `json:"reviewMessage"`
+	ReviewerId       string                `json:"reviewerId"`
+	ReviewTime       string                `json:"reviewTime"`
+	FileSize         int64                 `json:"fileSize"`
+	Width            int64                 `json:"width"`
+	Height           int64                 `json:"height"`
+	AspectRatio      float64               `json:"aspectRatio"`
+	MimeType         string                `json:"mimeType"`
+	FileExt          string                `json:"fileExt"`
+	DominantColor    string                `json:"dominantColor"`
+	BlurHash         string                `json:"blurHash"`
+	Urls             MediaAssetUrls        `json:"urls"`
+	Permissions      MediaAssetPermissions `json:"permissions"`
+	Stats            MediaAssetStats       `json:"stats"`
+	MetadataJson     string                `json:"metadataJson"`
+	CreatedAt        string                `json:"createdAt"`
+	UpdatedAt        string                `json:"updatedAt"`
+}
+
 type MediaAssetStats struct {
 	ViewCount     int64 `json:"viewCount"`
 	ReactionCount int64 `json:"reactionCount"`
@@ -52,6 +256,17 @@ type MediaAssetStats struct {
 	CommentCount  int64 `json:"commentCount"`
 	ShareCount    int64 `json:"shareCount"`
 	DownloadCount int64 `json:"downloadCount"`
+}
+
+type MediaAssetUploadByUrlRequest struct {
+	Id          string   `json:"id,optional"`
+	FileUrl     string   `json:"fileUrl"`
+	Title       string   `json:"title,optional"`
+	Description string   `json:"description,optional"`
+	Category    string   `json:"category,optional"`
+	Tags        []string `json:"tags,optional"`
+	Visibility  string   `json:"visibility,optional"`
+	AssetUsage  string   `json:"assetUsage,optional"`
 }
 
 type MediaAssetUrls struct {
@@ -68,6 +283,59 @@ type MediaVariantRequest struct {
 	CutHeight    int64  `json:"cutHeight,optional"`
 }
 
+type OverviewStatsResponse struct {
+	PublicMediaAssetCount int64 `json:"publicMediaAssetCount"`
+	CreatorCount          int64 `json:"creatorCount"`
+	PublicPostCount       int64 `json:"publicPostCount"`
+	PublicAlbumCount      int64 `json:"publicAlbumCount"`
+}
+
+type PinPostRequest struct {
+	Id string `json:"id"`
+}
+
+type PostCommentCursorListRequest struct {
+	PostId   string `json:"postId"`
+	Cursor   string `json:"cursor,optional"`
+	PageSize int64  `json:"pageSize,optional"`
+}
+
+type PostCommentCursorPageResponse struct {
+	PageSize   int64                 `json:"pageSize"`
+	HasMore    bool                  `json:"hasMore"`
+	NextCursor string                `json:"nextCursor"`
+	List       []PostCommentResponse `json:"list"`
+}
+
+type PostCommentResponse struct {
+	Id        string         `json:"id"`
+	PostId    string         `json:"postId"`
+	UserId    string         `json:"userId"`
+	Author    AccountSummary `json:"author"`
+	Content   string         `json:"content"`
+	Status    string         `json:"status"`
+	CreatedAt string         `json:"createdAt"`
+	UpdatedAt string         `json:"updatedAt"`
+}
+
+type PostToggleResponse struct {
+	Active bool            `json:"active"`
+	Stats  MediaAssetStats `json:"stats"`
+}
+
+type ProfileAlbumListRequest struct {
+	UserId   string `json:"userId,optional"`
+	PageNum  int64  `json:"pageNum,optional"`
+	PageSize int64  `json:"pageSize,optional"`
+}
+
+type ProfileAlbumPageResponse struct {
+	PageNum  int64                  `json:"pageNum"`
+	PageSize int64                  `json:"pageSize"`
+	Total    int64                  `json:"total"`
+	List     []ProfileAlbumResponse `json:"list"`
+}
+
 type ProfileAlbumResponse struct {
 	Id          string             `json:"id"`
 	UserId      string             `json:"userId"`
@@ -79,6 +347,25 @@ type ProfileAlbumResponse struct {
 	Status      string             `json:"status"`
 	CreatedAt   string             `json:"createdAt"`
 	UpdatedAt   string             `json:"updatedAt"`
+}
+
+type ProfileFeaturedMediaListRequest struct {
+	UserId   string              `json:"userId,optional"`
+	PageSize int64               `json:"pageSize,optional"`
+	Variant  MediaVariantRequest `json:"variantOption,optional"`
+}
+
+type ProfilePostCursorPageResponse struct {
+	PageSize   int64                 `json:"pageSize"`
+	HasMore    bool                  `json:"hasMore"`
+	NextCursor string                `json:"nextCursor"`
+	List       []ProfilePostResponse `json:"list"`
+}
+
+type ProfilePostListRequest struct {
+	UserId   string `json:"userId,optional"`
+	Cursor   string `json:"cursor,optional"`
+	PageSize int64  `json:"pageSize,optional"`
 }
 
 type ProfilePostResponse struct {
@@ -96,4 +383,86 @@ type ProfilePostResponse struct {
 	IsFavorited bool                 `json:"isFavorited"`
 	CreatedAt   string               `json:"createdAt"`
 	UpdatedAt   string               `json:"updatedAt"`
+}
+
+type QueryMediaAssetRequest struct {
+	Id            string              `json:"id,optional"`
+	Title         string              `json:"title,optional"`
+	Category      string              `json:"category,optional"`
+	AuditStatus   string              `json:"auditStatus,default=approved"`
+	Tags          []string            `json:"tags,optional"`
+	FileSize      int64               `json:"fileSize,optional"`
+	Width         int64               `json:"width,optional"`
+	Height        int64               `json:"height,optional"`
+	AspectRatio   float64             `json:"aspectRatio,optional"`
+	FileExt       string              `json:"fileExt,optional"`
+	OwnerUserId   string              `json:"ownerUserId,optional"`
+	SearchText    string              `json:"searchText,optional"`
+	CreatedAtFrom string              `json:"createdAtFrom,optional"`
+	CreatedAtTo   string              `json:"createdAtTo,optional"`
+	Variant       MediaVariantRequest `json:"variantOption,optional"`
+	PageNum       int64               `json:"pageNum,optional"`
+	PageSize      int64               `json:"pageSize,optional"`
+}
+
+type RegisterRequest struct {
+	Username      string `json:"username,optional"`
+	Email         string `json:"email"`
+	Password      string `json:"password"`
+	CheckPassword string `json:"checkPassword"`
+}
+
+type RegisterResponse struct {
+	Id string `json:"id"`
+}
+
+type ReviewMediaAssetRequest struct {
+	Id            string `json:"id"`
+	AuditStatus   string `json:"auditStatus"`
+	ReviewMessage string `json:"reviewMessage,optional"`
+}
+
+type TogglePostFavoriteRequest struct {
+	Id string `json:"id"`
+}
+
+type TogglePostReactionRequest struct {
+	Id           string `json:"id"`
+	ReactionType string `json:"reactionType,optional"`
+}
+
+type UnpinPostRequest struct {
+	Id string `json:"id"`
+}
+
+type UpdateAccountRequest struct {
+	Id        string `json:"id"`
+	Username  string `json:"username,optional"`
+	Email     string `json:"email,optional"`
+	Password  string `json:"password,optional"`
+	Nickname  string `json:"nickname,optional"`
+	AvatarUrl string `json:"avatarUrl,optional"`
+	Bio       string `json:"bio,optional"`
+}
+
+type UpdateHomepageFeaturedRequest struct {
+	MediaAssetIds []string `json:"mediaAssetIds,optional"`
+}
+
+type UpdateHomepageHeroRequest struct {
+	AssetId string  `json:"assetId,optional"`
+	FocalX  float64 `json:"focalX,default=50"`
+	FocalY  float64 `json:"focalY,default=50"`
+}
+
+type UpdatePostRequest struct {
+	Id         string   `json:"id"`
+	Content    string   `json:"content,optional"`
+	Visibility string   `json:"visibility,optional"`
+	Location   string   `json:"location,optional"`
+	ImageIds   []string `json:"imageIds,optional"`
+}
+
+type UpdateProfileFeaturedMediaRequest struct {
+	MediaAssetIds []string `json:"mediaAssetIds,optional"`
 }

@@ -176,6 +176,7 @@ func TestBuildAccountSummaryKeepsEmailPrivate(t *testing.T) {
 			Valid:  true,
 		},
 		Status: "active",
+		Role:   "editor",
 	}, &model.UserProfile{
 		Nickname: sql.NullString{
 			String: "Alice Chen",
@@ -191,5 +192,8 @@ func TestBuildAccountSummaryKeepsEmailPrivate(t *testing.T) {
 	}
 	if summary.Email != "" {
 		t.Fatalf("summary.Email = %q, want empty private email", summary.Email)
+	}
+	if summary.Role != "editor" {
+		t.Fatalf("summary.Role = %q, want role column value", summary.Role)
 	}
 }

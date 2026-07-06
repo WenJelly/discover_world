@@ -7,7 +7,9 @@ import type { PostAuthor } from "./PostComposerDialog";
 export type PostTimelineProps = {
   posts: ProfilePostResponse[];
   author?: PostAuthor | null;
+  canManage?: boolean;
   onDeleted?: (id: string) => void;
+  onUpdated?: (post: ProfilePostResponse) => void;
 };
 
 type PostGroup = {
@@ -80,7 +82,13 @@ function groupPostsByDay(
   return groups;
 }
 
-export function PostTimeline({ posts, author, onDeleted }: PostTimelineProps) {
+export function PostTimeline({
+  posts,
+  author,
+  canManage = false,
+  onDeleted,
+  onUpdated,
+}: PostTimelineProps) {
   const now = new Date();
   const groups = groupPostsByDay(posts, now);
 
@@ -122,7 +130,13 @@ export function PostTimeline({ posts, author, onDeleted }: PostTimelineProps) {
                   aria-hidden
                   className="absolute left-4 top-7 size-1.5 -translate-x-1/2 rounded-full bg-muted-foreground/50 sm:top-8"
                 />
-                <PostCard post={post} author={author} onDeleted={onDeleted} />
+                <PostCard
+                  post={post}
+                  author={author}
+                  canManage={canManage}
+                  onDeleted={onDeleted}
+                  onUpdated={onUpdated}
+                />
               </li>
             ))}
           </ol>

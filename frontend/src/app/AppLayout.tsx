@@ -9,6 +9,8 @@ import Footer from "@/components/Footer";
 import DiscoverPage from "@/pages/DiscoverPage";
 import AccountDetailPage from "@/pages/AccountDetailPage";
 import UploadPage from "@/pages/UploadPage";
+import SearchPage from "@/pages/SearchPage";
+import AdminPage from "@/pages/AdminPage";
 
 export function AppLayout() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
@@ -24,6 +26,8 @@ export function AppLayout() {
   const isLegacyPublicRoute = pathname === "/public";
   const isAccountRoute = pathname === "/account";
   const isUploadRoute = pathname === "/upload";
+  const isSearchRoute = pathname === "/search";
+  const isAdminRoute = pathname === "/admin";
 
   return (
     <>
@@ -39,6 +43,10 @@ export function AppLayout() {
           <AccountDetailPage />
         ) : isUploadRoute ? (
           <UploadPage />
+        ) : isSearchRoute ? (
+          <SearchPage />
+        ) : isAdminRoute ? (
+          <AdminPage />
         ) : isDiscoverRoute || isLegacyPublicRoute ? (
           <DiscoverPage />
         ) : (

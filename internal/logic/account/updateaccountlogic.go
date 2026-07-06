@@ -48,7 +48,7 @@ func (l *UpdateAccountLogic) UpdateAccount(req *types.UpdateAccountRequest) (res
 	if err != nil {
 		return nil, commonresponse.NotFound("账号不存在")
 	}
-	if err := applyAccountPatch(l.ctx, l.svcCtx, account, req.Username, req.Email, req.Password, "", false); err != nil {
+	if err := applyAccountPatch(l.ctx, l.svcCtx, account, req.Username, req.Email, req.Password, "", "", false, false); err != nil {
 		return nil, err
 	}
 	profile, err := ensureUserProfile(l.ctx, l.svcCtx, account)

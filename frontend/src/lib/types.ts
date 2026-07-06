@@ -208,6 +208,14 @@ export interface CreatePostRequest {
   imageIds?: string[];
 }
 
+export interface UpdatePostRequest {
+  id: string;
+  content?: string;
+  visibility?: string;
+  location?: string;
+  imageIds?: string[];
+}
+
 export interface PostToggleResponse {
   active: boolean;
   stats: MediaAssetStats;
@@ -251,6 +259,78 @@ export interface MediaVariantRequest {
   compressType: 0 | 1 | 2 | 3;
   cutWidth?: number;
   cutHeight?: number;
+}
+
+export type GlobalSearchType = "media" | "post" | "album" | "user";
+
+export interface GlobalSearchRequest {
+  q?: string;
+  types?: GlobalSearchType[];
+  pageSize?: number;
+  variantOption?: MediaVariantRequest;
+  searchText?: string;
+  compressType?: number;
+}
+
+export interface GlobalSearchPostResponse {
+  id: string;
+  userId: string;
+  author: AccountSummary;
+  content: string;
+  location: string;
+  stats: MediaAssetStats;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GlobalSearchAlbumResponse {
+  id: string;
+  userId: string;
+  author: AccountSummary;
+  name: string;
+  description: string;
+  cover: MediaAssetResponse;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GlobalSearchResponse {
+  q: string;
+  types: GlobalSearchType[];
+  pageSize: number;
+  media: MediaAssetResponse[];
+  posts: GlobalSearchPostResponse[];
+  albums: GlobalSearchAlbumResponse[];
+  users: AccountSummary[];
+}
+
+export interface GetHomepageConfigRequest {
+  variantOption?: MediaVariantRequest;
+}
+
+export interface HomepageHeroConfig {
+  /** Empty string means no hero is configured. */
+  assetId: string;
+  /** object-position percentages in [0,100]. */
+  focalX: number;
+  focalY: number;
+  media: MediaAssetResponse | null;
+}
+
+export interface HomepageConfigResponse {
+  hero: HomepageHeroConfig;
+  featured: MediaAssetResponse[];
+}
+
+export interface UpdateHomepageHeroRequest {
+  /** Empty/omitted assetId clears the hero selection. */
+  assetId?: string;
+  focalX?: number;
+  focalY?: number;
+}
+
+export interface UpdateHomepageFeaturedRequest {
+  mediaAssetIds?: string[];
 }
 
 export interface MediaAssetUploadByUrlRequest {
@@ -354,6 +434,7 @@ export interface UserProfile {
   avatarUrl: string;
   coverUrl: string;
   bio: string;
+  role: string;
   title: string;
   level: number;
   location?: string;

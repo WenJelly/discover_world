@@ -4,6 +4,10 @@ import type {
   CreatePostRequest,
   DetailAccountResponse,
   DetailUserResponse,
+  GetHomepageConfigRequest,
+  GlobalSearchRequest,
+  GlobalSearchResponse,
+  HomepageConfigResponse,
   LoginRequest,
   LoginResponse,
   MediaAssetCursorListReq,
@@ -25,6 +29,9 @@ import type {
   ProfilePostResponse,
   RegisterRequest,
   RegisterResponse,
+  UpdateHomepageFeaturedRequest,
+  UpdateHomepageHeroRequest,
+  UpdatePostRequest,
   UpdateProfileFeaturedMediaReq,
   UpdateUserRequest,
 } from "./types";
@@ -400,6 +407,53 @@ function normalizeProfileAlbumPage(
   };
 }
 
+function clampFocalPercent(value: unknown): number {
+  const num = typeof value === "number" && Number.isFinite(value) ? value : 50;
+  return Math.min(100, Math.max(0, num));
+}
+
+function normalizeHomepageConfig(
+  resp: HomepageConfigResponse
+): HomepageConfigResponse {
+  const hero = resp.hero ?? {
+    assetId: "",
+    focalX: 50,
+    focalY: 50,
+    media: null,
+  };
+  const assetId = hero.assetId ?? "";
+  const media = assetId && hero.media?.id ? normalizeMediaAsset(hero.media) : null;
+
+  return {
+    hero: {
+      // A configured hero whose media can no longer be resolved (deleted or
+      // withdrawn) is reported as unset so callers can fall back safely.
+      assetId: media ? assetId : "",
+      focalX: clampFocalPercent(hero.focalX),
+      focalY: clampFocalPercent(hero.focalY),
+      media,
+    },
+    featured: (resp.featured ?? []).map(normalizeMediaAsset),
+  };
+}
+
+function normalizeGlobalSearchResponse(
+  resp: GlobalSearchResponse
+): GlobalSearchResponse {
+  return {
+    ...resp,
+    media: (resp.media ?? []).map(normalizeMediaAsset),
+    posts: resp.posts ?? [],
+    albums: (resp.albums ?? []).map((album) => ({
+      ...album,
+      cover: album.cover?.id ? normalizeMediaAsset(album.cover) : album.cover,
+    })),
+    users: (resp.users ?? [])
+      .map((user) => normalizeAccountSummary(user))
+      .filter((user): user is AccountSummary => Boolean(user)),
+  };
+}
+
 function toMediaListReq(req: PictureListReq | MediaAssetListReq): MediaAssetListReq {
   const legacy = req as PictureListReq;
   const compress = legacy.compressPictureType;
@@ -448,6 +502,47 @@ export function fetchPictureCursorList(
     ...toMediaListReq(req),
     cursor: req.cursor,
   });
+}
+
+export function globalSearch(
+  req: GlobalSearchRequest
+): Promise<GlobalSearchResponse> {
+  return request<GlobalSearchResponse>("/api/search", req).then(
+    normalizeGlobalSearchResponse
+  );
+}
+
+export async function fetchHomepageConfig(
+  req: GetHomepageConfigRequest = {}
+): Promise<HomepageConfigResponse> {
+  const resp = await request<HomepageConfigResponse>("/api/homepage/config", req);
+  return normalizeHomepageConfig(resp);
+}
+
+export async function updateHomepageHero(
+  req: UpdateHomepageHeroRequest
+): Promise<HomepageConfigResponse> {
+  const resp = await request<HomepageConfigResponse>(
+    "/api/admin/homepage/hero/update",
+    {
+      assetId: req.assetId ?? "",
+      focalX: clampFocalPercent(req.focalX),
+      focalY: clampFocalPercent(req.focalY),
+    },
+    { requireAuth: true }
+  );
+  return normalizeHomepageConfig(resp);
+}
+
+export async function updateHomepageFeatured(
+  req: UpdateHomepageFeaturedRequest
+): Promise<HomepageConfigResponse> {
+  const resp = await request<HomepageConfigResponse>(
+    "/api/admin/homepage/featured/update",
+    { mediaAssetIds: req.mediaAssetIds ?? [] },
+    { requireAuth: true }
+  );
+  return normalizeHomepageConfig(resp);
 }
 
 export function fetchUserImages(
@@ -526,6 +621,15 @@ export async function createPost(
   req: CreatePostRequest
 ): Promise<ProfilePostResponse> {
   const resp = await request<ProfilePostResponse>("/api/post/create", req, {
+    requireAuth: true,
+  });
+  return normalizeProfilePost(resp);
+}
+
+export async function updatePost(
+  req: UpdatePostRequest
+): Promise<ProfilePostResponse> {
+  const resp = await request<ProfilePostResponse>("/api/post/update", req, {
     requireAuth: true,
   });
   return normalizeProfilePost(resp);
