@@ -75,6 +75,10 @@ type (
 		Id      string              `json:"id"`
 		Variant MediaVariantRequest `json:"variantOption,optional"`
 	}
+	ToggleMediaReactionRequest {
+		Id           string `json:"id"`
+		ReactionType string `json:"reactionType,optional"`
+	}
 	DeleteMediaAssetRequest {
 		Id    string `json:"id"`
 		Force bool   `json:"force,optional"`
@@ -150,9 +154,14 @@ type (
 		Urls             MediaAssetUrls        `json:"urls"`
 		Permissions      MediaAssetPermissions `json:"permissions"`
 		Stats            MediaAssetStats       `json:"stats"`
+		IsLiked          bool                  `json:"isLiked"`
 		MetadataJson     string                `json:"metadataJson"`
 		CreatedAt        string                `json:"createdAt"`
 		UpdatedAt        string                `json:"updatedAt"`
+	}
+	MediaAssetToggleResponse {
+		Active bool            `json:"active"`
+		Stats  MediaAssetStats `json:"stats"`
 	}
 	MediaAssetPageResponse {
 		PageNum  int64                `json:"pageNum"`
@@ -562,6 +571,9 @@ service DiscoverWorld {
 service DiscoverWorld {
 	@handler GetMediaAsset
 	post /media/detail (GetMediaAssetRequest) returns (MediaAssetResponse)
+
+	@handler ToggleMediaReaction
+	post /media/reaction/toggle (ToggleMediaReactionRequest) returns (MediaAssetToggleResponse)
 
 	@handler UploadMediaAsset
 	post /media/upload returns (MediaAssetResponse)

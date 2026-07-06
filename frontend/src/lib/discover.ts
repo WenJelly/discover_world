@@ -116,15 +116,15 @@ function getAspectRatio(picture: PictureResponse) {
 }
 
 function getHotScore(picture: PictureResponse) {
-  return picture.likeCount * 3 + picture.viewCount;
+  return getTimeValue(picture);
 }
 
 function getUpcomingScore(picture: PictureResponse) {
-  return picture.likeCount * 4 + picture.viewCount * 1.25 + getTimeValue(picture) / 1e11;
+  return getTimeValue(picture);
 }
 
 function getEditorsScore(picture: PictureResponse) {
-  return picture.likeCount * 5 + picture.viewCount * 0.75 + getTimeValue(picture) / 1e12;
+  return getTimeValue(picture);
 }
 
 export function parseDiscoverSearch(search: string): DiscoverSearchState {
@@ -175,6 +175,17 @@ export function getDiscoverCategoryQuery(category: DiscoverCategoryKey) {
   }
 
   return DISCOVER_CATEGORY_OPTIONS.find((item) => item.key === category)?.title;
+}
+
+export function resolveDiscoverPreviewIndex<T extends { id: string }>(
+  pictures: T[],
+  selectedAssetId: string | null
+) {
+  if (!selectedAssetId) {
+    return -1;
+  }
+
+  return pictures.findIndex((picture) => picture.id === selectedAssetId);
 }
 
 export function matchesDiscoverCategory(

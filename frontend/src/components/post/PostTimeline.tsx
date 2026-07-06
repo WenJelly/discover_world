@@ -97,7 +97,7 @@ export function PostTimeline({
       {/* Timeline rail — a quiet neutral axis. No color, no decoration. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute bottom-2 left-4 top-2 w-px bg-border"
+        className="pointer-events-none absolute bottom-2 left-4 top-2 -translate-x-1/2 w-px bg-border"
       />
 
       {groups.map((group, groupIndex) => (

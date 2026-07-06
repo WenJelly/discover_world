@@ -68,7 +68,11 @@ function DiscoverPictureCardImpl({ picture, onOpen }: DiscoverPictureCardProps) 
             {formatCount(picture.viewCount)}
           </span>
           <span className="metric" title={`喜欢 ${picture.likeCount}`}>
-            <Heart size={13} aria-hidden="true" />
+            <Heart
+              size={13}
+              className={picture.isLiked ? "fill-current" : undefined}
+              aria-hidden="true"
+            />
             {formatCount(picture.likeCount)}
           </span>
         </div>

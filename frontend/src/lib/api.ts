@@ -4,6 +4,7 @@ import type {
   CreatePostRequest,
   DetailAccountResponse,
   DetailUserResponse,
+  GetMediaAssetRequest,
   GetHomepageConfigRequest,
   GlobalSearchRequest,
   GlobalSearchResponse,
@@ -15,6 +16,7 @@ import type {
   MediaAssetListReq,
   MediaAssetPageResponse,
   MediaAssetResponse,
+  MediaAssetToggleResponse,
   OverviewStatsResponse,
   PictureCursorListReq,
   PictureCursorPageResponse,
@@ -29,6 +31,7 @@ import type {
   ProfilePostResponse,
   RegisterRequest,
   RegisterResponse,
+  ToggleMediaReactionRequest,
   UpdateHomepageFeaturedRequest,
   UpdateHomepageHeroRequest,
   UpdatePostRequest,
@@ -341,6 +344,7 @@ function normalizeMediaAsset(asset: MediaAssetResponse): MediaAssetResponse {
     assetUsage: asset.assetUsage || "work",
     tags: asset.tags ?? [],
     ownerUserId: asset.ownerUserId || asset.userId || "",
+    isLiked: asset.isLiked ?? false,
     url,
     name: asset.title || asset.name || "未命名作品",
     introduction: asset.description || asset.introduction || "",
@@ -565,6 +569,25 @@ export async function deleteMediaAsset(
   return request<void>(
     "/api/media/delete",
     { id, force: options.force ?? false },
+    { requireAuth: true }
+  );
+}
+
+export async function fetchMediaAssetDetail(
+  req: GetMediaAssetRequest
+): Promise<MediaAssetResponse> {
+  const resp = await request<MediaAssetResponse>("/api/media/detail", req, {
+    requireAuth: true,
+  });
+  return normalizeMediaAsset(resp);
+}
+
+export async function toggleMediaReaction(
+  req: ToggleMediaReactionRequest
+): Promise<MediaAssetToggleResponse> {
+  return request<MediaAssetToggleResponse>(
+    "/api/media/reaction/toggle",
+    { id: req.id, reactionType: req.reactionType ?? "like" },
     { requireAuth: true }
   );
 }

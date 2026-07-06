@@ -39,8 +39,18 @@ type MediaPickerDialogProps = {
   excludedIds?: string[];
   /** How many more works may still be picked (multiple mode). */
   maxCount?: number;
+  /** Limit the list to one owner's published works. */
+  ownerUserId?: string;
+  /**
+   * Managed mode: assets pre-selected when the dialog opens. Unchecking them
+   * removes; confirming an empty selection clears the whole collection.
+   */
+  initialSelected?: MediaAssetResponse[];
   confirmLabel?: string;
-  onConfirm: (assets: MediaAssetResponse[]) => void;
+  /** Return false or reject to keep the dialog open. */
+  onConfirm: (
+    assets: MediaAssetResponse[]
+  ) => void | boolean | Promise<void | boolean>;
 };
 
 type LoadState = {
@@ -62,6 +72,8 @@ export function MediaPickerDialog({
   description,
   excludedIds = [],
   maxCount,
+  ownerUserId,
+  initialSelected,
   confirmLabel = "确认选择",
   onConfirm,
 }: MediaPickerDialogProps) {
@@ -78,6 +90,10 @@ export function MediaPickerDialog({
   );
   const cursorRef = useRef<string | null>(null);
   const requestVersionRef = useRef(0);
+  const [confirming, setConfirming] = useState(false);
+  const isManaged = initialSelected != null;
+  const initialSelectedRef = useRef(initialSelected);
+  initialSelectedRef.current = initialSelected;
 
   const excludedIdSet = useMemo(() => new Set(excludedIds), [excludedIds]);
   const selectionFull =
@@ -100,6 +116,7 @@ export function MediaPickerDialog({
         pageSize: PAGE_SIZE,
         cursor: cursorRef.current ?? undefined,
         searchText: keyword || undefined,
+        ownerUserId,
         variantOption: { compressType: 2 },
       });
       if (version !== requestVersionRef.current) return;
@@ -126,7 +143,7 @@ export function MediaPickerDialog({
             : "作品加载失败，请稍后重试",
       }));
     }
-  }, []);
+  }, [ownerUserId]);
 
   // Reset search + selection every time the dialog opens so stale state from
   // a previous session never leaks into a new pick.
@@ -134,7 +151,11 @@ export function MediaPickerDialog({
     if (!open) return;
     setSearchInput("");
     setSearchText("");
-    setSelected(new Map());
+    setSelected(
+      new Map(
+        (initialSelectedRef.current ?? []).map((asset) => [asset.id, asset])
+      )
+    );
     loadPage(true, "");
   }, [open, loadPage]);
 
@@ -174,9 +195,17 @@ export function MediaPickerDialog({
     });
   };
 
-  const handleConfirm = () => {
-    onConfirm(Array.from(selected.values()));
-    onOpenChange(false);
+  const handleConfirm = async () => {
+    setConfirming(true);
+    try {
+      const result = await onConfirm(Array.from(selected.values()));
+      if (result === false) return;
+      onOpenChange(false);
+    } catch {
+      // Caller surfaces the error; keep this dialog open for retry.
+    } finally {
+      setConfirming(false);
+    }
   };
 
   const { assets, hasMore, loading, error } = loadState;
@@ -287,7 +316,7 @@ export function MediaPickerDialog({
                   const isExcluded = excludedIdSet.has(asset.id);
                   const isSelected = selected.has(asset.id);
                   const disabled =
-                    isExcluded || (!isSelected && selectionFull);
+                    isExcluded || confirming || (!isSelected && selectionFull);
                   const ownerName =
                     asset.owner?.nickname || asset.owner?.username || "";
 
@@ -394,9 +423,13 @@ export function MediaPickerDialog({
             aria-live="polite"
           >
             {mode === "multiple"
-              ? maxCount != null
-                ? `本次新增 ${selected.size} 张（还可添加 ${Math.max(0, maxCount - selected.size)} 张）`
-                : `本次新增 ${selected.size} 张`
+              ? isManaged
+                ? maxCount != null
+                  ? `已选 ${selected.size} / ${maxCount} 张`
+                  : `已选 ${selected.size} 张`
+                : maxCount != null
+                  ? `本次新增 ${selected.size} 张（还可添加 ${Math.max(0, maxCount - selected.size)} 张）`
+                  : `本次新增 ${selected.size} 张`
               : selected.size > 0
                 ? "已选 1 张作品"
                 : "尚未选择作品"}
@@ -405,15 +438,19 @@ export function MediaPickerDialog({
             <Button
               type="button"
               variant="outline"
+              disabled={confirming}
               onClick={() => onOpenChange(false)}
             >
               取消
             </Button>
             <Button
               type="button"
-              disabled={selected.size === 0}
+              disabled={confirming || (selected.size === 0 && !isManaged)}
               onClick={handleConfirm}
             >
+              {confirming ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : null}
               {confirmLabel}
             </Button>
           </div>

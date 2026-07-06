@@ -65,7 +65,7 @@ test("toImageItem maps backend media URLs and stats without fabricated favorites
     createdAt: "2026-07-02 12:00:00",
   } as PictureResponse;
 
-  const image = toImageItem(picture, 0);
+  const image = toImageItem(picture);
 
   assert.equal(image.id, "100");
   assert.equal(image.url, "https://cdn.example.com/thumb.jpg");
@@ -77,7 +77,7 @@ test("toImageItem maps backend media URLs and stats without fabricated favorites
   assert.equal(image.favorites, 4);
   assert.equal(image.views, 123);
   assert.equal(image.createdAt, "2026-07-02 12:00:00");
-  assert.equal(image.isFeatured, true);
+  assert.equal("isFeatured" in image, false);
 });
 
 test("filter helpers derive categories and apply backend image filters", () => {

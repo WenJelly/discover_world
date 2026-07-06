@@ -120,6 +120,11 @@ type GetMediaAssetRequest struct {
 	Variant MediaVariantRequest `json:"variantOption,optional"`
 }
 
+type ToggleMediaReactionRequest struct {
+	Id           string `json:"id"`
+	ReactionType string `json:"reactionType,optional"`
+}
+
 type GetPostDetailRequest struct {
 	Id string `json:"id"`
 }
@@ -244,9 +249,15 @@ type MediaAssetResponse struct {
 	Urls             MediaAssetUrls        `json:"urls"`
 	Permissions      MediaAssetPermissions `json:"permissions"`
 	Stats            MediaAssetStats       `json:"stats"`
+	IsLiked          bool                  `json:"isLiked"`
 	MetadataJson     string                `json:"metadataJson"`
 	CreatedAt        string                `json:"createdAt"`
 	UpdatedAt        string                `json:"updatedAt"`
+}
+
+type MediaAssetToggleResponse struct {
+	Active bool            `json:"active"`
+	Stats  MediaAssetStats `json:"stats"`
 }
 
 type MediaAssetStats struct {

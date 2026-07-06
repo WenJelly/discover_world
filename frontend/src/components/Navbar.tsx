@@ -19,7 +19,6 @@ import {
     Search,
     Settings,
     ShieldCheck,
-    Upload,
     UserRound,
     X,
 } from "lucide-react";
@@ -41,9 +40,7 @@ import {
     uploadAccountAvatar,
     updateUserProfile,
 } from "@/lib/api";
-import type { MediaAssetResponse } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { UploadDialog } from "@/components/upload/UploadDialog";
 import {
     DISCOVER_NAVBAR_VISIBILITY_EVENT,
     type DiscoverNavbarVisibilityDetail,
@@ -76,7 +73,6 @@ export default function FadingSiblingsNavbar() {
     const [authOpen, setAuthOpen] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [urlUploadOpen, setUrlUploadOpen] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
@@ -147,27 +143,9 @@ export default function FadingSiblingsNavbar() {
         handleInternalNavigation(event, "/account", closeMenu);
     };
 
-    const openUploadDialog = () => {
-        setAccountMenuOpen(false);
-        setIsOpen(false);
-        setUrlUploadOpen(true);
-    };
-
-    const handleImageUploadComplete = (asset: MediaAssetResponse) => {
-        setUploading(false);
-        toast({
-            title: "图片上传成功",
-            description: asset.title
-                ? `「${asset.title}」已加入你的图片库，审核通过后公开。`
-                : "图片已加入你的图片库，审核通过后公开。",
-            variant: "success",
-        });
-    };
-
     const handleLogout = () => {
         logout();
         setAccountMenuOpen(false);
-        setUrlUploadOpen(false);
         setIsOpen(false);
     };
 
@@ -300,7 +278,6 @@ export default function FadingSiblingsNavbar() {
     useEffect(() => {
         if (!isAuthenticated) {
             setAccountMenuOpen(false);
-            setUrlUploadOpen(false);
         }
     }, [isAuthenticated]);
 
@@ -500,20 +477,6 @@ export default function FadingSiblingsNavbar() {
                                                         <Settings className="size-[17px] text-slate-400 dark:text-slate-500" strokeWidth={2} />
                                                         个人设置
                                                     </button>
-                                                    <button
-                                                        role="menuitem"
-                                                        type="button"
-                                                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[15px] font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800/50 dark:hover:text-white"
-                                                        disabled={uploading}
-                                                        onClick={openUploadDialog}
-                                                    >
-                                                        {uploading ? (
-                                                            <Loader2 className="size-[17px] animate-spin text-slate-400 dark:text-slate-500" strokeWidth={2} />
-                                                        ) : (
-                                                            <Upload className="size-[17px] text-slate-400 dark:text-slate-500" strokeWidth={2} />
-                                                        )}
-                                                        上传图片
-                                                    </button>
                                                     {isAdmin ? (
                                                         <a
                                                             role="menuitem"
@@ -682,20 +645,6 @@ export default function FadingSiblingsNavbar() {
                                                         </div>
                                                     </div>
                                                 </a>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="h-10 w-full rounded-xl"
-                                                    disabled={uploading}
-                                                    onClick={openUploadDialog}
-                                                >
-                                                    {uploading ? (
-                                                        <Loader2 className="size-4 animate-spin" />
-                                                    ) : (
-                                                        <Upload className="size-4" />
-                                                    )}
-                                                    上传图片
-                                                </Button>
                                                 {isAdmin ? (
                                                     <a
                                                         href="/admin"
@@ -896,13 +845,6 @@ export default function FadingSiblingsNavbar() {
                     </form>
                 </DialogContent>
             </Dialog>
-
-            {/* Upload Dialog */}
-            <UploadDialog
-                open={urlUploadOpen}
-                onOpenChange={setUrlUploadOpen}
-                onUploaded={handleImageUploadComplete}
-            />
         </LayoutGroup>
     );
 }

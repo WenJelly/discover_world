@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import {
   ArrowUp,
@@ -18,8 +19,10 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Settings2,
   Sparkles,
   Trash2,
+  Upload,
   UserRound,
 } from "lucide-react";
 
@@ -31,6 +34,7 @@ import {
   fetchProfileFeaturedMediaList,
   fetchProfilePostCursorList,
   fetchUserProfile,
+  updateProfileFeaturedMedia,
 } from "@/lib/api";
 import {
   toAccountProfile,
@@ -40,11 +44,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { ImagePreviewModal } from "@/components/ImagePreviewModal";
+import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
+import { UploadDialog } from "@/components/upload/UploadDialog";
 import { PostTimeline } from "@/components/post/PostTimeline";
 import {
   PostComposerDialog,
   type PostAuthor,
 } from "@/components/post/PostComposerDialog";
+import { useToast } from "@/hooks/use-toast";
 import {
   formatCount,
   formatDate,
@@ -54,6 +61,7 @@ import {
 import { isForceDeleteMediaConflict } from "@/lib/api-error";
 import type {
   ImageItem,
+  MediaAssetResponse,
   ProfileAlbumResponse,
   ProfilePostResponse,
   UserProfile,
@@ -71,7 +79,7 @@ const TAB_ITEMS: Array<{ id: AccountTab; label: string; icon: typeof Camera }> =
 
 const POST_PAGE_SIZE = 10;
 const PICTURES_PAGE_SIZE = 20;
-const FEATURED_PAGE_SIZE = 12;
+const MAX_FEATURED_COUNT = 20;
 const ALBUM_PAGE_SIZE = 12;
 
 function getImageUrl(image: ImageItem) {
@@ -86,7 +94,15 @@ function readAccountTargetUserId() {
   return new URLSearchParams(window.location.search).get("userId")?.trim() ?? "";
 }
 
-function EmptyState({ title, description }: { title: string; description: string }) {
+function EmptyState({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
   return (
     <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-border bg-card p-8 text-center">
       <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -98,6 +114,7 @@ function EmptyState({ title, description }: { title: string; description: string
       <p className="mt-2 max-w-sm text-sm text-muted-foreground">
         {description}
       </p>
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
 }
@@ -112,6 +129,7 @@ function LoadingBlock() {
 
 export default function AccountDetailPage() {
   const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<AccountTab>("posts");
   const [targetUserId, setTargetUserId] = useState(() => readAccountTargetUserId());
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -131,12 +149,14 @@ export default function AccountDetailPage() {
   const [picturesLoadingMore, setPicturesLoadingMore] = useState(false);
   const [picturesError, setPicturesError] = useState<string | null>(null);
   const [picturesHasMore, setPicturesHasMore] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const picturesCursorRef = useRef("");
 
   // Featured state
-  const [featuredImages, setFeaturedImages] = useState<ImageItem[]>([]);
+  const [featuredAssets, setFeaturedAssets] = useState<MediaAssetResponse[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState(false);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
+  const [showFeaturedPicker, setShowFeaturedPicker] = useState(false);
 
   // Posts state
   const [posts, setPosts] = useState<ProfilePostResponse[]>([]);
@@ -153,6 +173,10 @@ export default function AccountDetailPage() {
 
   const ownerId = targetUserId || user?.id;
   const isOwnProfile = Boolean(user?.id && ownerId === user.id);
+  const featuredImages = useMemo(
+    () => featuredAssets.map(toImageItem),
+    [featuredAssets]
+  );
 
   useEffect(() => {
     const syncTargetUserId = () => {
@@ -230,7 +254,7 @@ export default function AccountDetailPage() {
 
   const loadFeatured = useCallback(async () => {
     if (!isAuthenticated || !ownerId) {
-      setFeaturedImages([]);
+      setFeaturedAssets([]);
       setFeaturedError(null);
       return;
     }
@@ -240,13 +264,13 @@ export default function AccountDetailPage() {
     try {
       const resp = await fetchProfileFeaturedMediaList({
         userId: ownerId,
-        pageSize: FEATURED_PAGE_SIZE,
+        pageSize: MAX_FEATURED_COUNT,
         variantOption: { compressType: 2 },
       });
-      setFeaturedImages(resp.list.map(toImageItem));
+      setFeaturedAssets(resp.list);
     } catch (error) {
       setFeaturedError(errorMessage(error, "精选图片加载失败"));
-      setFeaturedImages([]);
+      setFeaturedAssets([]);
     } finally {
       setFeaturedLoading(false);
     }
@@ -369,7 +393,7 @@ export default function AccountDetailPage() {
 
   const removeDeletedImageFromState = (imageId: string) => {
     setPictures((prev) => prev.filter((img) => img.id !== imageId));
-    setFeaturedImages((prev) => prev.filter((img) => img.id !== imageId));
+    setFeaturedAssets((prev) => prev.filter((asset) => asset.id !== imageId));
     handleClosePreview();
   };
 
@@ -413,6 +437,35 @@ export default function AccountDetailPage() {
 
   const handleNewPost = () => {
     setShowNewPostDialog(true);
+  };
+
+  const handleFeaturedConfirm = async (assets: MediaAssetResponse[]) => {
+    try {
+      await updateProfileFeaturedMedia({
+        mediaAssetIds: assets.map((asset) => asset.id),
+      });
+      await loadFeatured();
+      toast({ title: "精选已更新", variant: "success" });
+    } catch (error) {
+      toast({
+        title: "精选保存失败",
+        description: errorMessage(error, "请稍后重试"),
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const handleProfileUploadComplete = (asset: MediaAssetResponse) => {
+    toast({
+      title: "作品已上传",
+      description: asset.title
+        ? `「${asset.title}」已加入你的作品，审核通过后会公开展示。`
+        : "作品已加入你的主页，审核通过后会公开展示。",
+      variant: "success",
+    });
+    void loadPictures(true);
+    void loadProfile();
   };
 
   const handlePostPublished = (post: ProfilePostResponse) => {
@@ -646,14 +699,42 @@ export default function AccountDetailPage() {
           )}
         </>
         ) : activeTab === "pictures" ? (
-          picturesLoading ? (
-            <LoadingBlock />
-          ) : picturesError && pictures.length === 0 ? (
-            <EmptyState title="作品加载失败" description={picturesError} />
-          ) : pictures.length === 0 ? (
-            <EmptyState title="暂无作品" description="上传的作品会展示在这里" />
-          ) : (
-            <div className="space-y-4">
+          <div className="space-y-4">
+            {isOwnProfile && !picturesLoading && pictures.length > 0 ? (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowUploadDialog(true)}
+                >
+                  <Upload className="size-4" />
+                  上传作品
+                </Button>
+              </div>
+            ) : null}
+            {picturesLoading ? (
+              <LoadingBlock />
+            ) : picturesError && pictures.length === 0 ? (
+              <EmptyState title="作品加载失败" description={picturesError} />
+            ) : pictures.length === 0 ? (
+              <EmptyState
+                title="暂无作品"
+                description="上传的作品会展示在这里"
+                action={
+                  isOwnProfile ? (
+                    <Button
+                      type="button"
+                      onClick={() => setShowUploadDialog(true)}
+                    >
+                      <Upload className="size-4" />
+                      上传作品
+                    </Button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {pictures.map((image, index) => (
                   <article
@@ -700,14 +781,47 @@ export default function AccountDetailPage() {
                 </div>
               ) : null}
             </div>
-          )
+            )}
+          </div>
         ) : activeTab === "featured" ? (
-          featuredLoading ? (
+          <div className="space-y-4">
+            {isOwnProfile && !featuredLoading && featuredImages.length > 0 ? (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFeaturedPicker(true)}
+                >
+                  <Settings2 className="size-4" />
+                  管理精选
+                </Button>
+              </div>
+            ) : null}
+            {featuredLoading ? (
             <LoadingBlock />
           ) : featuredError ? (
             <EmptyState title="精选图片加载失败" description={featuredError} />
           ) : featuredImages.length === 0 ? (
-            <EmptyState title="暂无精选图片" description="设置精选后会展示在这里" />
+            <EmptyState
+              title="暂无精选图片"
+              description={
+                isOwnProfile
+                  ? "从你的作品中挑选精选，展示在这里"
+                  : "设置精选后会展示在这里"
+              }
+              action={
+                isOwnProfile ? (
+                  <Button
+                    type="button"
+                    onClick={() => setShowFeaturedPicker(true)}
+                  >
+                    <Sparkles className="size-4" />
+                    去挑选作品
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {featuredImages.map((image, index) => (
@@ -736,7 +850,8 @@ export default function AccountDetailPage() {
                 </article>
               ))}
             </div>
-          )
+          )}
+          </div>
         ) : (
           albumLoading ? (
             <LoadingBlock />
@@ -845,6 +960,28 @@ export default function AccountDetailPage() {
           }
         />
       )}
+
+      {isOwnProfile ? (
+        <>
+          <MediaPickerDialog
+            open={showFeaturedPicker}
+            onOpenChange={setShowFeaturedPicker}
+            mode="multiple"
+            title="管理精选"
+            description="从你已发布的公开作品中挑选精选，最多 20 张；取消勾选即可移除。"
+            ownerUserId={user?.id}
+            initialSelected={featuredAssets}
+            maxCount={MAX_FEATURED_COUNT}
+            confirmLabel="保存精选"
+            onConfirm={handleFeaturedConfirm}
+          />
+          <UploadDialog
+            open={showUploadDialog}
+            onOpenChange={setShowUploadDialog}
+            onUploaded={handleProfileUploadComplete}
+          />
+        </>
+      ) : null}
 
       {/* New Post Dialog */}
       <PostComposerDialog

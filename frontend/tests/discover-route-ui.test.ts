@@ -139,3 +139,17 @@ test("discover category filters are sent to cursor requests before local filteri
   assert.match(discoverPage, /const discoverCategoryQuery = useMemo/);
   assert.match(discoverPage, /category:\s*discoverCategoryQuery/);
 });
+
+test("discover preview is anchored by asset id when detail updates resort the list", async () => {
+  const discoverPage = await readFile(pageUrl, "utf8");
+  const discoverLib = await readFile(libUrl, "utf8");
+
+  assert.match(discoverLib, /export function resolveDiscoverPreviewIndex/);
+  assert.match(discoverPage, /const \[previewAssetId, setPreviewAssetId\]/);
+  assert.match(
+    discoverPage,
+    /const previewIndex = useMemo\(\s*\(\) => resolveDiscoverPreviewIndex\(filteredPictures, previewAssetId\)/s
+  );
+  assert.match(discoverPage, /onOpen=\{\(picture\) => setPreviewAssetId\(picture\.id\)\}/);
+  assert.doesNotMatch(discoverPage, /const \[previewIndex, setPreviewIndex\]/);
+});

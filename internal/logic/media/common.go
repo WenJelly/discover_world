@@ -31,6 +31,7 @@ const (
 	maxVariantCropDimension   = 4096
 
 	targetTypeMediaAsset = "media_asset"
+	defaultMediaReaction = "like"
 	assetUsageWork       = "work"
 	assetUsagePost       = "post"
 	assetUsageAvatar     = "avatar"
@@ -317,6 +318,17 @@ func initialUploadAuditStatus(assetUsage string, isAdmin bool) string {
 		return "approved"
 	}
 	return "pending"
+}
+
+func normalizeMediaReactionType(reactionType string) (string, error) {
+	reactionType = strings.ToLower(strings.TrimSpace(reactionType))
+	if reactionType == "" {
+		return defaultMediaReaction, nil
+	}
+	if reactionType == defaultMediaReaction {
+		return reactionType, nil
+	}
+	return "", commonresponse.BadRequest("reactionType must be like")
 }
 
 func variantOrDefault(option types.MediaVariantRequest, fallback int64) types.MediaVariantRequest {

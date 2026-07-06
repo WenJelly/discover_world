@@ -150,6 +150,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodPost,
+				Path:    "/media/reaction/toggle",
+				Handler: media.ToggleMediaReactionHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
 				Path:    "/media/upload",
 				Handler: media.UploadMediaAssetHandler(serverCtx),
 			},

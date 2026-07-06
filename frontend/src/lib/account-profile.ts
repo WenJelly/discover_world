@@ -59,7 +59,7 @@ export function toAccountProfile(detail: DetailUserResponse): UserProfile {
   };
 }
 
-export function toImageItem(picture: PictureResponse, index: number): ImageItem {
+export function toImageItem(picture: PictureResponse): ImageItem {
   const urls = picture.urls ?? {
     thumbnail: "",
     preview: "",
@@ -93,7 +93,6 @@ export function toImageItem(picture: PictureResponse, index: number): ImageItem 
     views: stats.viewCount ?? picture.viewCount ?? 0,
     createdAt: picture.createdAt || picture.createTime || picture.updateTime,
     uploadedAt: picture.createdAt || picture.createTime || picture.updateTime,
-    isFeatured: index < 8,
     user: picture.user
       ? {
           id: picture.user.id,

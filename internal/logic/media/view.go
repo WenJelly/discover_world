@@ -12,6 +12,10 @@ import (
 	"discover_world/model"
 )
 
+type mediaViewerState struct {
+	liked map[uint64]bool
+}
+
 func BuildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext, assets []*model.MediaAsset, viewer *model.UserAccount, variant types.MediaVariantRequest) ([]types.MediaAssetResponse, error) {
 	return buildMediaAssetListResponse(ctx, svcCtx, assets, viewer, variant)
 }
@@ -23,6 +27,11 @@ func buildMediaAssetResponse(ctx context.Context, svcCtx *svc.ServiceContext, as
 	}
 	if resp != nil {
 		resp.Owner.AvatarUrl = LoadAvatarURL(ctx, svcCtx, profile)
+		viewerState, err := loadMediaViewerState(ctx, svcCtx, viewer, []uint64{asset.Id})
+		if err != nil {
+			return nil, err
+		}
+		applyMediaViewerState(resp, asset.Id, viewerState)
 	}
 	return resp, nil
 }
@@ -184,6 +193,10 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 	if err != nil {
 		return nil, err
 	}
+	viewerState, err := loadMediaViewerState(ctx, svcCtx, viewer, assetIDs)
+	if err != nil {
+		return nil, err
+	}
 
 	resp := make([]types.MediaAssetResponse, 0, len(assets))
 	for _, asset := range assets {
@@ -199,10 +212,34 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 		if err != nil {
 			return nil, err
 		}
+		applyMediaViewerState(item, asset.Id, viewerState)
 		item.Owner.AvatarUrl = avatarURLs[asset.OwnerUserId]
 		resp = append(resp, *item)
 	}
 	return resp, nil
+}
+
+func loadMediaViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *model.UserAccount, assetIDs []uint64) (mediaViewerState, error) {
+	state := mediaViewerState{
+		liked: map[uint64]bool{},
+	}
+	if viewer == nil || viewer.Id == 0 || len(assetIDs) == 0 {
+		return state, nil
+	}
+
+	liked, err := svcCtx.ReactionModel.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypeMediaAsset, assetIDs, defaultMediaReaction)
+	if err != nil {
+		return state, err
+	}
+	state.liked = liked
+	return state, nil
+}
+
+func applyMediaViewerState(resp *types.MediaAssetResponse, assetID uint64, state mediaViewerState) {
+	if resp == nil {
+		return
+	}
+	resp.IsLiked = state.liked[assetID]
 }
 
 func collectOriginalBucketIDs(assets []*model.MediaAsset, objects map[uint64]*model.MediaObject) []uint64 {

@@ -7,6 +7,7 @@ import {
   Eye,
   Heart,
   ImageOff,
+  Loader2,
   Share2,
   X,
 } from "lucide-react";
@@ -18,14 +19,20 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import {
+  ApiError,
+  fetchMediaAssetDetail,
+  toggleMediaReaction,
+} from "@/lib/api";
 import {
   formatCount,
   formatDate,
   getAvatarFallback,
   getMediaDetailUrl,
 } from "@/lib/format";
-import type { MediaAssetResponse } from "@/lib/types";
+import type { MediaAssetResponse, MediaAssetStats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type MediaDetailDialogProps = {
@@ -34,7 +41,21 @@ type MediaDetailDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onIndexChange: (index: number) => void;
+  onAssetChange?: (asset: MediaAssetResponse) => void;
 };
+
+const EMPTY_MEDIA_STATS: MediaAssetStats = {
+  viewCount: 0,
+  reactionCount: 0,
+  favoriteCount: 0,
+  commentCount: 0,
+  shareCount: 0,
+  downloadCount: 0,
+};
+
+function getAssetStats(asset: MediaAssetResponse | undefined): MediaAssetStats {
+  return asset?.stats ?? EMPTY_MEDIA_STATS;
+}
 
 function getOriginalUrl(asset: MediaAssetResponse): string {
   return asset.urls?.original || asset.urls?.detail || asset.url || "";
@@ -46,21 +67,68 @@ export function MediaDetailDialog({
   open,
   onOpenChange,
   onIndexChange,
+  onAssetChange,
 }: MediaDetailDialogProps) {
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
   const asset = assets[index];
+  const assetId = asset?.id;
 
   const [imgError, setImgError] = useState(false);
-  // Local like state — UI-only until a backend /api/media/reaction/toggle exists.
   const [liked, setLiked] = useState(false);
-  const [likeDelta, setLikeDelta] = useState(0);
+  const [stats, setStats] = useState<MediaAssetStats>(() => getAssetStats(asset));
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [togglingLike, setTogglingLike] = useState(false);
 
-  // Reset per-asset local state when the displayed asset changes.
   useEffect(() => {
     setImgError(false);
-    setLiked(false);
-    setLikeDelta(0);
-  }, [asset?.id]);
+    setLoadingDetail(false);
+    setTogglingLike(false);
+
+    if (!asset) {
+      setLiked(false);
+      setStats(EMPTY_MEDIA_STATS);
+      return;
+    }
+
+    setLiked(Boolean(asset.isLiked));
+    setStats(asset.stats);
+  }, [asset]);
+
+  useEffect(() => {
+    if (!open || !assetId || !isAuthenticated) {
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingDetail(true);
+
+    void fetchMediaAssetDetail({ id: assetId })
+      .then((detail) => {
+        if (cancelled) return;
+        setLiked(Boolean(detail.isLiked));
+        setStats(detail.stats);
+        onAssetChange?.(detail);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.code === 401) {
+          return;
+        }
+        toast({
+          title: "详情加载失败",
+          description: err instanceof ApiError ? err.message : "请稍后重试。",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDetail(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [assetId, isAuthenticated, onAssetChange, open, toast]);
 
   // Arrow-key navigation. base-ui Dialog handles ESC, focus trap, scroll lock.
   useEffect(() => {
@@ -84,17 +152,70 @@ export function MediaDetailDialog({
   const ownerName = owner?.nickname || owner?.username || "匿名摄影师";
   const title = asset.title || asset.name || "未命名作品";
   const description = asset.description || asset.introduction;
-  const stats = asset.stats;
-  const reactionCount = (stats?.reactionCount ?? 0) + likeDelta;
+  const reactionCount = stats.reactionCount;
   const canDownload = asset.permissions?.canDownload ?? true;
   const detailUrl = getMediaDetailUrl(asset);
   const hasPrev = index > 0;
   const hasNext = index < assets.length - 1;
 
-  const handleLike = () => {
-    // TODO: persist via /api/media/reaction/toggle once the backend exposes it.
-    setLiked((v) => !v);
-    setLikeDelta((d) => (liked ? d - 1 : d + 1));
+  const handleLike = async () => {
+    if (togglingLike) return;
+    if (!isAuthenticated) {
+      toast({
+        title: "请先登录",
+        description: "登录后才能点赞作品。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const previousLiked = liked;
+    const previousStats = stats;
+    const optimisticStats = {
+      ...stats,
+      reactionCount: Math.max(0, stats.reactionCount + (liked ? -1 : 1)),
+    };
+
+    setLiked(!liked);
+    setStats(optimisticStats);
+    setTogglingLike(true);
+    onAssetChange?.({
+      ...asset,
+      isLiked: !liked,
+      stats: optimisticStats,
+      viewCount: optimisticStats.viewCount,
+      likeCount: optimisticStats.reactionCount,
+    });
+
+    try {
+      const res = await toggleMediaReaction({ id: asset.id, reactionType: "like" });
+      setLiked(res.active);
+      setStats(res.stats);
+      onAssetChange?.({
+        ...asset,
+        isLiked: res.active,
+        stats: res.stats,
+        viewCount: res.stats.viewCount,
+        likeCount: res.stats.reactionCount,
+      });
+    } catch (err) {
+      setLiked(previousLiked);
+      setStats(previousStats);
+      onAssetChange?.({
+        ...asset,
+        isLiked: previousLiked,
+        stats: previousStats,
+        viewCount: previousStats.viewCount,
+        likeCount: previousStats.reactionCount,
+      });
+      toast({
+        title: "操作失败",
+        description: err instanceof ApiError ? err.message : "请稍后重试。",
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingLike(false);
+    }
   };
 
   const handleDownload = () => {
@@ -245,11 +366,14 @@ export function MediaDetailDialog({
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Eye className="size-4" aria-hidden />
-              {formatCount(stats?.viewCount ?? 0)}
+              {formatCount(stats.viewCount)}
+              {loadingDetail ? (
+                <Loader2 className="size-3 animate-spin" aria-hidden />
+              ) : null}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Bookmark className="size-4" aria-hidden />
-              {formatCount(stats?.favoriteCount ?? 0)}
+              {formatCount(stats.favoriteCount)}
             </span>
           </div>
 
@@ -272,10 +396,15 @@ export function MediaDetailDialog({
               size="sm"
               variant="outline"
               onClick={handleLike}
+              disabled={togglingLike}
               aria-pressed={liked}
               className={cn(liked && "text-rose-600 hover:text-rose-600")}
             >
-              <Heart className={cn("size-4", liked && "fill-current")} aria-hidden />
+              {togglingLike ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Heart className={cn("size-4", liked && "fill-current")} aria-hidden />
+              )}
               {liked ? "已点赞" : "点赞"}
             </Button>
             <Button

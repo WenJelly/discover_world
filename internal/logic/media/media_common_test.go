@@ -267,6 +267,46 @@ func TestInitialUploadAuditStatusDependsOnRoleAndUsage(t *testing.T) {
 	}
 }
 
+func TestNormalizeMediaReactionTypeDefaultsAndRejectsUnsupported(t *testing.T) {
+	got, err := normalizeMediaReactionType("")
+	if err != nil {
+		t.Fatalf("normalizeMediaReactionType returned error: %v", err)
+	}
+	if got != "like" {
+		t.Fatalf("normalizeMediaReactionType empty = %q, want like", got)
+	}
+
+	got, err = normalizeMediaReactionType(" LIKE ")
+	if err != nil {
+		t.Fatalf("normalizeMediaReactionType returned error: %v", err)
+	}
+	if got != "like" {
+		t.Fatalf("normalizeMediaReactionType = %q, want like", got)
+	}
+
+	if _, err := normalizeMediaReactionType("wow"); err == nil {
+		t.Fatal("normalizeMediaReactionType accepted unsupported media reaction type")
+	}
+}
+
+func TestApplyMediaViewerStateMarksLikedAssets(t *testing.T) {
+	state := mediaViewerState{
+		liked: map[uint64]bool{10: true},
+	}
+
+	liked := types.MediaAssetResponse{}
+	applyMediaViewerState(&liked, 10, state)
+	if !liked.IsLiked {
+		t.Fatal("applyMediaViewerState did not mark liked media asset")
+	}
+
+	unliked := types.MediaAssetResponse{}
+	applyMediaViewerState(&unliked, 20, state)
+	if unliked.IsLiked {
+		t.Fatal("applyMediaViewerState marked unrelated media asset as liked")
+	}
+}
+
 func TestMarkMediaAssetUploadFailedPersistsFailedStatusAndReturnsOriginalError(t *testing.T) {
 	asset := &model.MediaAsset{Id: 42, Status: "uploading"}
 	originalErr := errors.New("cos upload failed")

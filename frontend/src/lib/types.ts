@@ -142,6 +142,7 @@ export interface MediaAssetResponse {
   stats: MediaAssetStats;
   permissions?: MediaAssetPermissions;
   metadataJson: string;
+  isLiked: boolean;
   createdAt: string;
   updatedAt: string;
   url: string;
@@ -183,6 +184,21 @@ export interface MediaAssetPageResponse {
 }
 
 export type PicturePageResponse = MediaAssetPageResponse;
+
+export interface GetMediaAssetRequest {
+  id: string;
+  variantOption?: MediaVariantRequest;
+}
+
+export interface ToggleMediaReactionRequest {
+  id: string;
+  reactionType?: string;
+}
+
+export interface MediaAssetToggleResponse {
+  active: boolean;
+  stats: MediaAssetStats;
+}
 
 export interface ProfilePostResponse {
   id: string;
@@ -460,7 +476,6 @@ export interface ImageItem {
   favorites: number;
   views: number;
   createdAt: string;
-  isFeatured?: boolean;
   user?: {
     id: string;
     username: string;
