@@ -24,6 +24,7 @@ const (
 	defaultProfilePageNum        = 1
 	defaultProfilePageSize       = 12
 	maxProfilePageSize           = 60
+	maxProfileFeaturedMediaCount = 20
 
 	targetTypePost        = "post"
 	targetTypeAlbum       = "album"
@@ -76,6 +77,31 @@ func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserI
 	return loginUser, target, includePrivate, nil
 }
 
+func ensureProfileForAccount(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount) (*model.UserProfile, error) {
+	if account == nil || account.Id == 0 {
+		return nil, commonresponse.BadRequest("账号不存在")
+	}
+	profile, err := svcCtx.UserProfileModel.FindOneByUserId(ctx, account.Id)
+	if err == nil {
+		return profile, nil
+	}
+	if !errors.Is(err, model.ErrNotFound) {
+		return nil, commonresponse.InternalServerError("查询用户资料失败")
+	}
+
+	if _, err := svcCtx.UserProfileModel.Insert(ctx, &model.UserProfile{
+		UserId:   account.Id,
+		Nickname: optionalString(account.Username),
+	}); err != nil {
+		return nil, commonresponse.InternalServerError("创建用户资料失败")
+	}
+	profile, err = svcCtx.UserProfileModel.FindOneByUserId(ctx, account.Id)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询用户资料失败")
+	}
+	return profile, nil
+}
+
 func normalizeProfileCursorPage(pageSize int64) (int64, error) {
 	if pageSize <= 0 {
 		return defaultProfileCursorPageSize, nil
@@ -97,6 +123,26 @@ func normalizeProfilePage(pageNum, pageSize int64) (int64, int64, error) {
 		return 0, 0, commonresponse.BadRequest("pageSize 不能超过 60")
 	}
 	return pageNum, pageSize, nil
+}
+
+func parseProfileFeaturedMediaAssetIDs(raw []string) ([]uint64, error) {
+	if len(raw) > maxProfileFeaturedMediaCount {
+		return nil, commonresponse.BadRequest("精选照片不能超过 20 张")
+	}
+
+	ids := make([]uint64, 0, len(raw))
+	for _, item := range raw {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		id, err := parseRequiredID(item, "mediaAssetIds")
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return uniqueIDs(ids), nil
 }
 
 func encodeProfileCursor(post *model.Post) (string, error) {
@@ -187,6 +233,14 @@ func nullStringValue(value sql.NullString) string {
 		return value.String
 	}
 	return ""
+}
+
+func optionalString(value string) sql.NullString {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: value, Valid: true}
 }
 
 func formatTime(value time.Time) string {
@@ -281,6 +335,16 @@ func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, asse
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")
 	}
+	return buildMediaResponseMapFromAssets(ctx, svcCtx, assetIDs, assetsByID, viewer, variant)
+}
+
+func buildMediaResponseMapFromAssets(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, assetsByID map[uint64]*model.MediaAsset, viewer *model.UserAccount, variant types.MediaVariantRequest) (map[uint64]types.MediaAssetResponse, error) {
+	resp := make(map[uint64]types.MediaAssetResponse)
+	assetIDs = uniqueIDs(assetIDs)
+	if len(assetIDs) == 0 {
+		return resp, nil
+	}
+
 	assets := make([]*model.MediaAsset, 0, len(assetIDs))
 	orderedIDs := make([]uint64, 0, len(assetIDs))
 	for _, id := range assetIDs {

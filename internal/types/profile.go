@@ -22,6 +22,10 @@ type ProfileFeaturedMediaListRequest struct {
 	Variant  MediaVariantRequest `json:"variantOption,optional"`
 }
 
+type UpdateProfileFeaturedMediaRequest struct {
+	MediaAssetIds []string `json:"mediaAssetIds,optional"`
+}
+
 type ProfilePostCursorPageResponse struct {
 	PageSize   int64                 `json:"pageSize"`
 	HasMore    bool                  `json:"hasMore"`

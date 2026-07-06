@@ -24,7 +24,8 @@ type CursorQueryMediaAssetRequest struct {
 }
 
 type DeleteMediaAssetRequest struct {
-	Id string `json:"id"`
+	Id    string `json:"id"`
+	Force bool   `json:"force,optional"`
 }
 
 type GetMediaAssetRequest struct {
@@ -42,6 +43,7 @@ type MediaAssetCursorPageResponse struct {
 type MediaAssetResponse struct {
 	Id               string                `json:"id"`
 	MediaType        string                `json:"mediaType"`
+	AssetUsage       string                `json:"assetUsage"`
 	Title            string                `json:"title"`
 	Description      string                `json:"description"`
 	Category         string                `json:"category"`
@@ -79,6 +81,7 @@ type MediaAssetUploadByUrlRequest struct {
 	Category    string   `json:"category,optional"`
 	Tags        []string `json:"tags,optional"`
 	Visibility  string   `json:"visibility,optional"`
+	AssetUsage  string   `json:"assetUsage,optional"`
 }
 
 type QueryMediaAssetRequest struct {

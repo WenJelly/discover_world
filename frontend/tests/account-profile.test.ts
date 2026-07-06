@@ -18,6 +18,7 @@ test("toAccountProfile maps backend account detail without mock profile defaults
     avatarUrl: "https://cdn.example.com/avatar.jpg",
     bio: "backend bio",
     createdAt: "2026-07-01 10:00:00",
+    publicMediaAssetCount: 5,
     approvedMediaAssetCount: 7,
     mediaAssetCount: 9,
   } as DetailUserResponse;
@@ -27,10 +28,11 @@ test("toAccountProfile maps backend account detail without mock profile defaults
   assert.equal(profile.id, "42");
   assert.equal(profile.username, "Alice Chen");
   assert.equal(profile.handle, "@alice");
+  assert.equal(profile.email, "");
   assert.equal(profile.avatarUrl, "https://cdn.example.com/avatar.jpg");
   assert.equal(profile.bio, "backend bio");
   assert.equal(profile.joinedAt, "2026-07-01 10:00:00");
-  assert.equal(profile.imageCount, 7);
+  assert.equal(profile.imageCount, 5);
   assert.equal(profile.followers, 0);
   assert.equal(profile.likes, 0);
   assert.deepEqual(profile.badges, []);

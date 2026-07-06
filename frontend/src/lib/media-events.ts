@@ -10,7 +10,8 @@ export function shouldDisplayUploadedMediaAsset(asset: MediaAssetResponse) {
   return (
     asset.status === "active" &&
     asset.visibility === "public" &&
-    asset.auditStatus === "approved"
+    asset.auditStatus === "approved" &&
+    asset.assetUsage === "work"
   );
 }
 

@@ -58,13 +58,44 @@ func (l *DeleteMediaAssetLogic) DeleteMediaAsset(req *types.DeleteMediaAssetRequ
 		return commonresponse.Forbidden("无权删除该媒体资源")
 	}
 
-	asset.Status = "deleted"
-	asset.DeletedAt = sql.NullTime{Time: time.Now(), Valid: true}
-	if err := l.svcCtx.MediaAssetModel.Update(l.ctx, asset); err != nil {
-		return commonresponse.InternalServerError("删除媒体资源失败")
+	links, err := l.svcCtx.AssetLinkModel.FindActiveByAssetID(l.ctx, asset.Id)
+	if err != nil {
+		return commonresponse.InternalServerError("查询媒体引用失败")
 	}
-	if err := l.svcCtx.MediaObjectModel.MarkDeletedByAssetID(l.ctx, asset.Id); err != nil {
-		return commonresponse.InternalServerError("删除媒体对象失败")
+	references := buildMediaDeleteReferenceSummary(links)
+	avatarProfiles, err := l.svcCtx.UserProfileModel.FindAvatarReferencesByAssetID(l.ctx, asset.Id)
+	if err != nil {
+		return commonresponse.InternalServerError("查询头像引用失败")
+	}
+	coverAlbums, err := l.svcCtx.AlbumModel.FindCoverReferencesByAssetID(l.ctx, asset.Id)
+	if err != nil {
+		return commonresponse.InternalServerError("查询相册封面引用失败")
+	}
+	references.addBlockingLabels(buildDirectMediaDeleteReferenceLabels(avatarProfiles, coverAlbums)...)
+
+	if references.hasBlockingReferences() {
+		return commonresponse.Conflict(references.blockingMessage())
+	}
+	if references.requiresForceConfirmation() && !req.Force {
+		return commonresponse.Conflict(references.forceConfirmationMessage())
+	}
+
+	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
+		asset.Status = "deleted"
+		asset.DeletedAt = sql.NullTime{Time: time.Now(), Valid: true}
+		if err := txSvc.MediaAssetModel.Update(ctx, asset); err != nil {
+			return err
+		}
+		if err := txSvc.MediaObjectModel.MarkDeletedByAssetID(ctx, asset.Id); err != nil {
+			return err
+		}
+		if references.hasPostReferences() {
+			return txSvc.AssetLinkModel.DeactivateActiveByAssetIDAndOwnerRole(ctx, asset.Id, deleteReferenceOwnerPost, deleteReferenceRoleAttachment)
+		}
+		return nil
+	})
+	if err != nil {
+		return commonresponse.InternalServerError("删除媒体资源失败")
 	}
 
 	return nil

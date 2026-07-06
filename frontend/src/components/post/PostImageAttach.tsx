@@ -68,7 +68,10 @@ export function PostImageAttach({
 
     setUploading(true);
     try {
-      const asset = await uploadMediaAsset(file, { visibility: "public" });
+      const asset = await uploadMediaAsset(file, {
+        visibility: "public",
+        assetUsage: "post",
+      });
       notifyMediaAssetUploaded(asset);
       onAdd({
         id: asset.id,

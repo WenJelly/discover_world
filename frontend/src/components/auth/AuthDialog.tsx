@@ -314,6 +314,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     setLoading("register")
     try {
       await register({
+        username: registerForm.username.trim(),
         userEmail: registerForm.email.trim(),
         userPassword: registerForm.password,
         userCheckPassword: registerForm.confirmPassword,
@@ -539,7 +540,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                     <InputWithIcon
                       id="register-username"
                       value={registerForm.username}
-                      placeholder="你的昵称"
+                      placeholder="唯一用户名"
                       icon={<User className="size-4" />}
                       aria-invalid={Boolean(registerErrors.username)}
                       aria-describedby={

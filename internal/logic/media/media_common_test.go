@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
 )
@@ -109,6 +110,33 @@ func TestCollectAvatarAssetIDsDedupesAndSkipsInvalid(t *testing.T) {
 	}
 }
 
+func TestBuildAccountSummaryKeepsEmailPrivate(t *testing.T) {
+	summary := buildAccountSummary(&svc.ServiceContext{}, &model.UserAccount{
+		Id:       7,
+		Username: "alice",
+		Email: sql.NullString{
+			String: "alice@example.com",
+			Valid:  true,
+		},
+		Status: "active",
+	}, &model.UserProfile{
+		Nickname: sql.NullString{
+			String: "Alice Chen",
+			Valid:  true,
+		},
+	})
+
+	if summary.Username != "alice" {
+		t.Fatalf("summary.Username = %q, want alice", summary.Username)
+	}
+	if summary.Nickname != "Alice Chen" {
+		t.Fatalf("summary.Nickname = %q, want Alice Chen", summary.Nickname)
+	}
+	if summary.Email != "" {
+		t.Fatalf("summary.Email = %q, want empty private email", summary.Email)
+	}
+}
+
 func TestBuildVariantURLCompression(t *testing.T) {
 	got, err := buildVariantURL("https://cdn.example.com/a.jpg", 8<<20, 2400, 1600, types.MediaVariantRequest{CompressType: 1})
 	if err != nil {
@@ -175,17 +203,24 @@ func TestMetadataJSONRoundTrip(t *testing.T) {
 	}
 }
 
-func TestBuildPublicMediaAssetListWhereExcludesAvatarUsage(t *testing.T) {
-	whereSQL, _, err := buildPublicMediaAssetListWhere(mediaListFilter{})
+func TestBuildPublicMediaAssetListWhereRequiresWorkUsage(t *testing.T) {
+	whereSQL, args, err := buildPublicMediaAssetListWhere(mediaListFilter{})
 	if err != nil {
 		t.Fatalf("buildPublicMediaAssetListWhere returned error: %v", err)
 	}
 
-	if !strings.Contains(whereSQL, "$.usageType") {
-		t.Fatalf("public media where SQL = %q, want usageType filter", whereSQL)
+	if !strings.Contains(whereSQL, "`asset_usage` = ?") {
+		t.Fatalf("public media where SQL = %q, want asset_usage filter", whereSQL)
 	}
-	if !strings.Contains(whereSQL, "avatar") {
-		t.Fatalf("public media where SQL = %q, want avatar exclusion", whereSQL)
+	foundWorkArg := false
+	for _, arg := range args {
+		if arg == "work" {
+			foundWorkArg = true
+			break
+		}
+	}
+	if !foundWorkArg {
+		t.Fatalf("public media args = %#v, want work asset usage argument", args)
 	}
 }
 

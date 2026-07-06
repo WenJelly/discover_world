@@ -15,7 +15,9 @@ type (
 	AssetLinkModel interface {
 		assetLinkModel
 		CountActiveByOwners(ctx context.Context, ownerType, linkRole string, ownerIDs []uint64) (map[uint64]int64, error)
+		DeactivateActiveByAssetIDAndOwnerRole(ctx context.Context, assetID uint64, ownerType, linkRole string) error
 		DeactivateByOwner(ctx context.Context, ownerType string, ownerID uint64, linkRole string) error
+		FindActiveByAssetID(ctx context.Context, assetID uint64) ([]*AssetLink, error)
 		FindActiveAssetIDsByOwner(ctx context.Context, ownerType string, ownerID uint64, linkRole string, limit int64) ([]uint64, error)
 		FindActiveAssetIDsByOwners(ctx context.Context, ownerType, linkRole string, ownerIDs []uint64) (map[uint64][]uint64, error)
 		ReplaceActiveAssetIDsByOwner(ctx context.Context, ownerType string, ownerID uint64, linkRole string, assetIDs []uint64) error
@@ -42,6 +44,29 @@ func (m *customAssetLinkModel) DeactivateByOwner(ctx context.Context, ownerType 
 	query := fmt.Sprintf("update %s set `status` = 0 where `owner_type` = ? and `owner_id` = ? and `link_role` = ?", m.table)
 	_, err := m.conn.ExecCtx(ctx, query, ownerType, ownerID, linkRole)
 	return err
+}
+
+func (m *customAssetLinkModel) DeactivateActiveByAssetIDAndOwnerRole(ctx context.Context, assetID uint64, ownerType, linkRole string) error {
+	if assetID == 0 {
+		return nil
+	}
+
+	query := fmt.Sprintf("update %s set `status` = 0 where `asset_id` = ? and `owner_type` = ? and `link_role` = ? and `status` = 1", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, assetID, ownerType, linkRole)
+	return err
+}
+
+func (m *customAssetLinkModel) FindActiveByAssetID(ctx context.Context, assetID uint64) ([]*AssetLink, error) {
+	if assetID == 0 {
+		return []*AssetLink{}, nil
+	}
+
+	query := fmt.Sprintf("select %s from %s where `asset_id` = ? and `status` = 1 order by `owner_type` asc, `owner_id` asc, `link_role` asc, `id` asc", assetLinkRows, m.table)
+	var resp []*AssetLink
+	if err := m.conn.QueryRowsCtx(ctx, &resp, query, assetID); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (m *customAssetLinkModel) FindActiveAssetIDsByOwner(ctx context.Context, ownerType string, ownerID uint64, linkRole string, limit int64) ([]uint64, error) {

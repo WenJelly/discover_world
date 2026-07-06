@@ -7,6 +7,7 @@ export type MediaUploadMetadata = {
   category?: string;
   tags?: string[];
   visibility?: string;
+  assetUsage?: string;
 };
 
 function cleanText(value?: string) {
@@ -60,6 +61,7 @@ export function buildMediaAssetUploadFormData(
     formData.append("tags", JSON.stringify(tags));
   }
   formData.append("visibility", cleanText(metadata.visibility) || "public");
+  formData.append("assetUsage", cleanText(metadata.assetUsage) || "work");
 
   return formData;
 }
@@ -95,6 +97,7 @@ export function buildMediaAssetUrlUploadRequest(
     fileUrl: normalizedUrl,
     title: cleanText(metadata.title) || titleFromUrl(parsedUrl),
     visibility: cleanText(metadata.visibility) || "public",
+    assetUsage: cleanText(metadata.assetUsage) || "work",
   };
 
   const id = cleanText(metadata.id);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { fetchMediaAssetCursorList } from "@/lib/api";
 import { getMediaDetailUrl, getMediaUrl } from "@/lib/format";
 import {
@@ -13,6 +14,27 @@ import { cn } from "@/lib/utils";
 export default function Hero() {
   const [photo, setPhoto] = useState<MediaAssetResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  // Staggered reveal: title → subtitle → actions rise and fade in together
+  // as one entrance. Disabled to a static show when reduced-motion is set.
+  const container: Variants = {
+    hidden: {},
+    show: {
+      transition: {
+        staggerChildren: reduceMotion ? 0 : 0.12,
+        delayChildren: reduceMotion ? 0 : 0.08,
+      },
+    },
+  };
+  const rise: Variants = {
+    hidden: reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: reduceMotion ? 0.2 : 0.6, ease: [0.22, 1, 0.36, 1] },
+    },
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -75,19 +97,37 @@ export default function Hero() {
         </svg>
       </div>
 
-      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center text-white">
+      <motion.div
+        className="relative z-10 mx-auto max-w-4xl px-6 text-center text-white"
+        variants={container}
+        initial="hidden"
+        animate="show"
+      >
         <h1
           id="hero-heading"
           className="text-4xl font-bold tracking-tight text-balance sm:text-6xl md:text-7xl"
         >
-          发现世界的
-          <br />
-          高质量图库
+          <span className="block overflow-hidden pb-1">
+            <motion.span className="block" variants={rise}>
+              发现世界的
+            </motion.span>
+          </span>
+          <span className="block overflow-hidden pb-1">
+            <motion.span className="block" variants={rise}>
+              高质量图库
+            </motion.span>
+          </span>
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-base text-white/85 text-pretty sm:text-lg">
+        <motion.p
+          className="mx-auto mt-6 max-w-2xl text-base text-white/85 text-pretty sm:text-lg"
+          variants={rise}
+        >
           海量高清原图，免费浏览与下载，让创作更自由
-        </p>
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+        </motion.p>
+        <motion.div
+          className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4"
+          variants={rise}
+        >
           <a
             href="#gallery"
             className="group inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-slate-950 shadow-lg transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
@@ -107,8 +147,8 @@ export default function Hero() {
           >
             了解更多
           </a>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </section>
   );
 }

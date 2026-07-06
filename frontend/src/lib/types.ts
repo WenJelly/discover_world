@@ -39,10 +39,12 @@ export interface AuthUser extends AccountSummary {
 
 export interface DetailAccountResponse extends AuthUser {
   mediaAssetCount: number;
+  publicMediaAssetCount: number;
   approvedMediaAssetCount: number;
   pendingMediaAssetCount: number;
   rejectedMediaAssetCount: number;
   pictureCount: number;
+  publicPictureCount: number;
   approvedPictureCount: number;
   pendingPictureCount: number;
   rejectedPictureCount: number;
@@ -114,6 +116,7 @@ export interface MediaAssetPermissions {
 export interface MediaAssetResponse {
   id: string;
   mediaType: string;
+  assetUsage: string;
   title: string;
   description: string;
   category: string;
@@ -258,6 +261,7 @@ export interface MediaAssetUploadByUrlRequest {
   category?: string;
   tags?: string[];
   visibility?: string;
+  assetUsage?: string;
 }
 
 export type CompressPictureType = MediaVariantRequest & {
@@ -285,6 +289,10 @@ export interface ProfileFeaturedMediaListReq {
   userId?: string;
   pageSize?: number;
   variantOption?: MediaVariantRequest;
+}
+
+export interface UpdateProfileFeaturedMediaReq {
+  mediaAssetIds?: string[];
 }
 
 export interface ProfileAlbumListReq {

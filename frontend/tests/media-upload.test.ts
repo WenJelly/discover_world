@@ -25,6 +25,17 @@ test("buildMediaAssetUploadFormData includes the selected file and cleaned metad
   assert.equal(formData.get("category"), "旅行");
   assert.equal(formData.get("tags"), JSON.stringify(["海边", "日落"]));
   assert.equal(formData.get("visibility"), "private");
+  assert.equal(formData.get("assetUsage"), "work");
+});
+
+test("buildMediaAssetUploadFormData sends explicit post usage for dynamic attachments", () => {
+  const file = new File(["image"], "daily.jpg", { type: "image/jpeg" });
+
+  const formData = buildMediaAssetUploadFormData(file, {
+    assetUsage: "post",
+  });
+
+  assert.equal(formData.get("assetUsage"), "post");
 });
 
 test("buildAccountAvatarUploadFormData only sends the avatar file to the account endpoint", () => {
@@ -48,6 +59,7 @@ test("buildMediaAssetUrlUploadRequest trims and validates image URL uploads", ()
     category: "城市",
     tags: ["夜景", "街道"],
     visibility: "public",
+    assetUsage: "work",
   });
 
   assert.throws(
@@ -62,8 +74,18 @@ test("shouldDisplayUploadedMediaAsset matches public gallery visibility rules", 
       status: "active",
       visibility: "public",
       auditStatus: "approved",
+      assetUsage: "work",
     } as any),
     true
+  );
+  assert.equal(
+    shouldDisplayUploadedMediaAsset({
+      status: "active",
+      visibility: "public",
+      auditStatus: "approved",
+      assetUsage: "post",
+    } as any),
+    false
   );
   assert.equal(
     shouldDisplayUploadedMediaAsset({

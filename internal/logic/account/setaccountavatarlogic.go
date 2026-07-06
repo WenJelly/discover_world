@@ -42,6 +42,7 @@ func (l *SetAccountAvatarLogic) SetAccountAvatar(file multipart.File, header *mu
 		Title:      loginUser.Username + " avatar",
 		Visibility: "public",
 		UsageType:  "avatar",
+		AssetUsage: "avatar",
 	}, authorization)
 	if err != nil {
 		return nil, err

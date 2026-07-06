@@ -15,6 +15,7 @@ const albumRows = "`id`,`user_id`,`name`,`description`,`cover_asset_id`,`visibil
 type (
 	AlbumModel interface {
 		CountByUser(ctx context.Context, userID uint64, includePrivate bool) (int64, error)
+		FindCoverReferencesByAssetID(ctx context.Context, assetID uint64) ([]*Album, error)
 		FindByUser(ctx context.Context, userID uint64, includePrivate bool, limit, offset int64) ([]*Album, error)
 	}
 
@@ -58,6 +59,19 @@ func (m *defaultAlbumModel) CountByUser(ctx context.Context, userID uint64, incl
 	var resp int64
 	if err := m.conn.QueryRowCtx(ctx, &resp, query, userID); err != nil {
 		return 0, err
+	}
+	return resp, nil
+}
+
+func (m *defaultAlbumModel) FindCoverReferencesByAssetID(ctx context.Context, assetID uint64) ([]*Album, error) {
+	if assetID == 0 {
+		return []*Album{}, nil
+	}
+
+	query := fmt.Sprintf("select %s from %s where `cover_asset_id` = ? and `status` <> 'deleted' and `deleted_at` is null order by `id` asc", albumRows, m.table)
+	var resp []*Album
+	if err := m.conn.QueryRowsCtx(ctx, &resp, query, assetID); err != nil {
+		return nil, err
 	}
 	return resp, nil
 }

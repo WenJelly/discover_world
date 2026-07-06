@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
 )
@@ -163,5 +164,32 @@ func TestApplyPostViewerStateMarksLikedAndFavoritedPosts(t *testing.T) {
 	}
 	if !favorited.IsFavorited {
 		t.Fatal("applyPostViewerState did not mark favorited post")
+	}
+}
+
+func TestBuildAccountSummaryKeepsEmailPrivate(t *testing.T) {
+	summary := buildAccountSummary(&svc.ServiceContext{}, &model.UserAccount{
+		Id:       7,
+		Username: "alice",
+		Email: sql.NullString{
+			String: "alice@example.com",
+			Valid:  true,
+		},
+		Status: "active",
+	}, &model.UserProfile{
+		Nickname: sql.NullString{
+			String: "Alice Chen",
+			Valid:  true,
+		},
+	})
+
+	if summary.Username != "alice" {
+		t.Fatalf("summary.Username = %q, want alice", summary.Username)
+	}
+	if summary.Nickname != "Alice Chen" {
+		t.Fatalf("summary.Nickname = %q, want Alice Chen", summary.Nickname)
+	}
+	if summary.Email != "" {
+		t.Fatalf("summary.Email = %q, want empty private email", summary.Email)
 	}
 }

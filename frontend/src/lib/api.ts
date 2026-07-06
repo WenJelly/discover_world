@@ -25,6 +25,7 @@ import type {
   ProfilePostResponse,
   RegisterRequest,
   RegisterResponse,
+  UpdateProfileFeaturedMediaReq,
   UpdateUserRequest,
 } from "./types";
 import {
@@ -266,6 +267,18 @@ function normalizeAccountSummary(account: AccountSummary | null | undefined): Ac
 
 function normalizeAccount<T extends DetailAccountResponse | LoginResponse>(account: T): T {
   const normalized = normalizeAccountSummary(account);
+  const mediaAssetCount = "mediaAssetCount" in account ? account.mediaAssetCount : 0;
+  const approvedMediaAssetCount =
+    "approvedMediaAssetCount" in account ? account.approvedMediaAssetCount : 0;
+  const pendingMediaAssetCount =
+    "pendingMediaAssetCount" in account ? account.pendingMediaAssetCount : 0;
+  const rejectedMediaAssetCount =
+    "rejectedMediaAssetCount" in account ? account.rejectedMediaAssetCount : 0;
+  const publicMediaAssetCount =
+    "publicMediaAssetCount" in account
+      ? account.publicMediaAssetCount
+      : approvedMediaAssetCount;
+
   return {
     ...account,
     ...(normalized ?? {}),
@@ -274,20 +287,16 @@ function normalizeAccount<T extends DetailAccountResponse | LoginResponse>(accou
     updatedAt: account.updatedAt || account.updateTime || "",
     createTime: account.createdAt || account.createTime || "",
     updateTime: account.updatedAt || account.updateTime || "",
-    mediaAssetCount: "mediaAssetCount" in account ? account.mediaAssetCount : 0,
-    approvedMediaAssetCount:
-      "approvedMediaAssetCount" in account ? account.approvedMediaAssetCount : 0,
-    pendingMediaAssetCount:
-      "pendingMediaAssetCount" in account ? account.pendingMediaAssetCount : 0,
-    rejectedMediaAssetCount:
-      "rejectedMediaAssetCount" in account ? account.rejectedMediaAssetCount : 0,
-    pictureCount: "mediaAssetCount" in account ? account.mediaAssetCount : 0,
-    approvedPictureCount:
-      "approvedMediaAssetCount" in account ? account.approvedMediaAssetCount : 0,
-    pendingPictureCount:
-      "pendingMediaAssetCount" in account ? account.pendingMediaAssetCount : 0,
-    rejectedPictureCount:
-      "rejectedMediaAssetCount" in account ? account.rejectedMediaAssetCount : 0,
+    mediaAssetCount,
+    publicMediaAssetCount,
+    approvedMediaAssetCount,
+    pendingMediaAssetCount,
+    rejectedMediaAssetCount,
+    pictureCount: mediaAssetCount,
+    publicPictureCount: publicMediaAssetCount,
+    approvedPictureCount: approvedMediaAssetCount,
+    pendingPictureCount: pendingMediaAssetCount,
+    rejectedPictureCount: rejectedMediaAssetCount,
   } as T;
 }
 
@@ -322,6 +331,7 @@ function normalizeMediaAsset(asset: MediaAssetResponse): MediaAssetResponse {
     owner,
     title: asset.title || asset.name || "未命名作品",
     description: asset.description || asset.introduction || "",
+    assetUsage: asset.assetUsage || "work",
     tags: asset.tags ?? [],
     ownerUserId: asset.ownerUserId || asset.userId || "",
     url,
@@ -453,8 +463,15 @@ export function fetchOverviewStats(): Promise<OverviewStatsResponse> {
   return request<OverviewStatsResponse>("/api/overview/stats", {});
 }
 
-export async function deleteMediaAsset(id: string): Promise<void> {
-  return request<void>("/api/media/delete", { id }, { requireAuth: true });
+export async function deleteMediaAsset(
+  id: string,
+  options: { force?: boolean } = {}
+): Promise<void> {
+  return request<void>(
+    "/api/media/delete",
+    { id, force: options.force ?? false },
+    { requireAuth: true }
+  );
 }
 
 export async function uploadMediaAsset(
@@ -544,6 +561,17 @@ export async function fetchProfileFeaturedMediaList(
 ): Promise<MediaAssetPageResponse> {
   const page = await request<MediaAssetPageResponse>(
     "/api/profile/featured/media/list",
+    req,
+    { requireAuth: true }
+  );
+  return normalizeMediaAssetPage(page);
+}
+
+export async function updateProfileFeaturedMedia(
+  req: UpdateProfileFeaturedMediaReq
+): Promise<MediaAssetPageResponse> {
+  const page = await request<MediaAssetPageResponse>(
+    "/api/profile/featured/media/update",
     req,
     { requireAuth: true }
   );

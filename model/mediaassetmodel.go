@@ -18,6 +18,9 @@ type (
 		FindOneActive(ctx context.Context, id uint64) (*MediaAsset, error)
 		CountByWhere(ctx context.Context, whereSQL string, args ...any) (int64, error)
 		FindByIDs(ctx context.Context, ids []uint64) (map[uint64]*MediaAsset, error)
+		FindPublicApprovedByIDs(ctx context.Context, ids []uint64) (map[uint64]*MediaAsset, error)
+		FindOwnerPublicApprovedByIDs(ctx context.Context, ownerUserID uint64, ids []uint64) (map[uint64]*MediaAsset, error)
+		CountPublicApprovedByOwner(ctx context.Context, ownerUserID uint64) (int64, error)
 		FindByWhere(ctx context.Context, whereSQL, orderSQL string, limit, offset int64, args ...any) ([]*MediaAsset, error)
 		FindByWhereBeforeID(ctx context.Context, whereSQL, orderSQL string, beforeID, limit int64, args ...any) ([]*MediaAsset, error)
 		CountStatsByOwner(ctx context.Context, ownerUserID uint64) (*MediaAssetOwnerStats, error)
@@ -85,6 +88,69 @@ func (m *customMediaAssetModel) FindByIDs(ctx context.Context, ids []uint64) (ma
 	}
 
 	query := fmt.Sprintf("select %s from %s where `id` in (%s) and `status` <> 'deleted' and `deleted_at` is null", mediaAssetRows, m.table, inPlaceholders(len(args)))
+	var rows []*MediaAsset
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		if row != nil {
+			resp[row.Id] = row
+		}
+	}
+	return resp, nil
+}
+
+func (m *customMediaAssetModel) FindPublicApprovedByIDs(ctx context.Context, ids []uint64) (map[uint64]*MediaAsset, error) {
+	return m.findPublicApprovedByIDs(ctx, 0, ids)
+}
+
+func (m *customMediaAssetModel) FindOwnerPublicApprovedByIDs(ctx context.Context, ownerUserID uint64, ids []uint64) (map[uint64]*MediaAsset, error) {
+	if ownerUserID == 0 {
+		return map[uint64]*MediaAsset{}, nil
+	}
+	return m.findPublicApprovedByIDs(ctx, ownerUserID, ids)
+}
+
+func (m *customMediaAssetModel) CountPublicApprovedByOwner(ctx context.Context, ownerUserID uint64) (int64, error) {
+	if ownerUserID == 0 {
+		return 0, nil
+	}
+
+	query := fmt.Sprintf(
+		"select count(1) from %s where `owner_user_id` = ? and `status` = 'active' and `visibility` = 'public' and `audit_status` = 'approved' and `asset_usage` = 'work' and `deleted_at` is null",
+		m.table,
+	)
+	var resp int64
+	if err := m.conn.QueryRowCtx(ctx, &resp, query, ownerUserID); err != nil {
+		return 0, err
+	}
+	return resp, nil
+}
+
+func (m *customMediaAssetModel) findPublicApprovedByIDs(ctx context.Context, ownerUserID uint64, ids []uint64) (map[uint64]*MediaAsset, error) {
+	resp := make(map[uint64]*MediaAsset)
+	ids = uniquePositiveIDs(ids)
+	if len(ids) == 0 {
+		return resp, nil
+	}
+
+	args := make([]any, 0, len(ids)+1)
+	for _, id := range ids {
+		args = append(args, id)
+	}
+	ownerSQL := ""
+	if ownerUserID > 0 {
+		ownerSQL = " and `owner_user_id` = ?"
+		args = append(args, ownerUserID)
+	}
+
+	query := fmt.Sprintf(
+		"select %s from %s where `id` in (%s)%s and `status` = 'active' and `visibility` = 'public' and `audit_status` = 'approved' and `asset_usage` = 'work' and `deleted_at` is null",
+		mediaAssetRows,
+		m.table,
+		inPlaceholders(len(ids)),
+		ownerSQL,
+	)
 	var rows []*MediaAsset
 	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
 		return nil, err

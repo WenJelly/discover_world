@@ -120,7 +120,8 @@ func buildMediaAssetListWhere(filter mediaListFilter, publicOnly bool) (string, 
 
 	if publicOnly {
 		conditions = append(conditions, "`status` = 'active'", "`visibility` = 'public'")
-		conditions = append(conditions, "coalesce(json_unquote(json_extract(`metadata_json`, '$.usageType')), 'media') <> 'avatar'")
+		conditions = append(conditions, "`asset_usage` = ?")
+		args = append(args, assetUsageWork)
 	}
 
 	auditStatus, err := normalizeAuditStatus(filter.AuditStatus, "")

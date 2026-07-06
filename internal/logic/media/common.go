@@ -31,6 +31,10 @@ const (
 	maxVariantCropDimension   = 4096
 
 	targetTypeMediaAsset = "media_asset"
+	assetUsageWork       = "work"
+	assetUsagePost       = "post"
+	assetUsageAvatar     = "avatar"
+	assetUsageTemp       = "temp"
 )
 
 type mediaCursorPayload struct {
@@ -280,6 +284,19 @@ func normalizeUsageType(usageType string) string {
 		return "media"
 	}
 	return usageType
+}
+
+func normalizeAssetUsage(assetUsage string) string {
+	switch strings.ToLower(strings.TrimSpace(assetUsage)) {
+	case assetUsagePost:
+		return assetUsagePost
+	case assetUsageAvatar:
+		return assetUsageAvatar
+	case assetUsageTemp:
+		return assetUsageTemp
+	default:
+		return assetUsageWork
+	}
 }
 
 func normalizeAuditStatus(status string, fallback string) (string, error) {

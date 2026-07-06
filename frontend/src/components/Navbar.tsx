@@ -16,10 +16,8 @@ import {
     Loader2,
     LogOut,
     Menu,
-    Monitor,
     Search,
     Settings,
-    Sparkles,
     Upload,
     UserRound,
     X,
@@ -51,17 +49,8 @@ import {
 } from "@/lib/discover-navbar";
 
 const navItems = [
-    {
-        name: "产品功能",
-        href: "#features",
-        children: [
-            { name: "智能自动化 Pipeline", desc: "一键配置高并发数据流", icon: Sparkles },
-            { name: "实时监控看板", desc: "毫秒级吞吐量与性能可视化", icon: Monitor },
-        ]
-    },
+    { name: "首页", href: "/" },
     { name: "发现", href: "/discover" },
-    { name: "旅游攻略", href: "/#architecture" },
-    { name: "心得分享", href: "/#pricing" },
 ];
 
 function getAvatarFallback(userName?: string, userEmail?: string) {
@@ -81,7 +70,6 @@ function getUploadErrorMessage(error: unknown) {
 
 export default function FadingSiblingsNavbar() {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-    const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [siteNavbarVisible, setSiteNavbarVisible] = useState(true);
     const [authOpen, setAuthOpen] = useState(false);
@@ -198,8 +186,8 @@ export default function FadingSiblingsNavbar() {
         setAccountMenuOpen(false);
         setIsOpen(false);
         setSettingsForm({
-            username: user?.userName || "",
-            nickname: user?.userName || "",
+            username: user?.username || "",
+            nickname: user?.nickname || user?.userName || "",
             bio: user?.userProfile || "",
         });
         setSettingsOpen(true);
@@ -353,7 +341,6 @@ export default function FadingSiblingsNavbar() {
                                 className="navbar-route-list hidden items-center gap-1 relative lg:flex"
                                 onMouseLeave={() => {
                                     setHoveredIndex(null);
-                                    setActiveDropdown(null);
                                 }}
                             >
                                 {navItems.map((item, index) => {
@@ -368,8 +355,6 @@ export default function FadingSiblingsNavbar() {
                                             className="relative py-2"
                                             onMouseEnter={() => {
                                                 setHoveredIndex(index);
-                                                if (item.children) setActiveDropdown(index);
-                                                else setActiveDropdown(null);
                                             }}
                                         >
                                             <a
@@ -384,53 +369,7 @@ export default function FadingSiblingsNavbar() {
                                                 }`}
                                             >
                                                 {item.name}
-                                                {item.children && (
-                                                    <ChevronDown
-                                                        size={14}
-                                                        className={`transition-transform duration-300 ${
-                                                            activeDropdown === index ? "rotate-180 text-indigo-500" : "text-slate-400"
-                                                        }`}
-                                                    />
-                                                )}
                                             </a>
-
-                                            {/* 二级下拉菜单 */}
-                                            <AnimatePresence>
-                                                {item.children && activeDropdown === index && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                        exit={{ opacity: 0, y: 6, scale: 0.96 }}
-                                                        transition={{ duration: 0.15, ease: "easeOut" }}
-                                                        className="absolute left-0 top-full mt-1 w-80 rounded-xl border border-slate-200/80 bg-white p-2 shadow-xl dark:border-slate-800/80 dark:bg-slate-950"
-                                                    >
-                                                        <div className="grid gap-1">
-                                                            {item.children.map((child) => {
-                                                                const Icon = child.icon;
-                                                                return (
-                                                                    <a
-                                                                        key={child.name}
-                                                                        href="#"
-                                                                        className="flex items-start gap-3 rounded-lg p-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 group/item"
-                                                                    >
-                                                                        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-md bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-400">
-                                                                            <Icon size={16} />
-                                                                        </div>
-                                                                        <div>
-                                                                            <div className="text-sm font-medium text-slate-900 dark:text-white transition-colors group-hover/item:text-indigo-600 dark:group-hover/item:text-indigo-400">
-                                                                                {child.name}
-                                                                            </div>
-                                                                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
-                                                                                {child.desc}
-                                                                            </p>
-                                                                        </div>
-                                                                    </a>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
                                         </div>
                                     );
                                 })}
@@ -444,7 +383,7 @@ export default function FadingSiblingsNavbar() {
                                 onSubmit={handleSearchSubmit}
                             >
                                 <label htmlFor="navbar-search-desktop" className="sr-only">
-                                    搜索发现图片、旅游攻略和心得分享
+                                    搜索发现图片
                                 </label>
                                 <div className={`relative transition-all duration-300 ${
                                     searchFocused ? 'w-80 lg:w-96' : 'w-64 lg:w-72 xl:w-80'
@@ -466,8 +405,8 @@ export default function FadingSiblingsNavbar() {
                                         onChange={handleSearchChange}
                                         onFocus={() => setSearchFocused(true)}
                                         onBlur={() => setSearchFocused(false)}
-                                        aria-label="搜索发现图片、旅游攻略和心得分享"
-                                        placeholder="搜索图片、攻略、心得"
+                                        aria-label="搜索发现图片"
+                                        placeholder="搜索图片"
                                         autoComplete="off"
                                         className={`h-[42px] rounded-lg border border-slate-200/80 bg-white pl-[52px] pr-4 text-[15px] font-normal text-slate-900 placeholder:text-slate-400 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus:border-indigo-400 focus:shadow-md focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-indigo-500/60 dark:focus:ring-indigo-500/20 ${
                                             searchQuery ? 'pr-10' : ''
@@ -642,7 +581,7 @@ export default function FadingSiblingsNavbar() {
                                         onSubmit={handleSearchSubmit}
                                     >
                                         <label htmlFor="navbar-search-mobile" className="sr-only">
-                                            搜索发现图片、旅游攻略和心得分享
+                                            搜索发现图片
                                         </label>
                                         <div className="pointer-events-none absolute left-3.5 top-1/2 flex -translate-y-1/2 items-center gap-2">
                                             <Search
@@ -658,8 +597,8 @@ export default function FadingSiblingsNavbar() {
                                             type="search"
                                             value={searchQuery}
                                             onChange={handleSearchChange}
-                                            aria-label="搜索发现图片、旅游攻略和心得分享"
-                                            placeholder="搜索图片、攻略、心得"
+                                            aria-label="搜索发现图片"
+                                            placeholder="搜索图片"
                                             autoComplete="off"
                                             className={`h-11 rounded-lg border border-slate-200 bg-white pl-[52px] text-[15px] font-normal placeholder:text-slate-400 transition-all dark:border-slate-700 dark:bg-slate-900 dark:placeholder:text-slate-500 ${
                                                 searchQuery ? 'pr-10' : 'pr-3'
@@ -682,26 +621,12 @@ export default function FadingSiblingsNavbar() {
                                             <a
                                                 href={item.href}
                                                 onClick={(event) =>
-                                                    !item.children && handleInternalNavigation(event, item.href, true)
+                                                    handleInternalNavigation(event, item.href, true)
                                                 }
                                                 className="flex items-center justify-between rounded-lg py-2.5 px-2 text-base font-medium text-slate-800 dark:text-slate-200"
                                             >
                                                 {item.name}
                                             </a>
-                                            {item.children && (
-                                                <div className="ml-4 border-l border-slate-100 pl-4 dark:border-slate-800 space-y-1">
-                                                    {item.children.map((child) => (
-                                                        <a
-                                                            key={child.name}
-                                                            href="#"
-                                                            onClick={() => setIsOpen(false)}
-                                                            className="block rounded-lg py-2 px-2 text-sm text-slate-500 dark:text-slate-400"
-                                                        >
-                                                            {child.name}
-                                                        </a>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
                                     ))}
 

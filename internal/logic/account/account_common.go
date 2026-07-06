@@ -28,7 +28,7 @@ const (
 	minPasswordLength = 8
 )
 
-func buildDetailAccountResponse(svcCtx *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile, stats *model.MediaAssetOwnerStats) *types.DetailAccountResponse {
+func buildDetailAccountResponse(svcCtx *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile, stats *model.MediaAssetOwnerStats, publicMediaAssetCount int64) *types.DetailAccountResponse {
 	if account == nil {
 		return &types.DetailAccountResponse{}
 	}
@@ -65,6 +65,7 @@ func buildDetailAccountResponse(svcCtx *svc.ServiceContext, account *model.UserA
 		CreatedAt:               formatTime(account.CreatedAt),
 		UpdatedAt:               formatTime(account.UpdatedAt),
 		MediaAssetCount:         stats.Total,
+		PublicMediaAssetCount:   publicMediaAssetCount,
 		ApprovedMediaAssetCount: stats.ApprovedCount,
 		PendingMediaAssetCount:  stats.PendingCount,
 		RejectedMediaAssetCount: stats.RejectedCount,
@@ -80,8 +81,12 @@ func loadDetailAccountResponse(ctx context.Context, svcCtx *svc.ServiceContext, 
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询媒体资源统计失败")
 	}
+	publicMediaAssetCount, err := svcCtx.MediaAssetModel.CountPublicApprovedByOwner(ctx, account.Id)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询公开媒体资源统计失败")
+	}
 
-	resp := buildDetailAccountResponse(svcCtx, account, profile, stats)
+	resp := buildDetailAccountResponse(svcCtx, account, profile, stats, publicMediaAssetCount)
 	resp.AvatarUrl = mediaLogic.LoadAvatarURL(ctx, svcCtx, profile)
 	return resp, nil
 }

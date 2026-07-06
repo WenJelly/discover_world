@@ -219,6 +219,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodPost,
+				Path:    "/profile/featured/media/update",
+				Handler: profile.UpdateProfileFeaturedMediaHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
 				Path:    "/profile/post/list/cursor",
 				Handler: profile.GetProfilePostCursorListHandler(serverCtx),
 			},

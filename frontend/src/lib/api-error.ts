@@ -44,3 +44,11 @@ export function normalizeApiErrorMessage(
 
   return cleaned;
 }
+
+export function isForceDeleteMediaConflict(code: number, message: string) {
+  return (
+    code === 409 &&
+    message.includes("动态") &&
+    message.includes("是否继续删除")
+  );
+}

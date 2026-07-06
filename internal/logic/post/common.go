@@ -462,7 +462,7 @@ func buildAccountSummary(svcCtx *svc.ServiceContext, account *model.UserAccount,
 	return types.AccountSummary{
 		Id:       formatID(account.Id),
 		Username: account.Username,
-		Email:    nullStringValue(account.Email),
+		Email:    "",
 		Nickname: nickname,
 		Bio:      bio,
 		Status:   account.Status,

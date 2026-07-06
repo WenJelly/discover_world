@@ -76,22 +76,24 @@ type (
 		Variant MediaVariantRequest `json:"variantOption,optional"`
 	}
 	DeleteMediaAssetRequest {
-		Id string `json:"id"`
+		Id    string `json:"id"`
+		Force bool   `json:"force,optional"`
 	}
 	ReviewMediaAssetRequest {
 		Id            string `json:"id"`
 		AuditStatus   string `json:"auditStatus"`
 		ReviewMessage string `json:"reviewMessage,optional"`
 	}
-	MediaAssetUploadByUrlRequest {
-		Id          string   `json:"id,optional"`
-		FileUrl     string   `json:"fileUrl"`
-		Title       string   `json:"title,optional"`
-		Description string   `json:"description,optional"`
-		Category    string   `json:"category,optional"`
-		Tags        []string `json:"tags,optional"`
-		Visibility  string   `json:"visibility,optional"`
-	}
+		MediaAssetUploadByUrlRequest {
+			Id          string   `json:"id,optional"`
+			FileUrl     string   `json:"fileUrl"`
+			Title       string   `json:"title,optional"`
+			Description string   `json:"description,optional"`
+			Category    string   `json:"category,optional"`
+			Tags        []string `json:"tags,optional"`
+			Visibility  string   `json:"visibility,optional"`
+			AssetUsage  string   `json:"assetUsage,optional"`
+		}
 	AccountSummary {
 		Id        string `json:"id"`
 		Username  string `json:"username"`
@@ -120,10 +122,11 @@ type (
 		ShareCount    int64 `json:"shareCount"`
 		DownloadCount int64 `json:"downloadCount"`
 	}
-	MediaAssetResponse {
-		Id               string                `json:"id"`
-		MediaType        string                `json:"mediaType"`
-		Title            string                `json:"title"`
+		MediaAssetResponse {
+			Id               string                `json:"id"`
+			MediaType        string                `json:"mediaType"`
+			AssetUsage       string                `json:"assetUsage"`
+			Title            string                `json:"title"`
 		Description      string                `json:"description"`
 		Category         string                `json:"category"`
 		Tags             []string              `json:"tags"`
@@ -226,6 +229,7 @@ type (
 		CreatedAt               string `json:"createdAt"`
 		UpdatedAt               string `json:"updatedAt"`
 		MediaAssetCount         int64  `json:"mediaAssetCount"`
+		PublicMediaAssetCount   int64  `json:"publicMediaAssetCount"`
 		ApprovedMediaAssetCount int64  `json:"approvedMediaAssetCount"`
 		PendingMediaAssetCount  int64  `json:"pendingMediaAssetCount"`
 		RejectedMediaAssetCount int64  `json:"rejectedMediaAssetCount"`
@@ -323,6 +327,9 @@ type (
 		PageSize int64               `json:"pageSize,optional"`
 		Variant  MediaVariantRequest `json:"variantOption,optional"`
 	}
+	UpdateProfileFeaturedMediaRequest {
+		MediaAssetIds []string `json:"mediaAssetIds,optional"`
+	}
 	ProfileAlbumListRequest {
 		UserId   string `json:"userId,optional"`
 		PageNum  int64  `json:"pageNum,optional"`
@@ -393,6 +400,9 @@ service DiscoverWorld {
 
 	@handler GetProfileFeaturedMediaList
 	post /profile/featured/media/list (ProfileFeaturedMediaListRequest) returns (MediaAssetPageResponse)
+
+	@handler UpdateProfileFeaturedMedia
+	post /profile/featured/media/update (UpdateProfileFeaturedMediaRequest) returns (MediaAssetPageResponse)
 
 	@handler GetProfileAlbumList
 	post /profile/album/list (ProfileAlbumListRequest) returns (ProfileAlbumPageResponse)
@@ -507,4 +517,3 @@ service DiscoverWorld {
 	@handler ReviewMediaAsset
 	post /media/review (ReviewMediaAssetRequest) returns (MediaAssetResponse)
 }
-

@@ -14,32 +14,31 @@ export type AccountImageFilter = {
   sort: AccountImageSort;
 };
 
-function localNameFromEmail(email: string) {
-  return email.split("@")[0] || email;
-}
-
 function parseTime(value: string) {
   const parsed = Date.parse(value.replace(" ", "T"));
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export function toAccountProfile(detail: DetailUserResponse): UserProfile {
-  const email = detail.email || detail.userEmail || "";
-  const username =
+  const accountUsername = detail.username?.trim() || "";
+  const displayName =
     detail.nickname?.trim() ||
     detail.userName?.trim() ||
-    detail.username?.trim() ||
-    (email ? localNameFromEmail(email) : "用户");
+    accountUsername ||
+    "用户";
   const approvedCount =
-    detail.approvedMediaAssetCount ?? detail.approvedPictureCount ?? 0;
+    detail.publicMediaAssetCount ??
+    detail.publicPictureCount ??
+    detail.approvedMediaAssetCount ??
+    detail.approvedPictureCount ??
+    0;
 
   return {
     id: detail.id,
-    username,
-    accountUsername: detail.username || detail.userName || username,
-    email,
-    
-    handle: email ? `@${localNameFromEmail(email)}` : `@${detail.id}`,
+    username: displayName,
+    accountUsername,
+    email: "",
+    handle: accountUsername ? `@${accountUsername}` : `@${detail.id}`,
     avatarUrl: detail.avatarUrl || detail.userAvatar || "",
     coverUrl: "",
     bio: detail.bio || detail.userProfile || "",

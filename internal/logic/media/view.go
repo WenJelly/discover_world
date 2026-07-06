@@ -92,6 +92,7 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 	return &types.MediaAssetResponse{
 		Id:               formatID(asset.Id),
 		MediaType:        asset.MediaType,
+		AssetUsage:       normalizeAssetUsage(asset.AssetUsage),
 		Title:            nullStringValue(asset.Title),
 		Description:      nullStringValue(asset.Description),
 		Category:         metadata.Category,
@@ -248,7 +249,7 @@ func buildAccountSummary(svcCtx *svc.ServiceContext, account *model.UserAccount,
 	return types.AccountSummary{
 		Id:        formatID(account.Id),
 		Username:  account.Username,
-		Email:     nullStringValue(account.Email),
+		Email:     "",
 		Nickname:  nickname,
 		AvatarUrl: "",
 		Bio:       bio,

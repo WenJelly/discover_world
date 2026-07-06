@@ -14,6 +14,7 @@ type (
 	// and implement the added methods in customUserProfileModel.
 	UserProfileModel interface {
 		userProfileModel
+		FindAvatarReferencesByAssetID(ctx context.Context, assetID uint64) ([]*UserProfile, error)
 		FindByUserIDs(ctx context.Context, userIDs []uint64) (map[uint64]*UserProfile, error)
 		withSession(session sqlx.Session) UserProfileModel
 	}
@@ -32,6 +33,19 @@ func NewUserProfileModel(conn sqlx.SqlConn) UserProfileModel {
 
 func (m *customUserProfileModel) withSession(session sqlx.Session) UserProfileModel {
 	return NewUserProfileModel(sqlx.NewSqlConnFromSession(session))
+}
+
+func (m *customUserProfileModel) FindAvatarReferencesByAssetID(ctx context.Context, assetID uint64) ([]*UserProfile, error) {
+	if assetID == 0 {
+		return []*UserProfile{}, nil
+	}
+
+	query := fmt.Sprintf("select %s from %s where `avatar_asset_id` = ? order by `user_id` asc", userProfileRows, m.table)
+	var resp []*UserProfile
+	if err := m.conn.QueryRowsCtx(ctx, &resp, query, assetID); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (m *customUserProfileModel) FindByUserIDs(ctx context.Context, userIDs []uint64) (map[uint64]*UserProfile, error) {

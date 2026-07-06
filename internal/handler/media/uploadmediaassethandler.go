@@ -53,6 +53,7 @@ func UploadMediaAssetHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			Tags:        tags,
 			Visibility:  r.FormValue("visibility"),
 			UsageType:   "media",
+			AssetUsage:  r.FormValue("assetUsage"),
 		}, r.Header.Get("Authorization"))
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)

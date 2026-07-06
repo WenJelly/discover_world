@@ -27,6 +27,7 @@ type DetailAccountResponse struct {
 	CreatedAt               string `json:"createdAt"`
 	UpdatedAt               string `json:"updatedAt"`
 	MediaAssetCount         int64  `json:"mediaAssetCount"`
+	PublicMediaAssetCount   int64  `json:"publicMediaAssetCount"`
 	ApprovedMediaAssetCount int64  `json:"approvedMediaAssetCount"`
 	PendingMediaAssetCount  int64  `json:"pendingMediaAssetCount"`
 	RejectedMediaAssetCount int64  `json:"rejectedMediaAssetCount"`

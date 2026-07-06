@@ -46,21 +46,20 @@ func (l *GetProfileFeaturedMediaListLogic) GetProfileFeaturedMediaList(req *type
 	userProfile, err := l.svcCtx.UserProfileModel.FindOneByUserId(l.ctx, target.Id)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			return &types.MediaAssetPageResponse{
-				PageNum:  1,
-				PageSize: pageSize,
-				Total:    0,
-				List:     []types.MediaAssetResponse{},
-			}, nil
+			return emptyProfileFeaturedMediaPage(pageSize), nil
 		}
 		return nil, commonresponse.InternalServerError("查询用户资料失败")
 	}
 
-	assetIDs, err := l.svcCtx.AssetLinkModel.FindActiveAssetIDsByOwner(l.ctx, ownerTypeUserProfile, userProfile.Id, linkRoleFeaturedMedia, pageSize)
+	return buildProfileFeaturedMediaPage(l.ctx, l.svcCtx, userProfile.Id, loginUser, req.Variant, pageSize)
+}
+
+func buildProfileFeaturedMediaPage(ctx context.Context, svcCtx *svc.ServiceContext, userProfileID uint64, viewer *model.UserAccount, variant types.MediaVariantRequest, pageSize int64) (*types.MediaAssetPageResponse, error) {
+	assetIDs, err := svcCtx.AssetLinkModel.FindActiveAssetIDsByOwner(ctx, ownerTypeUserProfile, userProfileID, linkRoleFeaturedMedia, pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询精选图片失败")
 	}
-	mediaByID, err := buildMediaResponseMap(l.ctx, l.svcCtx, assetIDs, loginUser, req.Variant)
+	mediaByID, err := buildPublishedProfileFeaturedMediaResponseMap(ctx, svcCtx, assetIDs, viewer, variant)
 	if err != nil {
 		return nil, err
 	}
@@ -78,4 +77,21 @@ func (l *GetProfileFeaturedMediaListLogic) GetProfileFeaturedMediaList(req *type
 		Total:    int64(len(list)),
 		List:     list,
 	}, nil
+}
+
+func buildPublishedProfileFeaturedMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, viewer *model.UserAccount, variant types.MediaVariantRequest) (map[uint64]types.MediaAssetResponse, error) {
+	assetsByID, err := svcCtx.MediaAssetModel.FindPublicApprovedByIDs(ctx, assetIDs)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询媒体资源失败")
+	}
+	return buildMediaResponseMapFromAssets(ctx, svcCtx, assetIDs, assetsByID, viewer, variant)
+}
+
+func emptyProfileFeaturedMediaPage(pageSize int64) *types.MediaAssetPageResponse {
+	return &types.MediaAssetPageResponse{
+		PageNum:  1,
+		PageSize: pageSize,
+		Total:    0,
+		List:     []types.MediaAssetResponse{},
+	}
 }

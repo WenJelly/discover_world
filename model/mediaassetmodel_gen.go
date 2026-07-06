@@ -40,6 +40,7 @@ type (
 		Id               uint64         `db:"id"`                // 媒体资源ID
 		OwnerUserId      uint64         `db:"owner_user_id"`     // 上传者/所有者用户ID
 		MediaType        string         `db:"media_type"`        // 媒体类型：image / video / audio / document
+		AssetUsage       string         `db:"asset_usage"`       // 业务用途：work作品 / post动态附件 / avatar头像 / temp临时
 		Title            sql.NullString `db:"title"`             // 标题
 		Description      sql.NullString `db:"description"`       // 描述
 		OriginalFilename sql.NullString `db:"original_filename"` // 原始文件名
@@ -81,14 +82,14 @@ func (m *defaultMediaAssetModel) FindOne(ctx context.Context, id uint64) (*Media
 }
 
 func (m *defaultMediaAssetModel) Insert(ctx context.Context, data *MediaAsset) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, mediaAssetRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.OwnerUserId, data.MediaType, data.Title, data.Description, data.OriginalFilename, data.Visibility, data.Status, data.AuditStatus, data.MetadataJson, data.DeletedAt)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, mediaAssetRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.OwnerUserId, data.MediaType, data.AssetUsage, data.Title, data.Description, data.OriginalFilename, data.Visibility, data.Status, data.AuditStatus, data.MetadataJson, data.DeletedAt)
 	return ret, err
 }
 
 func (m *defaultMediaAssetModel) Update(ctx context.Context, data *MediaAsset) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, mediaAssetRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.OwnerUserId, data.MediaType, data.Title, data.Description, data.OriginalFilename, data.Visibility, data.Status, data.AuditStatus, data.MetadataJson, data.DeletedAt, data.Id)
+	_, err := m.conn.ExecCtx(ctx, query, data.OwnerUserId, data.MediaType, data.AssetUsage, data.Title, data.Description, data.OriginalFilename, data.Visibility, data.Status, data.AuditStatus, data.MetadataJson, data.DeletedAt, data.Id)
 	return err
 }
 

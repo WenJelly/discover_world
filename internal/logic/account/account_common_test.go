@@ -32,6 +32,7 @@ func TestBuildDetailAccountResponseUsesProfileAndMediaStats(t *testing.T) {
 			PendingCount:  1,
 			RejectedCount: 1,
 		},
+		4,
 	)
 
 	if resp.Id != "10" || resp.Username != "alice" || resp.Email != "alice@example.com" {
@@ -42,5 +43,8 @@ func TestBuildDetailAccountResponseUsesProfileAndMediaStats(t *testing.T) {
 	}
 	if resp.MediaAssetCount != 7 || resp.ApprovedMediaAssetCount != 5 || resp.PendingMediaAssetCount != 1 || resp.RejectedMediaAssetCount != 1 {
 		t.Fatalf("unexpected stats: %#v", resp)
+	}
+	if resp.PublicMediaAssetCount != 4 {
+		t.Fatalf("unexpected public media count: %#v", resp)
 	}
 }

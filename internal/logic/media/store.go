@@ -23,6 +23,7 @@ type mediaWriteRequest struct {
 	Tags        []string
 	Visibility  string
 	UsageType   string
+	AssetUsage  string
 }
 
 type MediaWriteRequest = mediaWriteRequest
@@ -75,6 +76,7 @@ func storeRemoteMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, req 
 		Tags:        req.Tags,
 		Visibility:  req.Visibility,
 		UsageType:   "media",
+		AssetUsage:  req.AssetUsage,
 	}, loginUser)
 }
 
@@ -92,6 +94,7 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 	if usageType == "" {
 		usageType = "media"
 	}
+	assetUsage := normalizeAssetUsage(req.AssetUsage)
 	target, err := loadStorageTarget(ctx, svcCtx, usageType)
 	if err != nil {
 		return nil, err
@@ -125,6 +128,7 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 		asset = &model.MediaAsset{
 			OwnerUserId:      loginUser.Id,
 			MediaType:        "image",
+			AssetUsage:       assetUsage,
 			Title:            optionalString(resolveMediaTitle(req.Title, originalFilename)),
 			Description:      optionalString(req.Description),
 			OriginalFilename: optionalString(originalFilename),
@@ -144,6 +148,7 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 		asset.Id = uint64(id)
 		createdAsset = true
 	} else {
+		asset.AssetUsage = assetUsage
 		asset.Title = optionalString(resolveMediaTitle(req.Title, originalFilename))
 		asset.Description = optionalString(req.Description)
 		asset.OriginalFilename = optionalString(originalFilename)

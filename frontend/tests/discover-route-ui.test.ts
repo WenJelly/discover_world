@@ -72,6 +72,20 @@ test("navbar exposes discover and stays opaque white", async () => {
   assert.doesNotMatch(navbar, /border-transparent bg-transparent|bg-white\/75|backdrop-blur-xl/);
 });
 
+test("navbar routes home directly and removes guide/share entries", async () => {
+  const navbar = await readFile(
+    new URL("../src/components/Navbar.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(navbar, /name: "首页",\s*href: "\/"/);
+  assert.doesNotMatch(navbar, /name: "产品功能"/);
+  assert.doesNotMatch(navbar, /children:\s*\[/);
+  assert.doesNotMatch(navbar, /智能自动化 Pipeline|实时监控看板/);
+  assert.doesNotMatch(navbar, /旅游攻略|心得分享|攻略、心得/);
+  assert.doesNotMatch(navbar, /href: "\/#architecture"|href: "\/#pricing"/);
+});
+
 test("discover scroll hides only the main navbar and keeps toolbar visible", async () => {
   const navbar = await readFile(
     new URL("../src/components/Navbar.tsx", import.meta.url),

@@ -50,6 +50,7 @@ import {
   getAvatarFallback,
   getMediaUrl,
 } from "@/lib/format";
+import { isForceDeleteMediaConflict } from "@/lib/api-error";
 import type {
   ImageItem,
   ProfileAlbumResponse,
@@ -318,11 +319,11 @@ export default function AccountDetailPage() {
   const stats = useMemo(() => {
     if (!profile) return [];
     return [
-      { label: "作品", value: pictures.length },
+      { label: "作品", value: profile.imageCount },
       { label: "精选", value: featuredImages.length },
       { label: "相册", value: albums.length },
     ];
-  }, [profile, pictures.length, featuredImages.length, albums.length]);
+  }, [profile, featuredImages.length, albums.length]);
 
   const handleImageClick = (image: ImageItem, index: number) => {
     setPreviewImage(image);
@@ -350,6 +351,12 @@ export default function AccountDetailPage() {
     setPreviewImage(currentList[newIndex]);
   };
 
+  const removeDeletedImageFromState = (imageId: string) => {
+    setPictures((prev) => prev.filter((img) => img.id !== imageId));
+    setFeaturedImages((prev) => prev.filter((img) => img.id !== imageId));
+    handleClosePreview();
+  };
+
   const handleDeleteImage = async (imageId: string) => {
     if (!window.confirm("确定要删除这张图片吗？此操作无法撤销。")) {
       return;
@@ -357,18 +364,26 @@ export default function AccountDetailPage() {
 
     try {
       await deleteMediaAsset(imageId);
-
-      // Remove from pictures list
-      setPictures((prev) => prev.filter((img) => img.id !== imageId));
-
-      // Remove from featured list if exists
-      setFeaturedImages((prev) => prev.filter((img) => img.id !== imageId));
-
-      handleClosePreview();
-
-      // Show success message (you can add a toast here)
+      removeDeletedImageFromState(imageId);
       console.log("图片删除成功");
     } catch (error) {
+      if (
+        error instanceof ApiError &&
+        isForceDeleteMediaConflict(error.code, error.message)
+      ) {
+        if (!window.confirm(error.message)) {
+          return;
+        }
+        try {
+          await deleteMediaAsset(imageId, { force: true });
+          removeDeletedImageFromState(imageId);
+          console.log("图片删除成功");
+        } catch (forceError) {
+          console.error("删除失败:", forceError);
+          alert(`删除失败: ${forceError instanceof ApiError ? forceError.message : "未知错误"}`);
+        }
+        return;
+      }
       console.error("删除失败:", error);
       alert(`删除失败: ${error instanceof ApiError ? error.message : "未知错误"}`);
     }
