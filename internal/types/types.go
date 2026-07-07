@@ -74,6 +74,7 @@ type CursorQueryMediaAssetRequest struct {
 	CreatedAtFrom string              `json:"createdAtFrom,optional"`
 	CreatedAtTo   string              `json:"createdAtTo,optional"`
 	Variant       MediaVariantRequest `json:"variantOption,optional"`
+	Sort          string              `json:"sort,optional"`
 	Cursor        string              `json:"cursor,optional"`
 	PageSize      int64               `json:"pageSize,optional"`
 }

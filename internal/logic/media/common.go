@@ -36,10 +36,36 @@ const (
 	assetUsagePost       = "post"
 	assetUsageAvatar     = "avatar"
 	assetUsageTemp       = "temp"
+
+	mediaCursorSortLatest  = "latest"
+	mediaCursorSortHot     = "hot"
+	mediaCursorSortCreated = "created"
 )
 
 type mediaCursorPayload struct {
 	ID uint64 `json:"id"`
+}
+
+type hotMediaCursor struct {
+	ID       uint64
+	HotScore float64
+}
+
+type hotMediaCursorPayload struct {
+	ID       uint64  `json:"id"`
+	HotScore float64 `json:"hotScore"`
+	Sort     string  `json:"sort,omitempty"`
+}
+
+type createdMediaCursor struct {
+	ID        uint64
+	CreatedAt time.Time
+}
+
+type createdMediaCursorPayload struct {
+	ID        uint64 `json:"id"`
+	CreatedAt string `json:"createdAt"`
+	Sort      string `json:"sort,omitempty"`
 }
 
 type mediaMetadata struct {
@@ -128,6 +154,90 @@ func decodeMediaCursor(raw string) (uint64, error) {
 		return 0, commonresponse.BadRequest("cursor 无效")
 	}
 	return payload.ID, nil
+}
+
+func normalizeMediaCursorSort(raw string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", mediaCursorSortLatest, "time", "id":
+		return mediaCursorSortLatest, nil
+	case mediaCursorSortHot:
+		return mediaCursorSortHot, nil
+	case mediaCursorSortCreated, "fresh":
+		return mediaCursorSortCreated, nil
+	default:
+		return "", commonresponse.BadRequest("sort 必须是 latest、hot 或 created")
+	}
+}
+
+func encodeHotMediaCursor(id uint64, hotScore float64) (string, error) {
+	data, err := json.Marshal(hotMediaCursorPayload{
+		ID:       id,
+		HotScore: hotScore,
+		Sort:     mediaCursorSortHot,
+	})
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(data), nil
+}
+
+func decodeHotMediaCursor(raw string) (hotMediaCursor, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return hotMediaCursor{}, nil
+	}
+
+	data, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return hotMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+
+	var payload hotMediaCursorPayload
+	if err := json.Unmarshal(data, &payload); err != nil || payload.ID == 0 || payload.HotScore < 0 {
+		return hotMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+	if payload.Sort != "" && payload.Sort != mediaCursorSortHot {
+		return hotMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+	return hotMediaCursor{ID: payload.ID, HotScore: payload.HotScore}, nil
+}
+
+func encodeCreatedMediaCursor(id uint64, createdAt time.Time) (string, error) {
+	data, err := json.Marshal(createdMediaCursorPayload{
+		ID:        id,
+		CreatedAt: createdAt.Format(time.RFC3339Nano),
+		Sort:      mediaCursorSortCreated,
+	})
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(data), nil
+}
+
+func decodeCreatedMediaCursor(raw string) (createdMediaCursor, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return createdMediaCursor{}, nil
+	}
+
+	data, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return createdMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+
+	var payload createdMediaCursorPayload
+	if err := json.Unmarshal(data, &payload); err != nil || payload.ID == 0 || strings.TrimSpace(payload.CreatedAt) == "" {
+		return createdMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+	if payload.Sort != "" && payload.Sort != mediaCursorSortCreated {
+		return createdMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+
+	createdAt, err := time.Parse(time.RFC3339Nano, payload.CreatedAt)
+	if err != nil || createdAt.IsZero() {
+		return createdMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+	return createdMediaCursor{ID: payload.ID, CreatedAt: createdAt}, nil
 }
 
 func normalizeTags(tags []string) []string {

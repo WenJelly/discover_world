@@ -4,7 +4,6 @@ export const DISCOVER_TABS = [
   { key: "rating", title: "热门" },
   { key: "upcoming", title: "排名上升" },
   { key: "fresh", title: "新作" },
-  { key: "editors", title: "编辑推荐" },
   { key: "set", title: "影集" },
   { key: "story", title: "专栏" },
 ] as const;
@@ -123,10 +122,6 @@ function getUpcomingScore(picture: PictureResponse) {
   return getTimeValue(picture);
 }
 
-function getEditorsScore(picture: PictureResponse) {
-  return getTimeValue(picture);
-}
-
 export function parseDiscoverSearch(search: string): DiscoverSearchState {
   const params = new URLSearchParams(search);
   const tab = params.get("t") || "rating";
@@ -217,24 +212,26 @@ export function filterAndSortDiscoverPictures(
   pictures: PictureResponse[],
   state: DiscoverSearchState
 ) {
-  return pictures
+  const filtered = pictures
     .filter((picture) => matchesDiscoverCategory(picture, state.category))
     .filter((picture) =>
       matchesDiscoverPhotographer(picture, state.photographerType)
-    )
-    .sort((left, right) => {
-      if (state.tab === "fresh" || state.sort === "2") {
-        return getTimeValue(right) - getTimeValue(left);
-      }
-      if (state.tab === "upcoming") {
-        return getUpcomingScore(right) - getUpcomingScore(left);
-      }
-      if (state.tab === "editors") {
-        return getEditorsScore(right) - getEditorsScore(left);
-      }
+    );
 
-      return getHotScore(right) - getHotScore(left);
-    });
+  if (state.tab === "rating" && state.sort === "1") {
+    return filtered;
+  }
+
+  return filtered.sort((left, right) => {
+    if (state.tab === "fresh" || state.sort === "2") {
+      return getTimeValue(right) - getTimeValue(left);
+    }
+    if (state.tab === "upcoming") {
+      return getUpcomingScore(right) - getUpcomingScore(left);
+    }
+
+    return getHotScore(right) - getHotScore(left);
+  });
 }
 
 function buildRow(

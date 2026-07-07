@@ -75,6 +75,7 @@ export default function DiscoverPage() {
   const [discoverState, setDiscoverState] = useState<DiscoverSearchState>(() =>
     parseDiscoverSearch(window.location.search)
   );
+  const [discoverRefreshKey, setDiscoverRefreshKey] = useState(0);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [isSiteNavVisible, setIsSiteNavVisible] = useState(true);
   const [previewAssetId, setPreviewAssetId] = useState<string | null>(null);
@@ -156,12 +157,27 @@ export default function DiscoverPage() {
     () => getDiscoverCategoryQuery(discoverState.category),
     [discoverState.category]
   );
+  const discoverMediaSort = useMemo(() => {
+    if (discoverState.tab === "rating" && discoverState.sort === "1") {
+      return "hot";
+    }
+    if (discoverState.tab === "fresh") {
+      return "created";
+    }
+    return "latest";
+  }, [discoverState.sort, discoverState.tab]);
 
   const { pictures, loading, error, hasMore, loadMore, retry } =
     useInfinitePictures({
       pageSize: 30,
       category: discoverCategoryQuery,
+      sort: discoverMediaSort,
+      refreshKey: discoverRefreshKey,
     });
+
+  useEffect(() => {
+    setAssetOverrides({});
+  }, [discoverCategoryQuery, discoverMediaSort, discoverRefreshKey]);
 
   const mergedPictures = useMemo(
     () =>
@@ -248,10 +264,16 @@ export default function DiscoverPage() {
 
   const canShowQueryBar = discoverState.tab === "rating";
 
-  const navigateDiscover = (nextState: DiscoverSearchState) => {
+  const navigateDiscover = (
+    nextState: DiscoverSearchState,
+    options: { refreshData?: boolean } = {}
+  ) => {
     const href = getHref(nextState);
     window.history.pushState({}, "", href);
     setDiscoverState(nextState);
+    if (options.refreshData !== false) {
+      setDiscoverRefreshKey((value) => value + 1);
+    }
     setOpenMenu(null);
   };
 
@@ -288,20 +310,24 @@ export default function DiscoverPage() {
       return;
     }
 
-    navigateDiscover({
-      ...discoverState,
-      layout,
-    });
+    navigateDiscover(
+      {
+        ...discoverState,
+        layout,
+      },
+      { refreshData: false }
+    );
   };
+  const discoverPageClassName = [
+    "discover-page",
+    !isSiteNavVisible ? "discover-page--site-nav-hidden" : "",
+    previewOpen ? "discover-page--preview-open" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <section
-      className={
-        isSiteNavVisible
-          ? "discover-page"
-          : "discover-page discover-page--site-nav-hidden"
-      }
-    >
+    <section className={discoverPageClassName}>
       <div className="discover-toolbar">
         <div className="discover-toolbar__inner">
           {canShowQueryBar ? (

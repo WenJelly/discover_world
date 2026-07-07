@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -23,6 +24,9 @@ type (
 		CountPublicApprovedByOwner(ctx context.Context, ownerUserID uint64) (int64, error)
 		FindByWhere(ctx context.Context, whereSQL, orderSQL string, limit, offset int64, args ...any) ([]*MediaAsset, error)
 		FindByWhereBeforeID(ctx context.Context, whereSQL, orderSQL string, beforeID, limit int64, args ...any) ([]*MediaAsset, error)
+		FindByWhereBeforeCreatedAt(ctx context.Context, whereSQL string, beforeCreatedAt time.Time, beforeID uint64, limit int64, args ...any) ([]*MediaAsset, error)
+		FindByWhereBeforeHotScore(ctx context.Context, whereSQL string, beforeScore float64, beforeID uint64, limit int64, args ...any) ([]*MediaAsset, error)
+		FindHotScoreByID(ctx context.Context, id uint64) (float64, error)
 		CountStatsByOwner(ctx context.Context, ownerUserID uint64) (*MediaAssetOwnerStats, error)
 		withSession(session sqlx.Session) MediaAssetModel
 	}
@@ -198,6 +202,42 @@ func (m *customMediaAssetModel) FindByWhereBeforeID(ctx context.Context, whereSQ
 	return resp, nil
 }
 
+func (m *customMediaAssetModel) FindByWhereBeforeCreatedAt(ctx context.Context, whereSQL string, beforeCreatedAt time.Time, beforeID uint64, limit int64, args ...any) ([]*MediaAsset, error) {
+	whereSQL, args = appendCreatedCursorWhere(whereSQL, beforeCreatedAt, beforeID, args)
+	whereSQL = normalizeWhereSQL(whereSQL)
+	query := fmt.Sprintf("select %s from %s %s order by `created_at` desc, `id` desc limit ?", mediaAssetRows, m.table, whereSQL)
+
+	queryArgs := append(append([]any{}, args...), limit)
+	var resp []*MediaAsset
+	if err := m.conn.QueryRowsCtx(ctx, &resp, query, queryArgs...); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (m *customMediaAssetModel) FindByWhereBeforeHotScore(ctx context.Context, whereSQL string, beforeScore float64, beforeID uint64, limit int64, args ...any) ([]*MediaAsset, error) {
+	whereSQL, args = appendHotCursorWhere(whereSQL, beforeScore, beforeID, args)
+	whereSQL = normalizeWhereSQL(whereSQL)
+	hotScoreSQL := mediaHotScoreSQL()
+	query := fmt.Sprintf("select %s from %s %s order by %s desc, `id` desc limit ?", mediaAssetRows, m.table, whereSQL, hotScoreSQL)
+
+	queryArgs := append(append([]any{}, args...), limit)
+	var resp []*MediaAsset
+	if err := m.conn.QueryRowsCtx(ctx, &resp, query, queryArgs...); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (m *customMediaAssetModel) FindHotScoreByID(ctx context.Context, id uint64) (float64, error) {
+	query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", mediaHotScoreSQL(), m.table)
+	var resp float64
+	if err := m.conn.QueryRowCtx(ctx, &resp, query, id); err != nil {
+		return 0, err
+	}
+	return resp, nil
+}
+
 func (m *customMediaAssetModel) CountStatsByOwner(ctx context.Context, ownerUserID uint64) (*MediaAssetOwnerStats, error) {
 	query := fmt.Sprintf(
 		"select count(1) as total, coalesce(sum(`audit_status` = 'approved'), 0) as approved_count, coalesce(sum(`audit_status` = 'pending'), 0) as pending_count, coalesce(sum(`audit_status` = 'rejected'), 0) as rejected_count from %s where `owner_user_id` = ? and `status` <> 'deleted' and `deleted_at` is null",
@@ -209,6 +249,52 @@ func (m *customMediaAssetModel) CountStatsByOwner(ctx context.Context, ownerUser
 		return nil, err
 	}
 	return &resp, nil
+}
+
+func mediaStatCounterSQL(counter string) string {
+	return fmt.Sprintf("coalesce((select es.`%s` from `entity_stat` es where es.`target_type` = 'media_asset' and es.`target_id` = `media_asset`.`id` limit 1), 0)", counter)
+}
+
+func mediaHotScoreSQL() string {
+	view := mediaStatCounterSQL("view_count")
+	reaction := mediaStatCounterSQL("reaction_count")
+	favorite := mediaStatCounterSQL("favorite_count")
+	comment := mediaStatCounterSQL("comment_count")
+	share := mediaStatCounterSQL("share_count")
+	download := mediaStatCounterSQL("download_count")
+
+	return fmt.Sprintf("(((ln(1 + %s) * 1) + (%s * 4) + (%s * 8) + (%s * 3) + (%s * 6) + (%s * 4) + 2) / pow(greatest(1, timestampdiff(hour, `created_at`, now())) + 24, 0.85))", view, reaction, favorite, comment, share, download)
+}
+
+func appendHotCursorWhere(whereSQL string, beforeScore float64, beforeID uint64, args []any) (string, []any) {
+	if beforeID == 0 {
+		return whereSQL, args
+	}
+
+	hotScoreSQL := mediaHotScoreSQL()
+	condition := fmt.Sprintf("(%s < ? or (abs(%s - ?) < 0.000001 and `id` < ?))", hotScoreSQL, hotScoreSQL)
+	if strings.TrimSpace(whereSQL) == "" {
+		whereSQL = condition
+	} else {
+		whereSQL += " and " + condition
+	}
+	args = append(args, beforeScore, beforeScore, beforeID)
+	return whereSQL, args
+}
+
+func appendCreatedCursorWhere(whereSQL string, beforeCreatedAt time.Time, beforeID uint64, args []any) (string, []any) {
+	if beforeID == 0 || beforeCreatedAt.IsZero() {
+		return whereSQL, args
+	}
+
+	condition := "(`created_at` < ? or (`created_at` = ? and `id` < ?))"
+	if strings.TrimSpace(whereSQL) == "" {
+		whereSQL = condition
+	} else {
+		whereSQL += " and " + condition
+	}
+	args = append(args, beforeCreatedAt, beforeCreatedAt, beforeID)
+	return whereSQL, args
 }
 
 func normalizeWhereSQL(whereSQL string) string {

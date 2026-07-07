@@ -140,6 +140,32 @@ test("discover category filters are sent to cursor requests before local filteri
   assert.match(discoverPage, /category:\s*discoverCategoryQuery/);
 });
 
+test("discover hot feed is requested from the backend and refreshed only by toolbar clicks", async () => {
+  const discoverPage = await readFile(pageUrl, "utf8");
+  const hook = await readFile(
+    new URL("../src/hooks/useInfinitePictures.ts", import.meta.url),
+    "utf8"
+  );
+  const types = await readFile(new URL("../src/lib/types.ts", import.meta.url), "utf8");
+
+  assert.match(discoverPage, /const discoverMediaSort = useMemo/);
+  assert.match(discoverPage, /sort:\s*discoverMediaSort/);
+  assert.match(discoverPage, /const \[discoverRefreshKey, setDiscoverRefreshKey\]/);
+  assert.match(discoverPage, /refreshKey:\s*discoverRefreshKey/);
+  assert.match(discoverPage, /setDiscoverRefreshKey\(\(value\) => value \+ 1\)/);
+
+  assert.match(hook, /sort\?: string/);
+  assert.match(hook, /refreshKey\?: number/);
+  assert.match(hook, /sort,\s*$/m);
+  assert.match(types, /sort\?: string/);
+});
+
+test("discover fresh feed is requested by creation time", async () => {
+  const discoverPage = await readFile(pageUrl, "utf8");
+
+  assert.match(discoverPage, /discoverState\.tab === "fresh"[\s\S]*return "created"/);
+});
+
 test("discover preview is anchored by asset id when detail updates resort the list", async () => {
   const discoverPage = await readFile(pageUrl, "utf8");
   const discoverLib = await readFile(libUrl, "utf8");
@@ -152,4 +178,23 @@ test("discover preview is anchored by asset id when detail updates resort the li
   );
   assert.match(discoverPage, /onOpen=\{\(picture\) => setPreviewAssetId\(picture\.id\)\}/);
   assert.doesNotMatch(discoverPage, /const \[previewIndex, setPreviewIndex\]/);
+});
+
+test("discover metadata overlay stays hover-only and is hidden behind detail preview", async () => {
+  const discoverPage = await readFile(pageUrl, "utf8");
+  const css = await readFile(new URL("../src/index.css", import.meta.url), "utf8");
+
+  assert.match(discoverPage, /discover-page--preview-open/);
+  assert.match(
+    css,
+    /@media\s*\(\s*hover:\s*hover\s*\)\s*and\s*\(\s*pointer:\s*fine\s*\)\s*\{[\s\S]*\.discover-page \.discover-tile:hover \.info/s
+  );
+  assert.doesNotMatch(
+    css,
+    /@media only screen and \(max-width: 720px\)\s*\{[\s\S]*?\.discover-page \.info\s*\{[\s\S]*?opacity:\s*1;[\s\S]*?\}/s
+  );
+  assert.match(
+    css,
+    /\.discover-page--preview-open \.discover-tile \.info\s*\{[\s\S]*?opacity:\s*0;/s
+  );
 });

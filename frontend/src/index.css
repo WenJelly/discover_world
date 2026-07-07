@@ -1,3 +1,6 @@
+/* Design System Fonts - Righteous (headings) + Poppins (body) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Righteous&display=swap');
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -113,8 +116,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: 'Righteous', 'Geist Variable', sans-serif;
+  --font-sans: 'Poppins', 'Geist Variable', sans-serif;
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
@@ -449,11 +452,6 @@
   transition: transform 0.24s ease;
 }
 
-.discover-page .discover-tile:hover img,
-.discover-page .discover-tile:focus-within img {
-  transform: scale(1.025);
-}
-
 .discover-page .discover-tile__fallback {
   display: flex;
   width: 100%;
@@ -480,12 +478,6 @@
   transition:
     opacity 0.2s ease,
     transform 0.2s ease;
-}
-
-.discover-page .discover-tile:hover .info,
-.discover-page .discover-tile:focus-within .info {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .discover-page .credits {
@@ -560,6 +552,28 @@
   color: #fff;
   font-size: 11px;
   line-height: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .discover-page .discover-tile:hover img,
+  .discover-page .discover-tile:focus-within img {
+    transform: scale(1.025);
+  }
+
+  .discover-page .discover-tile:hover .info,
+  .discover-page .discover-tile:focus-within .info {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.discover-page.discover-page--preview-open .discover-tile img {
+  transform: none;
+}
+
+.discover-page.discover-page--preview-open .discover-tile .info {
+  opacity: 0;
+  transform: translateY(8px);
 }
 
 .discover-page .discover-feedback {
@@ -696,13 +710,52 @@
     gap: 8px;
   }
 
-  .discover-page .info {
-    opacity: 1;
-    transform: none;
-    padding: 12px;
-  }
-
   .discover-page .metric {
     padding: 4px 7px;
   }
+}
+
+/* ── Search Page Styles (Vibrant & Block-based Design System) ───────── */
+.search-page-title {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+.search-page-section-title {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+}
+
+/* Smooth animations with proper timing */
+.search-card-hover {
+  transition-property: transform, border-color, box-shadow;
+  transition-duration: 250ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced skeleton animation */
+@keyframes search-skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.search-skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.8) 0%,
+    rgba(248, 113, 113, 0.15) 50%,
+    rgba(226, 232, 240, 0.8) 100%
+  );
+  background-size: 200% 100%;
+  animation: search-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Ensure cursor-pointer on all interactive elements */
+.search-page button,
+.search-page a[href] {
+  cursor: pointer;
 }

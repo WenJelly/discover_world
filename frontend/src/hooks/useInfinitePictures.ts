@@ -12,6 +12,8 @@ export type UseInfinitePicturesOptions = {
   category?: string;
   searchText?: string;
   tags?: string[];
+  sort?: string;
+  refreshKey?: number;
 };
 
 type State = {
@@ -42,6 +44,8 @@ export function useInfinitePictures(
   const pageSize = normalizedOptions.pageSize ?? 30;
   const category = normalizedOptions.category?.trim() || undefined;
   const searchText = normalizedOptions.searchText?.trim() || undefined;
+  const sort = normalizedOptions.sort?.trim() || undefined;
+  const refreshKey = normalizedOptions.refreshKey ?? 0;
   const tagsKey = normalizeTags(normalizedOptions.tags)?.join("|") ?? "";
   const [state, setState] = useState<State>(INITIAL);
   const cursorRef = useRef<string | null>(null);
@@ -67,6 +71,7 @@ export function useInfinitePictures(
         pageSize,
         category,
         searchText,
+        sort,
         ...(tagsKey ? { tags: tagsKey.split("|") } : {}),
         compressPictureType: { compressType: 2 },
         ...(cursor ? { cursor } : {}),
@@ -95,7 +100,7 @@ export function useInfinitePictures(
       loadingRef.current = false;
       setState((s) => ({ ...s, loading: false, error: err }));
     }
-  }, [category, pageSize, searchText, tagsKey]);
+  }, [category, pageSize, searchText, sort, tagsKey]);
 
   const retry = useCallback(() => {
     loadMore();
@@ -107,7 +112,7 @@ export function useInfinitePictures(
     loadingRef.current = false;
     hasMoreRef.current = true;
     setState(INITIAL);
-  }, [category, pageSize, searchText, tagsKey]);
+  }, [category, pageSize, refreshKey, searchText, sort, tagsKey]);
 
   useEffect(() => {
     loadMore();

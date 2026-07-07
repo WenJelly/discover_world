@@ -28,9 +28,92 @@ func TestEncodeDecodeMediaCursor(t *testing.T) {
 	}
 }
 
+func TestEncodeDecodeHotMediaCursor(t *testing.T) {
+	token, err := encodeHotMediaCursor(12345, 9.875)
+	if err != nil {
+		t.Fatalf("encodeHotMediaCursor returned error: %v", err)
+	}
+
+	cursor, err := decodeHotMediaCursor(token)
+	if err != nil {
+		t.Fatalf("decodeHotMediaCursor returned error: %v", err)
+	}
+	if cursor.ID != 12345 {
+		t.Fatalf("decodeHotMediaCursor id = %d, want 12345", cursor.ID)
+	}
+	if cursor.HotScore != 9.875 {
+		t.Fatalf("decodeHotMediaCursor hot score = %v, want 9.875", cursor.HotScore)
+	}
+}
+
 func TestDecodeMediaCursorRejectsInvalidTokens(t *testing.T) {
 	if _, err := decodeMediaCursor("not-a-cursor"); err == nil {
 		t.Fatal("decodeMediaCursor should reject invalid cursor tokens")
+	}
+}
+
+func TestNormalizeMediaCursorSort(t *testing.T) {
+	tests := []struct {
+		raw  string
+		want string
+	}{
+		{raw: "", want: mediaCursorSortLatest},
+		{raw: "latest", want: mediaCursorSortLatest},
+		{raw: "time", want: mediaCursorSortLatest},
+		{raw: "hot", want: mediaCursorSortHot},
+		{raw: "created", want: mediaCursorSortCreated},
+		{raw: "fresh", want: mediaCursorSortCreated},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.raw, func(t *testing.T) {
+			got, err := normalizeMediaCursorSort(tt.raw)
+			if err != nil {
+				t.Fatalf("normalizeMediaCursorSort returned error: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("normalizeMediaCursorSort(%q) = %q, want %q", tt.raw, got, tt.want)
+			}
+		})
+	}
+
+	if _, err := normalizeMediaCursorSort("random"); err == nil {
+		t.Fatal("normalizeMediaCursorSort accepted an unknown sort")
+	}
+}
+
+func TestEncodeDecodeCreatedMediaCursor(t *testing.T) {
+	createdAt := time.Date(2026, 7, 7, 10, 20, 30, 123456789, time.UTC)
+	token, err := encodeCreatedMediaCursor(12345, createdAt)
+	if err != nil {
+		t.Fatalf("encodeCreatedMediaCursor returned error: %v", err)
+	}
+
+	cursor, err := decodeCreatedMediaCursor(token)
+	if err != nil {
+		t.Fatalf("decodeCreatedMediaCursor returned error: %v", err)
+	}
+	if cursor.ID != 12345 {
+		t.Fatalf("decodeCreatedMediaCursor id = %d, want 12345", cursor.ID)
+	}
+	if !cursor.CreatedAt.Equal(createdAt) {
+		t.Fatalf("decodeCreatedMediaCursor createdAt = %v, want %v", cursor.CreatedAt, createdAt)
+	}
+}
+
+func TestEncodeDecodeCreatedMediaCursorPreservesOffset(t *testing.T) {
+	createdAt := time.Date(2026, 7, 7, 10, 20, 30, 0, time.FixedZone("CST", 8*60*60))
+	token, err := encodeCreatedMediaCursor(12345, createdAt)
+	if err != nil {
+		t.Fatalf("encodeCreatedMediaCursor returned error: %v", err)
+	}
+
+	cursor, err := decodeCreatedMediaCursor(token)
+	if err != nil {
+		t.Fatalf("decodeCreatedMediaCursor returned error: %v", err)
+	}
+	if got := cursor.CreatedAt.Format("-07:00"); got != "+08:00" {
+		t.Fatalf("decodeCreatedMediaCursor offset = %s, want +08:00", got)
 	}
 }
 

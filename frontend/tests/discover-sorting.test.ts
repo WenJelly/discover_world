@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  DISCOVER_TABS,
   filterAndSortDiscoverPictures,
+  parseDiscoverSearch,
   type DiscoverSearchState,
 } from "../src/lib/discover.ts";
 import type { PictureResponse } from "../src/lib/types.ts";
@@ -48,9 +50,7 @@ test("discover ranking ignores engagement counts", () => {
   const pictures = [oldHighEngagement, newLowEngagement];
 
   const rankingStates: DiscoverSearchState[] = [
-    { ...BASE_DISCOVER_STATE, tab: "rating" },
     { ...BASE_DISCOVER_STATE, tab: "upcoming" },
-    { ...BASE_DISCOVER_STATE, tab: "editors" },
   ];
 
   for (const state of rankingStates) {
@@ -59,4 +59,35 @@ test("discover ranking ignores engagement counts", () => {
       ["new-low-engagement", "old-high-engagement"]
     );
   }
+});
+
+test("discover hot ranking preserves backend order until the list is reloaded", () => {
+  const backendHotFirst = picture(
+    "backend-hot-first",
+    100,
+    10_000,
+    "2026-07-01T00:00:00Z"
+  );
+  const backendHotSecond = picture(
+    "backend-hot-second",
+    1,
+    0,
+    "2026-07-02T00:00:00Z"
+  );
+
+  assert.deepEqual(
+    filterAndSortDiscoverPictures(
+      [backendHotFirst, backendHotSecond],
+      { ...BASE_DISCOVER_STATE, tab: "rating", sort: "1" }
+    ).map((item) => item.id),
+    ["backend-hot-first", "backend-hot-second"]
+  );
+});
+
+test("discover navigation no longer exposes editor recommendations", () => {
+  assert.equal(
+    DISCOVER_TABS.some((tab) => tab.key === "editors" || tab.title === "编辑推荐"),
+    false
+  );
+  assert.equal(parseDiscoverSearch("?t=editors").tab, "rating");
 });

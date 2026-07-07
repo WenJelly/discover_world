@@ -373,6 +373,7 @@ export interface MediaAssetListReq {
   tags?: string[];
   searchText?: string;
   auditStatus?: string;
+  sort?: string;
 }
 
 export interface ProfilePostListReq {
