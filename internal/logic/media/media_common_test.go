@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"database/sql"
+	"encoding/binary"
 	"errors"
 	"strings"
 	"testing"
@@ -298,6 +299,14 @@ func TestMetadataJSONRoundTrip(t *testing.T) {
 		ReviewMessage: "ok",
 		ReviewerId:    "7",
 		ReviewTime:    formatTime(reviewTime),
+		Exif: &mediaExifMetadata{
+			Aperture:     " f/8.0 ",
+			FocalLength:  "24mm",
+			ShutterSpeed: "1/125s",
+			ISO:          "100",
+			CameraModel:  "Canon EOS R5",
+			LensModel:    "Canon RF 24-70mm F2.8 L IS USM",
+		},
 	})
 
 	got := parseMediaMetadata(raw)
@@ -306,6 +315,44 @@ func TestMetadataJSONRoundTrip(t *testing.T) {
 	}
 	if len(got.Tags) != 2 || got.Tags[0] != "夜景" || got.Tags[1] != "旅行" {
 		t.Fatalf("metadata tags = %#v", got.Tags)
+	}
+	if got.Exif == nil {
+		t.Fatal("metadata exif was not preserved")
+	}
+	if got.Exif.Aperture != "f/8.0" || got.Exif.FocalLength != "24mm" || got.Exif.ShutterSpeed != "1/125s" || got.Exif.ISO != "100" {
+		t.Fatalf("metadata exif exposure fields = %#v", got.Exif)
+	}
+	if got.Exif.CameraModel != "Canon EOS R5" || got.Exif.LensModel != "Canon RF 24-70mm F2.8 L IS USM" {
+		t.Fatalf("metadata exif camera fields = %#v", got.Exif)
+	}
+}
+
+func TestExtractExifMetadataFromJPEGBytes(t *testing.T) {
+	exif, err := extractExifMetadataFromJPEGBytes(buildTestExifJPEG())
+	if err != nil {
+		t.Fatalf("extractExifMetadataFromJPEGBytes returned error: %v", err)
+	}
+	if exif == nil {
+		t.Fatal("expected exif metadata")
+	}
+
+	if exif.Aperture != "f/8.0" {
+		t.Fatalf("aperture = %q, want f/8.0", exif.Aperture)
+	}
+	if exif.FocalLength != "24mm" {
+		t.Fatalf("focal length = %q, want 24mm", exif.FocalLength)
+	}
+	if exif.ShutterSpeed != "1/125s" {
+		t.Fatalf("shutter speed = %q, want 1/125s", exif.ShutterSpeed)
+	}
+	if exif.ISO != "100" {
+		t.Fatalf("iso = %q, want 100", exif.ISO)
+	}
+	if exif.CameraModel != "Canon EOS R5" {
+		t.Fatalf("camera model = %q, want Canon EOS R5", exif.CameraModel)
+	}
+	if exif.LensModel != "Canon RF 24-70mm F2.8 L IS USM" {
+		t.Fatalf("lens model = %q, want Canon RF 24-70mm F2.8 L IS USM", exif.LensModel)
 	}
 }
 
@@ -432,4 +479,77 @@ func TestMarkMediaAssetUploadFailedPersistsFailedStatusAndReturnsOriginalError(t
 	if updated.Status != "failed" {
 		t.Fatalf("updated status = %q, want failed", updated.Status)
 	}
+}
+
+func buildTestExifJPEG() []byte {
+	tiff := make([]byte, 0, 256)
+	tiff = append(tiff, 'I', 'I')
+	tiff = binary.LittleEndian.AppendUint16(tiff, 42)
+	tiff = binary.LittleEndian.AppendUint32(tiff, 8)
+
+	const ifd0EntryCount = 2
+	tiff = append(tiff, byte(ifd0EntryCount), 0)
+	ifd0ModelEntry := len(tiff)
+	tiff = append(tiff, make([]byte, 12)...)
+	ifd0ExifEntry := len(tiff)
+	tiff = append(tiff, make([]byte, 12)...)
+	tiff = append(tiff, 0, 0, 0, 0)
+
+	model := append([]byte("Canon EOS R5"), 0)
+	modelOffset := uint32(len(tiff))
+	tiff = append(tiff, model...)
+	if len(tiff)%2 != 0 {
+		tiff = append(tiff, 0)
+	}
+	exifIFDOffset := uint32(len(tiff))
+
+	putIFDEntry(tiff[ifd0ModelEntry:ifd0ModelEntry+12], 0x0110, 2, uint32(len(model)), modelOffset)
+	putIFDEntry(tiff[ifd0ExifEntry:ifd0ExifEntry+12], 0x8769, 4, 1, exifIFDOffset)
+
+	const exifEntryCount = 5
+	tiff = append(tiff, byte(exifEntryCount), 0)
+	fNumberEntry := len(tiff)
+	tiff = append(tiff, make([]byte, 12)...)
+	focalLengthEntry := len(tiff)
+	tiff = append(tiff, make([]byte, 12)...)
+	exposureEntry := len(tiff)
+	tiff = append(tiff, make([]byte, 12)...)
+	isoEntry := len(tiff)
+	tiff = append(tiff, make([]byte, 12)...)
+	lensEntry := len(tiff)
+	tiff = append(tiff, make([]byte, 12)...)
+	tiff = append(tiff, 0, 0, 0, 0)
+
+	fNumberOffset := uint32(len(tiff))
+	tiff = binary.LittleEndian.AppendUint32(tiff, 8)
+	tiff = binary.LittleEndian.AppendUint32(tiff, 1)
+	focalLengthOffset := uint32(len(tiff))
+	tiff = binary.LittleEndian.AppendUint32(tiff, 24)
+	tiff = binary.LittleEndian.AppendUint32(tiff, 1)
+	exposureOffset := uint32(len(tiff))
+	tiff = binary.LittleEndian.AppendUint32(tiff, 1)
+	tiff = binary.LittleEndian.AppendUint32(tiff, 125)
+	lens := append([]byte("Canon RF 24-70mm F2.8 L IS USM"), 0)
+	lensOffset := uint32(len(tiff))
+	tiff = append(tiff, lens...)
+
+	putIFDEntry(tiff[fNumberEntry:fNumberEntry+12], 0x829D, 5, 1, fNumberOffset)
+	putIFDEntry(tiff[focalLengthEntry:focalLengthEntry+12], 0x920A, 5, 1, focalLengthOffset)
+	putIFDEntry(tiff[exposureEntry:exposureEntry+12], 0x829A, 5, 1, exposureOffset)
+	putIFDEntry(tiff[isoEntry:isoEntry+12], 0x8827, 3, 1, 100)
+	putIFDEntry(tiff[lensEntry:lensEntry+12], 0xA434, 2, uint32(len(lens)), lensOffset)
+
+	app1Payload := append([]byte("Exif\x00\x00"), tiff...)
+	jpeg := []byte{0xFF, 0xD8, 0xFF, 0xE1}
+	jpeg = binary.BigEndian.AppendUint16(jpeg, uint16(len(app1Payload)+2))
+	jpeg = append(jpeg, app1Payload...)
+	jpeg = append(jpeg, 0xFF, 0xD9)
+	return jpeg
+}
+
+func putIFDEntry(entry []byte, tag uint16, typ uint16, count uint32, valueOrOffset uint32) {
+	binary.LittleEndian.PutUint16(entry[0:2], tag)
+	binary.LittleEndian.PutUint16(entry[2:4], typ)
+	binary.LittleEndian.PutUint32(entry[4:8], count)
+	binary.LittleEndian.PutUint32(entry[8:12], valueOrOffset)
 }

@@ -38,7 +38,7 @@ test("app layout moves focus to main content after route changes", async () => {
   );
 
   assert.match(appLayout, /const mainRef = useRef<HTMLElement>\(null\)/);
-  assert.match(appLayout, /mainRef\.current\?\.focus\(\)/);
+  assert.match(appLayout, /mainRef\.current\?\.focus\(\{\s*preventScroll:\s*true\s*\}\)/);
   assert.match(appLayout, /window\.requestAnimationFrame\(focusMainContent\)/);
   assert.match(appLayout, /<main[^>]*ref=\{mainRef\}[^>]*tabIndex=\{-1\}/s);
   assert.match(appLayout, /aria-live="polite"/);

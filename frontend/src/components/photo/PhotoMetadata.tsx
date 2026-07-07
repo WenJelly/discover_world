@@ -4,8 +4,8 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Camera / shooting parameters for a photo. All fields are optional — the
- * backend does not persist EXIF yet, so missing values render as "—".
+ * Camera / shooting parameters for a photo. Values come from backend EXIF
+ * metadata; missing fields render as "—".
  */
 export interface PhotoExif {
   aperture?: string;
@@ -32,15 +32,6 @@ const EXIF_FIELDS: ExifField[] = [
   { key: "lensModel", label: "镜头型号", icon: Crosshair },
 ];
 
-const DEFAULT_EXIF: Required<PhotoExif> = {
-  aperture: "f/8.0",
-  focalLength: "24mm",
-  shutterSpeed: "1/125s",
-  iso: "100",
-  cameraModel: "Canon EOS R5",
-  lensModel: "Canon RF 24-70mm F2.8 L IS USM",
-};
-
 interface PhotoMetadataProps {
   exif: PhotoExif;
   className?: string;
@@ -54,7 +45,7 @@ export function PhotoMetadata({ exif, className }: PhotoMetadataProps) {
       <div className="rounded-none border border-[#dfe3ea] bg-[#fbfcff] p-2.5">
         <dl className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3">
           {EXIF_FIELDS.map(({ key, label, icon: Icon, iso }) => {
-            const value = exif[key] || DEFAULT_EXIF[key];
+            const value = exif[key] || "—";
             return (
               <div
                 key={key}

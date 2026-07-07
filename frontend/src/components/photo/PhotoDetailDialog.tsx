@@ -200,6 +200,7 @@ export function PhotoDetailDialog({
   const [liked, setLiked] = useState(false);
   const [stats, setStats] = useState<MediaAssetStats | null>(null);
   const [likePending, setLikePending] = useState(false);
+  const [likeAnimationKey, setLikeAnimationKey] = useState(0);
   const [viewportSize, setViewportSize] = useState(getViewportSize);
 
   useEffect(() => {
@@ -289,6 +290,7 @@ export function PhotoDetailDialog({
     setLikePending(true);
     // Optimistic update, rolled back on failure.
     const nextLiked = !liked;
+    setLikeAnimationKey((value) => value + 1);
     setLiked(nextLiked);
     setStats((current) =>
       current
@@ -505,6 +507,7 @@ export function PhotoDetailDialog({
                       stats={displayStats}
                       isLiked={liked}
                       likePending={likePending}
+                      likeAnimationKey={likeAnimationKey}
                       onToggleLike={handleToggleLike}
                     />
                   </section>

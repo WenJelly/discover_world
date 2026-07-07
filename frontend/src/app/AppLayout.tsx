@@ -15,7 +15,7 @@ export function AppLayout() {
   const mainRef = useRef<HTMLElement>(null);
 
   const focusMainContent = useCallback(() => {
-    mainRef.current?.focus();
+    mainRef.current?.focus({ preventScroll: true });
   }, []);
 
   useEffect(() => {

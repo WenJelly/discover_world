@@ -47,6 +47,7 @@ type mediaFileMetadata struct {
 	Format        string
 	DominantColor string
 	BlurHash      string
+	Exif          *mediaExifMetadata
 }
 
 type objectStorageMetadata struct {
@@ -425,6 +426,7 @@ func extractMediaMetadata(filePath, originalFilename string) (mediaFileMetadata,
 	metadata := mediaFileMetadata{
 		Size:   info.Size(),
 		Format: format,
+		Exif:   extractExifMetadataFromFile(filePath, format),
 	}
 
 	switch format {

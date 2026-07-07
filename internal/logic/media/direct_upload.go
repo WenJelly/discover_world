@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	directUploadType = "direct"
-	directUploadTTL  = 10 * time.Minute
+	directUploadType              = "direct"
+	directUploadTTL               = 10 * time.Minute
+	directUploadMetadataReadBytes = 256 << 10
 )
 
 type directUploadInitRequest struct {
@@ -200,13 +201,14 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 	if session.FileSize.Valid && objectMeta.Size >= 0 && session.FileSize.Int64 != objectMeta.Size {
 		return nil, commonresponse.BadRequest("上传对象大小与会话不一致")
 	}
-	objectHeader, err := readObjectHeaderStorage(ctx, target, session.ObjectKey, 64)
+	objectHeader, err := readObjectHeaderStorage(ctx, target, session.ObjectKey, directUploadMetadataReadBytes)
 	if err != nil {
 		return nil, err
 	}
 	if err := validateDirectUploadObjectHeader(objectHeader, session.ObjectKey); err != nil {
 		return nil, err
 	}
+	objectExif := extractExifMetadataFromImageBytes(objectHeader, normalizeExtension(session.ObjectKey))
 
 	sessionExtra := parseDirectUploadSessionExtra(session.ExtraJson)
 	width, height := resolveDirectUploadDimensions(req.Width, req.Height, sessionExtra)
@@ -263,6 +265,9 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 		}
 		if req.BlurHash != "" {
 			metadata.BlurHash = req.BlurHash
+		}
+		if objectExif != nil {
+			metadata.Exif = objectExif
 		}
 		loaded.MetadataJson = metadataJSON(metadata)
 		loaded.Status = "active"

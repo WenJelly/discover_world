@@ -1,5 +1,6 @@
 import { ThumbsUp, Eye, Download } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef } from "react";
+import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 
 import { formatCount } from "@/lib/format";
@@ -25,6 +26,7 @@ interface PhotoStatsProps {
   /** Highlights the like icon when the viewer has reacted. */
   isLiked?: boolean;
   likePending?: boolean;
+  likeAnimationKey?: number;
   onToggleLike?: () => void;
   className?: string;
 }
@@ -34,18 +36,34 @@ export function PhotoStats({
   stats,
   isLiked = false,
   likePending = false,
+  likeAnimationKey = 0,
   onToggleLike,
   className,
 }: PhotoStatsProps) {
   const prefersReducedMotion = useReducedMotion();
-  const likeBounce = prefersReducedMotion
-    ? { scale: 1 }
-    : {
-        scale: [1, 1.28, 0.86, 1.12, 1],
-      };
-  const likeTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.45, ease: "easeOut" as const };
+  const likeControls = useAnimationControls();
+  const lastLikeAnimationKeyRef = useRef(likeAnimationKey);
+
+  useEffect(() => {
+    if (likeAnimationKey <= 0 || likeAnimationKey === lastLikeAnimationKeyRef.current) {
+      lastLikeAnimationKeyRef.current = likeAnimationKey;
+      likeControls.set({ scale: 1, opacity: 1 });
+      return;
+    }
+
+    lastLikeAnimationKeyRef.current = likeAnimationKey;
+
+    if (prefersReducedMotion) {
+      likeControls.set({ scale: 1, opacity: 1 });
+      return;
+    }
+
+    void likeControls.start({
+      scale: [1, 1.28, 0.86, 1.12, 1],
+      opacity: 1,
+      transition: { duration: 0.45, ease: "easeOut" as const },
+    });
+  }, [likeAnimationKey, likeControls, prefersReducedMotion]);
 
   return (
     <div className={cn("flex flex-wrap justify-start gap-x-8 gap-y-3", className)}>
@@ -57,29 +75,24 @@ export function PhotoStats({
           <>
             <span
               className={cn(
-                "flex size-8 items-center justify-center",
+                "flex size-9 items-center justify-center",
                 iconTone
               )}
             >
               {isLike ? (
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={isLiked ? "liked" : "unliked"}
-                    className="inline-flex"
-                    initial={{ scale: 0.6, opacity: 0 }}
-                    animate={likeBounce}
-                    exit={{ scale: 0.6, opacity: 0 }}
-                    transition={likeTransition}
-                  >
-                    <Icon
-                      className={cn("size-4", active && activeClass)}
-                      aria-hidden="true"
-                    />
-                  </motion.span>
-                </AnimatePresence>
+                <motion.span
+                  className="inline-flex"
+                  initial={false}
+                  animate={isLike ? likeControls : undefined}
+                >
+                  <Icon
+                    className={cn("size-5", active && activeClass)}
+                    aria-hidden="true"
+                  />
+                </motion.span>
               ) : (
                 <Icon
-                  className={cn("size-4", active && activeClass)}
+                  className={cn("size-5", active && activeClass)}
                   aria-hidden="true"
                 />
               )}

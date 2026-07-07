@@ -44,7 +44,7 @@ test("media detail dialog uses the reference card layout", async () => {
   assert.match(dialog, /height: rightPanelHeight/);
   assert.match(dialog, /尊重原创，请勿用于商业用途或二次修改后发布/);
   assert.match(dialog, /作品介绍/);
-  assert.match(dialog, />互动</);
+  assert.match(dialog, />\s*互动\s*</);
   assert.match(dialog, /text-\[24px\]/);
   assert.doesNotMatch(dialog, /text-\[26px\]/);
   assert.match(dialog, /REFERENCE_DETAIL_DEFAULTS/);
@@ -93,20 +93,28 @@ test("media detail dialog uses the reference card layout", async () => {
   assert.match(metadata, /相机信息/);
   assert.match(metadata, /rounded-none/);
   assert.match(metadata, /gap-y-2\.5/);
-  assert.match(metadata, /f\/8\.0/);
-  assert.match(metadata, /Canon EOS R5/);
+  assert.doesNotMatch(metadata, /DEFAULT_EXIF/);
+  assert.doesNotMatch(metadata, /f\/8\.0/);
+  assert.doesNotMatch(metadata, /Canon EOS R5/);
   assert.doesNotMatch(metadata, /wide/);
 
   assert.match(stats, /ThumbsUp/);
   assert.match(stats, /onToggleLike/);
   assert.doesNotMatch(stats, /rounded-full bg-rose-50/);
   assert.doesNotMatch(stats, /rounded-full bg-slate-100/);
-  assert.match(stats, /active \? "fill-blue-500 text-blue-500"/);
+  assert.match(stats, /activeClass: "fill-blue-500 text-blue-500"/);
   assert.match(stats, /cursor-pointer/);
   assert.match(stats, /motion\.span/);
+  assert.match(stats, /useAnimationControls/);
   assert.doesNotMatch(stats, /isLike && activeClass/);
   assert.match(stats, /flex flex-wrap justify-start/);
-  assert.match(stats, /size-8/);
+  assert.match(stats, /lastLikeAnimationKeyRef/);
+  assert.match(stats, /likeAnimationKey === lastLikeAnimationKeyRef\.current/);
+  assert.doesNotMatch(stats, /AnimatePresence/);
+  assert.doesNotMatch(stats, /key=\{`\$\{isLiked \? "liked" : "unliked"\}-\$\{likeAnimationKey\}`\}/);
+  assert.doesNotMatch(stats, /exit=/);
+  assert.match(stats, /size-9/);
+  assert.match(stats, /className=\{cn\("size-5", active && activeClass\)\}/);
   assert.match(stats, /active && activeClass/);
   assert.match(stats, /flex min-w-0 items-baseline justify-center gap-1\.5/);
   assert.match(stats, /text-\[11px\] leading-none text-slate-500/);
@@ -127,6 +135,46 @@ test("media detail dialog toggles backend likes optimistically", async () => {
   assert.match(dialog, /setLiked\(res\.active\)/);
   assert.match(dialog, /setStats\(res\.stats\)/);
   assert.doesNotMatch(dialog, /UI-only|TODO: persist/);
+});
+
+test("media detail like animation is triggered only by user toggles", async () => {
+  const dialog = await readFile(
+    new URL("../src/components/photo/PhotoDetailDialog.tsx", import.meta.url),
+    "utf8"
+  );
+  const stats = await readFile(
+    new URL("../src/components/photo/PhotoStats.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(dialog, /const \[likeAnimationKey, setLikeAnimationKey\] = useState\(0\)/);
+  assert.match(dialog, /setLikeAnimationKey\(\(value\) => value \+ 1\)/);
+  assert.match(dialog, /likeAnimationKey=\{likeAnimationKey\}/);
+
+  const syncEffect = dialog.match(/useEffect\(\(\) => \{\s*if \(!media\) return;[\s\S]*?\}, \[media\]\);/)?.[0] ?? "";
+  assert.doesNotMatch(syncEffect, /setLikeAnimationKey/);
+
+  assert.match(stats, /likeAnimationKey\?: number/);
+  assert.match(stats, /const likeControls = useAnimationControls\(\)/);
+  assert.match(stats, /const lastLikeAnimationKeyRef = useRef\(likeAnimationKey\)/);
+  assert.match(stats, /if \(likeAnimationKey <= 0 \|\| likeAnimationKey === lastLikeAnimationKeyRef\.current\)/);
+  assert.match(stats, /lastLikeAnimationKeyRef\.current = likeAnimationKey/);
+  assert.match(stats, /void likeControls\.start/);
+  assert.match(stats, /animate=\{isLike \? likeControls : undefined\}/);
+});
+
+test("media detail does not animate like state while switching assets", async () => {
+  const stats = await readFile(
+    new URL("../src/components/photo/PhotoStats.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(stats, /const lastLikeAnimationKeyRef = useRef\(likeAnimationKey\)/);
+  assert.match(stats, /likeAnimationKey === lastLikeAnimationKeyRef\.current/);
+  assert.match(stats, /likeControls\.set\(\{ scale: 1, opacity: 1 \}\)/);
+  assert.doesNotMatch(stats, /AnimatePresence/);
+  assert.doesNotMatch(stats, /exit=\{/);
+  assert.doesNotMatch(stats, /initial=\{shouldAnimateLike/);
 });
 
 test("discover page stores updated media stats for cards and the open dialog", async () => {

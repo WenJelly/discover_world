@@ -81,14 +81,15 @@ type createdMediaCursorPayload struct {
 }
 
 type mediaMetadata struct {
-	UsageType     string   `json:"usageType,omitempty"`
-	Category      string   `json:"category,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
-	DominantColor string   `json:"dominantColor,omitempty"`
-	BlurHash      string   `json:"blurHash,omitempty"`
-	ReviewMessage string   `json:"reviewMessage,omitempty"`
-	ReviewerId    string   `json:"reviewerId,omitempty"`
-	ReviewTime    string   `json:"reviewTime,omitempty"`
+	UsageType     string             `json:"usageType,omitempty"`
+	Category      string             `json:"category,omitempty"`
+	Tags          []string           `json:"tags,omitempty"`
+	DominantColor string             `json:"dominantColor,omitempty"`
+	BlurHash      string             `json:"blurHash,omitempty"`
+	Exif          *mediaExifMetadata `json:"exif,omitempty"`
+	ReviewMessage string             `json:"reviewMessage,omitempty"`
+	ReviewerId    string             `json:"reviewerId,omitempty"`
+	ReviewTime    string             `json:"reviewTime,omitempty"`
 }
 
 func formatID(id uint64) string {
@@ -336,6 +337,7 @@ func parseMediaMetadata(raw sql.NullString) mediaMetadata {
 		return mediaMetadata{}
 	}
 	metadata.Tags = normalizeTags(metadata.Tags)
+	metadata.Exif = normalizeMediaExif(metadata.Exif)
 	return metadata
 }
 
@@ -345,6 +347,7 @@ func metadataJSON(metadata mediaMetadata) sql.NullString {
 	metadata.Tags = normalizeTags(metadata.Tags)
 	metadata.DominantColor = strings.TrimSpace(metadata.DominantColor)
 	metadata.BlurHash = strings.TrimSpace(metadata.BlurHash)
+	metadata.Exif = normalizeMediaExif(metadata.Exif)
 	metadata.ReviewMessage = strings.TrimSpace(metadata.ReviewMessage)
 	metadata.ReviewerId = strings.TrimSpace(metadata.ReviewerId)
 	metadata.ReviewTime = strings.TrimSpace(metadata.ReviewTime)

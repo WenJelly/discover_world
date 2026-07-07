@@ -120,6 +120,7 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 		Tags:          req.Tags,
 		DominantColor: fileMetadata.DominantColor,
 		BlurHash:      fileMetadata.BlurHash,
+		Exif:          fileMetadata.Exif,
 	}
 
 	asset := existing

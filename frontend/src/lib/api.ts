@@ -316,7 +316,7 @@ async function uploadDirectObject(
         normalizeApiErrorMessage("上传超时", "upload")
       );
     }
-    throw new ApiError(0, "上传对象存储失败，请稍后重试");
+    throw new ApiError(0, "上传对象存储失败，请检查存储桶 CORS 配置");
   } finally {
     window.clearTimeout(timeoutId);
   }

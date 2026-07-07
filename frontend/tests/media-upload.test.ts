@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -71,6 +72,17 @@ test("buildMediaAssetDirectUploadInitRequest sends file facts and cleaned metada
     width: 1600,
     height: 900,
   });
+});
+
+test("media file upload remains frontend direct upload without server fallback", async () => {
+  const api = await readFile(new URL("../src/lib/api.ts", import.meta.url), "utf8");
+
+  assert.match(api, /"\/api\/media\/upload\/direct\/init"/);
+  assert.match(api, /const eTag = await uploadDirectObject\(file, upload\)/);
+  assert.match(api, /"\/api\/media\/upload\/direct\/complete"/);
+  assert.doesNotMatch(api, /function shouldUseDirectObjectUpload\(\)/);
+  assert.doesNotMatch(api, /async function uploadMediaAssetViaServer/);
+  assert.doesNotMatch(api, /return uploadMediaAssetViaServer\(file, metadata\)/);
 });
 
 test("buildAccountAvatarUploadFormData only sends the avatar file to the account endpoint", () => {
