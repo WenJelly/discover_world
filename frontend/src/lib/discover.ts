@@ -218,7 +218,10 @@ export function filterAndSortDiscoverPictures(
       matchesDiscoverPhotographer(picture, state.photographerType)
     );
 
-  if (state.tab === "rating" && state.sort === "1") {
+  if (
+    (state.tab === "rating" && state.sort === "1") ||
+    state.tab === "upcoming"
+  ) {
     return filtered;
   }
 

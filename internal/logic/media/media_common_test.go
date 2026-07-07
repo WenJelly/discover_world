@@ -46,6 +46,24 @@ func TestEncodeDecodeHotMediaCursor(t *testing.T) {
 	}
 }
 
+func TestEncodeDecodeRisingMediaCursor(t *testing.T) {
+	token, err := encodeRisingMediaCursor(12345, 6.25)
+	if err != nil {
+		t.Fatalf("encodeRisingMediaCursor returned error: %v", err)
+	}
+
+	cursor, err := decodeRisingMediaCursor(token)
+	if err != nil {
+		t.Fatalf("decodeRisingMediaCursor returned error: %v", err)
+	}
+	if cursor.ID != 12345 {
+		t.Fatalf("decodeRisingMediaCursor id = %d, want 12345", cursor.ID)
+	}
+	if cursor.RisingScore != 6.25 {
+		t.Fatalf("decodeRisingMediaCursor rising score = %v, want 6.25", cursor.RisingScore)
+	}
+}
+
 func TestDecodeMediaCursorRejectsInvalidTokens(t *testing.T) {
 	if _, err := decodeMediaCursor("not-a-cursor"); err == nil {
 		t.Fatal("decodeMediaCursor should reject invalid cursor tokens")
@@ -61,6 +79,7 @@ func TestNormalizeMediaCursorSort(t *testing.T) {
 		{raw: "latest", want: mediaCursorSortLatest},
 		{raw: "time", want: mediaCursorSortLatest},
 		{raw: "hot", want: mediaCursorSortHot},
+		{raw: "rising", want: mediaCursorSortRising},
 		{raw: "created", want: mediaCursorSortCreated},
 		{raw: "fresh", want: mediaCursorSortCreated},
 	}

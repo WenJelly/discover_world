@@ -39,6 +39,7 @@ const (
 
 	mediaCursorSortLatest  = "latest"
 	mediaCursorSortHot     = "hot"
+	mediaCursorSortRising  = "rising"
 	mediaCursorSortCreated = "created"
 )
 
@@ -55,6 +56,17 @@ type hotMediaCursorPayload struct {
 	ID       uint64  `json:"id"`
 	HotScore float64 `json:"hotScore"`
 	Sort     string  `json:"sort,omitempty"`
+}
+
+type risingMediaCursor struct {
+	ID          uint64
+	RisingScore float64
+}
+
+type risingMediaCursorPayload struct {
+	ID          uint64  `json:"id"`
+	RisingScore float64 `json:"risingScore"`
+	Sort        string  `json:"sort,omitempty"`
 }
 
 type createdMediaCursor struct {
@@ -162,10 +174,12 @@ func normalizeMediaCursorSort(raw string) (string, error) {
 		return mediaCursorSortLatest, nil
 	case mediaCursorSortHot:
 		return mediaCursorSortHot, nil
+	case mediaCursorSortRising:
+		return mediaCursorSortRising, nil
 	case mediaCursorSortCreated, "fresh":
 		return mediaCursorSortCreated, nil
 	default:
-		return "", commonresponse.BadRequest("sort 必须是 latest、hot 或 created")
+		return "", commonresponse.BadRequest("sort 必须是 latest、hot、rising 或 created")
 	}
 }
 
@@ -200,6 +214,39 @@ func decodeHotMediaCursor(raw string) (hotMediaCursor, error) {
 		return hotMediaCursor{}, commonresponse.BadRequest("cursor 无效")
 	}
 	return hotMediaCursor{ID: payload.ID, HotScore: payload.HotScore}, nil
+}
+
+func encodeRisingMediaCursor(id uint64, risingScore float64) (string, error) {
+	data, err := json.Marshal(risingMediaCursorPayload{
+		ID:          id,
+		RisingScore: risingScore,
+		Sort:        mediaCursorSortRising,
+	})
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(data), nil
+}
+
+func decodeRisingMediaCursor(raw string) (risingMediaCursor, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return risingMediaCursor{}, nil
+	}
+
+	data, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return risingMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+
+	var payload risingMediaCursorPayload
+	if err := json.Unmarshal(data, &payload); err != nil || payload.ID == 0 || payload.RisingScore < 0 {
+		return risingMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+	if payload.Sort != "" && payload.Sort != mediaCursorSortRising {
+		return risingMediaCursor{}, commonresponse.BadRequest("cursor 无效")
+	}
+	return risingMediaCursor{ID: payload.ID, RisingScore: payload.RisingScore}, nil
 }
 
 func encodeCreatedMediaCursor(id uint64, createdAt time.Time) (string, error) {

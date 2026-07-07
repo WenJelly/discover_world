@@ -42,6 +42,14 @@ import {
 } from "@/lib/account-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
 import { ImagePreviewModal } from "@/components/ImagePreviewModal";
 import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
@@ -69,6 +77,11 @@ import type {
 import { cn } from "@/lib/utils";
 
 type AccountTab = "posts" | "pictures" | "featured" | "albums";
+type DeleteConfirmation = {
+  imageId: string;
+  mode: "standard" | "force";
+  message?: string;
+};
 
 const TAB_ITEMS: Array<{ id: AccountTab; label: string; icon: typeof Camera }> = [
   { id: "posts", label: "动态", icon: MessageCircle },
@@ -139,6 +152,9 @@ export default function AccountDetailPage() {
   // Preview state
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number>(-1);
+  const [deleteConfirmation, setDeleteConfirmation] =
+    useState<DeleteConfirmation | null>(null);
+  const [deletingImage, setDeletingImage] = useState(false);
 
   // New post dialog state
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
@@ -397,35 +413,51 @@ export default function AccountDetailPage() {
     handleClosePreview();
   };
 
-  const handleDeleteImage = async (imageId: string) => {
-    if (!window.confirm("确定要删除这张图片吗？此操作无法撤销。")) {
+  const requestDeleteImage = (imageId: string) => {
+    setDeleteConfirmation({ imageId, mode: "standard" });
+  };
+
+  const closeDeleteConfirmation = () => {
+    if (!deletingImage) {
+      setDeleteConfirmation(null);
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    const confirmation = deleteConfirmation;
+    if (!confirmation) {
       return;
     }
 
+    setDeletingImage(true);
     try {
-      await deleteMediaAsset(imageId);
-      removeDeletedImageFromState(imageId);
-      console.log("图片删除成功");
+      await deleteMediaAsset(
+        confirmation.imageId,
+        confirmation.mode === "force" ? { force: true } : undefined
+      );
+      removeDeletedImageFromState(confirmation.imageId);
+      setDeleteConfirmation(null);
+      toast({ title: "图片已删除", variant: "success" });
     } catch (error) {
       if (
+        confirmation.mode === "standard" &&
         error instanceof ApiError &&
         isForceDeleteMediaConflict(error.code, error.message)
       ) {
-        if (!window.confirm(error.message)) {
-          return;
-        }
-        try {
-          await deleteMediaAsset(imageId, { force: true });
-          removeDeletedImageFromState(imageId);
-          console.log("图片删除成功");
-        } catch (forceError) {
-          console.error("删除失败:", forceError);
-          alert(`删除失败: ${forceError instanceof ApiError ? forceError.message : "未知错误"}`);
-        }
+        setDeleteConfirmation({
+          imageId: confirmation.imageId,
+          mode: "force",
+          message: error.message,
+        });
         return;
       }
-      console.error("删除失败:", error);
-      alert(`删除失败: ${error instanceof ApiError ? error.message : "未知错误"}`);
+      toast({
+        title: "删除失败",
+        description: errorMessage(error, "请稍后重试"),
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingImage(false);
     }
   };
 
@@ -948,7 +980,7 @@ export default function AccountDetailPage() {
               </button>
               <button
                 type="button"
-                onClick={() => handleDeleteImage(previewImage.id)}
+                onClick={() => requestDeleteImage(previewImage.id)}
                 className="inline-flex items-center gap-2 rounded-lg border border-red-500/50 px-4 py-2.5 text-sm font-medium text-red-400 backdrop-blur-sm transition-colors hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                 aria-label="删除图片"
               >
@@ -960,6 +992,48 @@ export default function AccountDetailPage() {
           }
         />
       )}
+
+      <Dialog
+        open={Boolean(deleteConfirmation)}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeDeleteConfirmation();
+          }
+        }}
+      >
+        <DialogContent
+          className="max-w-md rounded-xl border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+          showCloseButton={!deletingImage}
+        >
+          <DialogHeader>
+            <DialogTitle>删除图片</DialogTitle>
+            <DialogDescription>
+              {deleteConfirmation?.mode === "force"
+                ? deleteConfirmation.message
+                : "此操作无法撤销。删除后，这张图片会从你的作品和精选中移除。"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deletingImage}
+              onClick={closeDeleteConfirmation}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletingImage}
+              onClick={() => void handleDeleteImage()}
+            >
+              {deletingImage ? <Loader2 className="size-4 animate-spin" /> : null}
+              {deleteConfirmation?.mode === "force" ? "继续删除" : "确认删除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isOwnProfile ? (
         <>

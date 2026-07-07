@@ -556,12 +556,12 @@
 
 @media (hover: hover) and (pointer: fine) {
   .discover-page .discover-tile:hover img,
-  .discover-page .discover-tile:focus-within img {
+  .discover-page .photo_link:focus-visible img {
     transform: scale(1.025);
   }
 
   .discover-page .discover-tile:hover .info,
-  .discover-page .discover-tile:focus-within .info {
+  .discover-page .photo_link:focus-visible + .info {
     opacity: 1;
     transform: translateY(0);
   }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -27,4 +28,28 @@ test("homepage gallery marquee keeps moving after it leaves the viewport", async
     source,
     /cancelAnimationFrame\(frameRef\.current\)[\s\S]*lastFrameRef\.current = null/
   );
+});
+
+test("homepage does not render the creation workflow section", async () => {
+  const appLayout = await readFile(
+    new URL("../src/app/AppLayout.tsx", import.meta.url),
+    "utf8"
+  );
+  const featuresUrl = new URL("../src/components/home/Features.tsx", import.meta.url);
+
+  assert.doesNotMatch(appLayout, /import Features from/);
+  assert.doesNotMatch(appLayout, /<Features \/>/);
+  assert.equal(existsSync(featuresUrl), false);
+});
+
+test("homepage does not render the public stats section", async () => {
+  const appLayout = await readFile(
+    new URL("../src/app/AppLayout.tsx", import.meta.url),
+    "utf8"
+  );
+  const statsUrl = new URL("../src/components/home/Stats.tsx", import.meta.url);
+
+  assert.doesNotMatch(appLayout, /import Stats from/);
+  assert.doesNotMatch(appLayout, /<Stats \/>/);
+  assert.equal(existsSync(statsUrl), false);
 });

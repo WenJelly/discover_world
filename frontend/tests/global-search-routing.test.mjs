@@ -14,6 +14,30 @@ test("navbar submits global searches to the search route", async () => {
   assert.match(navbar, /aria-label="搜索全站内容"/);
 });
 
+test("navbar search submits the current form value instead of deferred state", async () => {
+  const navbar = await readFile(
+    new URL("../src/components/Navbar.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.doesNotMatch(navbar, /useDeferredValue/);
+  assert.doesNotMatch(navbar, /deferredSearchQuery/);
+  assert.match(navbar, /new FormData\(event\.currentTarget\)/);
+  assert.match(navbar, /formData\.get\("q"\)/);
+});
+
+test("navbar desktop and mobile search fields keep independent refs", async () => {
+  const navbar = await readFile(
+    new URL("../src/components/Navbar.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(navbar, /desktopSearchInputRef/);
+  assert.match(navbar, /mobileSearchInputRef/);
+  assert.match(navbar, /focusSearchInput\(event\.currentTarget\)/);
+  assert.doesNotMatch(navbar, /ref=\{searchInputRef\}/);
+});
+
 test("navbar search hides the native clear control and keeps one custom clear button", async () => {
   const navbar = await readFile(
     new URL("../src/components/Navbar.tsx", import.meta.url),

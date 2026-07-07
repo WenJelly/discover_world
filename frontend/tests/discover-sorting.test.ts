@@ -34,20 +34,20 @@ function picture(
   } as PictureResponse;
 }
 
-test("discover ranking ignores engagement counts", () => {
-  const oldHighEngagement = picture(
-    "old-high-engagement",
+test("discover rising ranking preserves backend order", () => {
+  const backendRisingFirst = picture(
+    "backend-rising-first",
     100,
     10_000,
     "2026-07-01T00:00:00Z"
   );
-  const newLowEngagement = picture(
-    "new-low-engagement",
+  const backendRisingSecond = picture(
+    "backend-rising-second",
     1,
     0,
     "2026-07-02T00:00:00Z"
   );
-  const pictures = [oldHighEngagement, newLowEngagement];
+  const pictures = [backendRisingFirst, backendRisingSecond];
 
   const rankingStates: DiscoverSearchState[] = [
     { ...BASE_DISCOVER_STATE, tab: "upcoming" },
@@ -56,7 +56,7 @@ test("discover ranking ignores engagement counts", () => {
   for (const state of rankingStates) {
     assert.deepEqual(
       filterAndSortDiscoverPictures(pictures, state).map((item) => item.id),
-      ["new-low-engagement", "old-high-engagement"]
+      ["backend-rising-first", "backend-rising-second"]
     );
   }
 });

@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Navbar from "@/components/Navbar.tsx";
 import Hero from "@/components/home/Hero";
 import InfiniteGallery from "@/components/home/InfiniteGallery";
-import Features from "@/components/home/Features";
-import Stats from "@/components/home/Stats";
 import CTA from "@/components/home/CTA";
 import Footer from "@/components/Footer";
 import DiscoverPage from "@/pages/DiscoverPage";
@@ -14,13 +12,21 @@ import AdminPage from "@/pages/AdminPage";
 
 export function AppLayout() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
+  const mainRef = useRef<HTMLElement>(null);
+
+  const focusMainContent = useCallback(() => {
+    mainRef.current?.focus();
+  }, []);
 
   useEffect(() => {
-    const handlePopState = () => setPathname(window.location.pathname);
+    const handlePopState = () => {
+      setPathname(window.location.pathname);
+      window.requestAnimationFrame(focusMainContent);
+    };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [focusMainContent]);
 
   const isDiscoverRoute = pathname === "/discover";
   const isLegacyPublicRoute = pathname === "/public";
@@ -38,7 +44,13 @@ export function AppLayout() {
         跳到主要内容
       </a>
       <Navbar />
-      <main id="main-content">
+      <main
+        id="main-content"
+        ref={mainRef}
+        tabIndex={-1}
+        aria-live="polite"
+        className="outline-none"
+      >
         {isAccountRoute ? (
           <AccountDetailPage />
         ) : isUploadRoute ? (
@@ -53,8 +65,6 @@ export function AppLayout() {
           <>
             <Hero />
             <InfiniteGallery />
-            <Features />
-            <Stats />
             <CTA />
           </>
         )}

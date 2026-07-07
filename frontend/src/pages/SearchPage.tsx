@@ -31,10 +31,10 @@ import type {
   MediaAssetResponse,
 } from "@/lib/types";
 
-type SearchCategory = "all" | "media" | "posts" | "albums" | "users";
+type SearchGroupKey = "all" | "media" | "posts" | "albums" | "users";
 
 interface SearchCategoryConfig {
-  key: SearchCategory;
+  key: SearchGroupKey;
   label: string;
   icon: typeof ImageIcon;
 }
@@ -56,11 +56,11 @@ function readSearchQuery() {
   return new URLSearchParams(window.location.search).get("q")?.trim() ?? "";
 }
 
-function navigateSearch(query: string, category: SearchCategory = "all") {
+function navigateSearch(query: string, group: SearchGroupKey = "all") {
   const trimmed = query.trim();
   const params = new URLSearchParams();
   if (trimmed) params.set("q", trimmed);
-  if (category !== "all") params.set("category", category);
+  if (group !== "all") params.set("category", group);
 
   const nextUrl = params.toString() ? `/search?${params}` : "/search";
   const currentUrl = `${window.location.pathname}${window.location.search}`;
@@ -434,12 +434,11 @@ function UserResults({
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {items.map((user) => {
-          const href = buildAccountProfileHref(user.id);
           return (
             <a
               key={user.id}
-              href={href}
-              onClick={(e) => handleSpaNavigate(e, href)}
+              href={buildAccountProfileHref(user.id)}
+              onClick={(e) => handleSpaNavigate(e, buildAccountProfileHref(user.id))}
               className="bg-white border-2 border-slate-200 rounded-lg p-4 hover:border-green-400 transition-colors duration-200 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
             >
               <Avatar className="w-16 h-16 mx-auto mb-3">
@@ -468,7 +467,7 @@ function UserResults({
 export default function SearchPage() {
   const [query, setQuery] = useState(() => readSearchQuery());
   const [inputValue, setInputValue] = useState(() => readSearchQuery());
-  const [category, setCategory] = useState<SearchCategory>("all");
+  const [activeGroup, setActiveGroup] = useState<SearchGroupKey>("all");
   const [result, setResult] = useState<GlobalSearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -498,11 +497,11 @@ export default function SearchPage() {
 
     const timer = window.setTimeout(() => {
       setQuery(trimmed);
-      navigateSearch(trimmed, category);
+      navigateSearch(trimmed, activeGroup);
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
-  }, [inputValue, query, category, isComposing]);
+  }, [inputValue, query, activeGroup, isComposing]);
 
   // Perform search
   useEffect(() => {
@@ -549,7 +548,7 @@ export default function SearchPage() {
     const trimmed = inputValue.trim();
     if (trimmed) {
       setQuery(trimmed);
-      navigateSearch(trimmed, category);
+      navigateSearch(trimmed, activeGroup);
     }
   };
 
@@ -563,7 +562,7 @@ export default function SearchPage() {
   const handleRecentClick = (searchQuery: string) => {
     setInputValue(searchQuery);
     setQuery(searchQuery);
-    navigateSearch(searchQuery, category);
+    navigateSearch(searchQuery, activeGroup);
   };
 
   const handleClearRecent = () => {
@@ -584,7 +583,7 @@ export default function SearchPage() {
   const filteredResults = useMemo(() => {
     if (!result) return null;
 
-    switch (category) {
+    switch (activeGroup) {
       case "media":
         return {
           ...result,
@@ -616,7 +615,7 @@ export default function SearchPage() {
       default:
         return result;
     }
-  }, [result, category]);
+  }, [result, activeGroup]);
 
   const hasResults =
     filteredResults &&
@@ -663,15 +662,21 @@ export default function SearchPage() {
             </form>
 
             {/* Category Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-2 -mb-2 scrollbar-hide">
-              {SEARCH_CATEGORIES.map((cat) => {
-                const Icon = cat.icon;
-                const isActive = category === cat.key;
+            <div
+              className="flex gap-2 overflow-x-auto pb-2 -mb-2 scrollbar-hide"
+              role="tablist"
+              aria-label="搜索结果分组"
+            >
+              {SEARCH_CATEGORIES.map((group) => {
+                const Icon = group.icon;
+                const isActive = activeGroup === group.key;
                 return (
                   <button
-                    key={cat.key}
+                    key={group.key}
                     type="button"
-                    onClick={() => setCategory(cat.key)}
+                    role="tab"
+                    aria-selected={activeGroup === group.key}
+                    onClick={() => setActiveGroup(group.key)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
                       isActive
                         ? "bg-rose-600 text-white"
@@ -680,7 +685,7 @@ export default function SearchPage() {
                     aria-pressed={isActive}
                   >
                     <Icon className="w-4 h-4" />
-                    {cat.label}
+                    {group.label}
                   </button>
                 );
               })}

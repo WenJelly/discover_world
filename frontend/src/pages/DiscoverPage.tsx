@@ -1,8 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { ImageOff, LayoutGrid, RefreshCw, Rows3 } from "lucide-react";
-import { useCallback } from "react";
 import { DiscoverPictureCard } from "@/components/discover/DiscoverPictureCard";
-import { MediaDetailDialog } from "@/components/discover/MediaDetailDialog";
 import { useInView } from "@/hooks/useInView";
 import { useInfinitePictures } from "@/hooks/useInfinitePictures";
 import type { MediaAssetResponse } from "@/lib/types";
@@ -22,7 +20,6 @@ import {
   filterAndSortDiscoverPictures,
   getDiscoverCategoryQuery,
   parseDiscoverSearch,
-  resolveDiscoverPreviewIndex,
   type DiscoverCategoryKey,
   type DiscoverLayoutKey,
   type DiscoverPhotographerKey,
@@ -78,7 +75,6 @@ export default function DiscoverPage() {
   const [discoverRefreshKey, setDiscoverRefreshKey] = useState(0);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [isSiteNavVisible, setIsSiteNavVisible] = useState(true);
-  const [previewAssetId, setPreviewAssetId] = useState<string | null>(null);
   const [assetOverrides, setAssetOverrides] = useState<
     Record<string, MediaAssetResponse>
   >({});
@@ -161,6 +157,9 @@ export default function DiscoverPage() {
     if (discoverState.tab === "rating" && discoverState.sort === "1") {
       return "hot";
     }
+    if (discoverState.tab === "upcoming") {
+      return "rising";
+    }
     if (discoverState.tab === "fresh") {
       return "created";
     }
@@ -189,13 +188,6 @@ export default function DiscoverPage() {
     [assetOverrides, pictures]
   );
 
-  const handleAssetChange = useCallback((asset: MediaAssetResponse) => {
-    setAssetOverrides((current) => ({
-      ...current,
-      [asset.id]: asset,
-    }));
-  }, []);
-
   useEffect(() => {
     if (sentinelInView && hasMore && !loading) {
       loadMore();
@@ -206,11 +198,6 @@ export default function DiscoverPage() {
     () => filterAndSortDiscoverPictures(mergedPictures, discoverState),
     [mergedPictures, discoverState]
   );
-  const previewIndex = useMemo(
-    () => resolveDiscoverPreviewIndex(filteredPictures, previewAssetId),
-    [filteredPictures, previewAssetId]
-  );
-  const previewOpen = previewAssetId !== null && previewIndex >= 0;
 
   const targetRowHeight = isDesktopWidth(galleryWidth) ? 350 : 132;
   const gap = isDesktopWidth(galleryWidth) ? 10 : 8;
@@ -321,7 +308,6 @@ export default function DiscoverPage() {
   const discoverPageClassName = [
     "discover-page",
     !isSiteNavVisible ? "discover-page--site-nav-hidden" : "",
-    previewOpen ? "discover-page--preview-open" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -594,7 +580,9 @@ export default function DiscoverPage() {
                     >
                       <DiscoverPictureCard
                         picture={item.picture}
-                        onOpen={(picture) => setPreviewAssetId(picture.id)}
+                        onOpen={() => {
+                          // 详情功能已删除
+                        }}
                       />
                     </div>
                   ))}
@@ -667,17 +655,6 @@ export default function DiscoverPage() {
           ) : null}
         </div>
       </div>
-
-      <MediaDetailDialog
-        assets={filteredPictures}
-        index={Math.max(0, previewIndex)}
-        open={previewOpen}
-        onOpenChange={(o) => {
-          if (!o) setPreviewAssetId(null);
-        }}
-        onIndexChange={(i) => setPreviewAssetId(filteredPictures[i]?.id ?? null)}
-        onAssetChange={handleAssetChange}
-      />
     </section>
   );
 }

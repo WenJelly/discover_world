@@ -5,7 +5,6 @@ import {
     useEffect,
     useRef,
     useState,
-    useDeferredValue,
     useCallback,
 } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
@@ -82,10 +81,10 @@ export default function FadingSiblingsNavbar() {
         nickname: "",
         bio: "",
     });
-    const deferredSearchQuery = useDeferredValue(searchQuery);
     const accountMenuRef = useRef<HTMLDivElement>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
-    const searchInputRef = useRef<HTMLInputElement>(null);
+    const desktopSearchInputRef = useRef<HTMLInputElement>(null);
+    const mobileSearchInputRef = useRef<HTMLInputElement>(null);
     const { user, isAuthenticated, logout, refreshUser, applyAccountDetail } = useAuth();
     const { toast } = useToast();
     const displayName = user?.userName?.trim() || user?.userEmail || "用户";
@@ -149,25 +148,47 @@ export default function FadingSiblingsNavbar() {
         setIsOpen(false);
     };
 
+    const getSearchInput = useCallback((target: HTMLFormElement | HTMLButtonElement) => {
+        const form = target instanceof HTMLFormElement ? target : target.form;
+        const input = form?.elements.namedItem("q");
+        return input instanceof HTMLInputElement ? input : null;
+    }, []);
+
+    const focusSearchInput = useCallback((target: HTMLFormElement | HTMLButtonElement) => {
+        getSearchInput(target)?.focus();
+    }, [getSearchInput]);
+
+    const blurSearchInput = useCallback((target: HTMLFormElement | HTMLButtonElement) => {
+        getSearchInput(target)?.blur();
+    }, [getSearchInput]);
+
     const handleSearchSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (deferredSearchQuery.trim()) {
-            const searchUrl = `/search?q=${encodeURIComponent(deferredSearchQuery.trim())}`;
-            window.history.pushState({}, "", searchUrl);
-            window.dispatchEvent(new Event("popstate"));
-            setIsOpen(false);
-            searchInputRef.current?.blur();
+        const formData = new FormData(event.currentTarget);
+        const query = String(formData.get("q") ?? "").trim();
+
+        setSearchQuery(query);
+
+        if (!query) {
+            focusSearchInput(event.currentTarget);
+            return;
         }
-    }, [deferredSearchQuery]);
+
+        const searchUrl = `/search?q=${encodeURIComponent(query)}`;
+        window.history.pushState({}, "", searchUrl);
+        window.dispatchEvent(new Event("popstate"));
+        setIsOpen(false);
+        blurSearchInput(event.currentTarget);
+    }, [blurSearchInput, focusSearchInput]);
 
     const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(event.target.value);
     }, []);
 
-    const clearSearch = useCallback(() => {
+    const clearSearch = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         setSearchQuery("");
-        searchInputRef.current?.focus();
-    }, []);
+        focusSearchInput(event.currentTarget);
+    }, [focusSearchInput]);
 
     const openSettings = () => {
         setAccountMenuOpen(false);
@@ -383,7 +404,7 @@ export default function FadingSiblingsNavbar() {
                                         <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
                                     </div>
                                     <Input
-                                        ref={searchInputRef}
+                                        ref={desktopSearchInputRef}
                                         id="navbar-search-desktop"
                                         name="q"
                                         type="search"
@@ -579,6 +600,7 @@ export default function FadingSiblingsNavbar() {
                                             <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
                                         </div>
                                         <Input
+                                            ref={mobileSearchInputRef}
                                             id="navbar-search-mobile"
                                             name="q"
                                             type="search"

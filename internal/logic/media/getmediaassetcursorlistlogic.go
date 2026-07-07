@@ -58,6 +58,15 @@ func (l *GetMediaAssetCursorListLogic) GetMediaAssetCursorList(req *types.Cursor
 		if err != nil {
 			return nil, err
 		}
+	case mediaCursorSortRising:
+		cursor, err := decodeRisingMediaCursor(req.Cursor)
+		if err != nil {
+			return nil, err
+		}
+		assets, err = l.svcCtx.MediaAssetModel.FindByWhereBeforeRisingScore(l.ctx, whereSQL, cursor.RisingScore, cursor.ID, pageSize+1, args...)
+		if err != nil {
+			return nil, err
+		}
 	case mediaCursorSortCreated:
 		cursor, err := decodeCreatedMediaCursor(req.Cursor)
 		if err != nil {
@@ -93,6 +102,12 @@ func (l *GetMediaAssetCursorListLogic) GetMediaAssetCursorList(req *types.Cursor
 				return nil, err
 			}
 			nextCursor, err = encodeHotMediaCursor(lastAssetID, hotScore)
+		case mediaCursorSortRising:
+			risingScore, err := l.svcCtx.MediaAssetModel.FindRisingScoreByID(l.ctx, lastAssetID)
+			if err != nil {
+				return nil, err
+			}
+			nextCursor, err = encodeRisingMediaCursor(lastAssetID, risingScore)
 		case mediaCursorSortCreated:
 			nextCursor, err = encodeCreatedMediaCursor(lastAssetID, assets[len(assets)-1].CreatedAt)
 		default:

@@ -31,6 +31,19 @@ test("discover page uses discover route and keeps public route compatibility", a
   assert.match(appLayout, /<DiscoverPage \/>/);
 });
 
+test("app layout moves focus to main content after route changes", async () => {
+  const appLayout = await readFile(
+    new URL("../src/app/AppLayout.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(appLayout, /const mainRef = useRef<HTMLElement>\(null\)/);
+  assert.match(appLayout, /mainRef\.current\?\.focus\(\)/);
+  assert.match(appLayout, /window\.requestAnimationFrame\(focusMainContent\)/);
+  assert.match(appLayout, /<main[^>]*ref=\{mainRef\}[^>]*tabIndex=\{-1\}/s);
+  assert.match(appLayout, /aria-live="polite"/);
+});
+
 test("discover code is named around discover instead of public gallery", async () => {
   assert.equal(existsSync(libUrl), true);
   assert.equal(existsSync(oldLibUrl), false);
@@ -166,6 +179,12 @@ test("discover fresh feed is requested by creation time", async () => {
   assert.match(discoverPage, /discoverState\.tab === "fresh"[\s\S]*return "created"/);
 });
 
+test("discover rising feed is requested from the backend", async () => {
+  const discoverPage = await readFile(pageUrl, "utf8");
+
+  assert.match(discoverPage, /discoverState\.tab === "upcoming"[\s\S]*return "rising"/);
+});
+
 test("discover preview is anchored by asset id when detail updates resort the list", async () => {
   const discoverPage = await readFile(pageUrl, "utf8");
   const discoverLib = await readFile(libUrl, "utf8");
@@ -189,6 +208,9 @@ test("discover metadata overlay stays hover-only and is hidden behind detail pre
     css,
     /@media\s*\(\s*hover:\s*hover\s*\)\s*and\s*\(\s*pointer:\s*fine\s*\)\s*\{[\s\S]*\.discover-page \.discover-tile:hover \.info/s
   );
+  assert.doesNotMatch(css, /\.discover-page \.discover-tile:focus-within \.info/);
+  assert.doesNotMatch(css, /\.discover-page \.discover-tile:focus-within img/);
+  assert.match(css, /\.discover-page \.photo_link:focus-visible \+ \.info/);
   assert.doesNotMatch(
     css,
     /@media only screen and \(max-width: 720px\)\s*\{[\s\S]*?\.discover-page \.info\s*\{[\s\S]*?opacity:\s*1;[\s\S]*?\}/s

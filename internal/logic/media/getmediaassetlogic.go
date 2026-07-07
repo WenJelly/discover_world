@@ -59,6 +59,11 @@ func (l *GetMediaAssetLogic) GetMediaAsset(req *types.GetMediaAssetRequest) (res
 	if err := l.svcCtx.EntityStatModel.IncrementViewCount(l.ctx, targetTypeMediaAsset, asset.Id); err != nil {
 		return nil, commonresponse.InternalServerError("更新浏览量失败")
 	}
+	if l.svcCtx.EntityStatHourlyModel != nil {
+		if err := l.svcCtx.EntityStatHourlyModel.IncrementCounter(l.ctx, targetTypeMediaAsset, asset.Id, "view_count", 1); err != nil {
+			logx.WithContext(l.ctx).Errorf("record media hourly view stat failed: assetId=%d err=%v", asset.Id, err)
+		}
+	}
 	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypeMediaAsset, asset.Id)
 	owner, _ := l.svcCtx.UserAccountModel.FindOne(l.ctx, asset.OwnerUserId)
 	profile, _ := l.svcCtx.UserProfileModel.FindOneByUserId(l.ctx, asset.OwnerUserId)

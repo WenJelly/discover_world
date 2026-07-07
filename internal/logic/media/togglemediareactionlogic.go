@@ -64,7 +64,15 @@ func (l *ToggleMediaReactionLogic) ToggleMediaReaction(req *types.ToggleMediaRea
 			return err
 		}
 		active = nextActive
-		return txSvc.EntityStatModel.IncrementCounter(ctx, targetTypeMediaAsset, asset.Id, "reaction_count", delta)
+		if err := txSvc.EntityStatModel.IncrementCounter(ctx, targetTypeMediaAsset, asset.Id, "reaction_count", delta); err != nil {
+			return err
+		}
+		if txSvc.EntityStatHourlyModel != nil {
+			if err := txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypeMediaAsset, asset.Id, "reaction_count", delta); err != nil {
+				logx.WithContext(ctx).Errorf("record media hourly reaction stat failed: assetId=%d err=%v", asset.Id, err)
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("toggle media reaction failed")
