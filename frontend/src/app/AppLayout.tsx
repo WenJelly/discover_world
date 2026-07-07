@@ -43,7 +43,7 @@ export function AppLayout() {
       >
         跳到主要内容
       </a>
-      <Navbar />
+      <Navbar fixed={!isDiscoverRoute && !isLegacyPublicRoute} />
       <main
         id="main-content"
         ref={mainRef}

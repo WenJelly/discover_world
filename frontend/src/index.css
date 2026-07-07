@@ -160,7 +160,6 @@
 
 .discover-page {
   min-height: 100dvh;
-  padding-top: 4rem;
   background: #f7f8fa;
   color: #525558;
   font-family:
@@ -172,14 +171,14 @@
 }
 
 .discover-page .discover-toolbar {
-  position: sticky;
-  top: 4rem;
+  position: static;
   z-index: 35;
   background: #fff;
   border-bottom: 1px solid #eeeff2;
 }
 
-.discover-page--site-nav-hidden .discover-toolbar {
+.discover-page--toolbar-pinned .discover-toolbar {
+  position: sticky;
   top: 0;
 }
 
@@ -219,6 +218,7 @@
   border-bottom: 2px solid transparent;
   color: #71767a;
   font-size: 14px;
+  font-weight: 700;
   transition:
     color 0.18s ease,
     border-color 0.18s ease;
@@ -266,31 +266,26 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 2px;
-  border: 1px solid #d7dde1;
-  border-radius: 3px;
-  background: #fff;
+  padding: 0;
+  border-radius: 4px;
 }
 
 .discover-page .discover-layout-switch__button {
   display: inline-flex;
-  width: 26px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 2px;
+  border-radius: 4px;
   background: transparent;
   color: #71767a;
   cursor: pointer;
-  transition:
-    color 0.14s ease,
-    background-color 0.14s ease;
+  transition: color 0.14s ease;
 }
 
 .discover-page .discover-layout-switch__button:hover,
 .discover-page .discover-layout-switch__button.selected {
-  background: rgba(0, 153, 229, 0.1);
   color: #0099e5;
 }
 

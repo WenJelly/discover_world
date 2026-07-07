@@ -1,10 +1,5 @@
-export const DISCOVER_NAVBAR_VISIBILITY_EVENT =
-  "discover-world:navbar-visibility";
+const DISCOVER_TOOLBAR_PIN_SCROLL_Y = 56;
 
-export type DiscoverNavbarVisibilityDetail = {
-  visible: boolean;
-};
-
-export function shouldShowDiscoverNavbar(scrollY: number) {
-  return scrollY <= 8;
+export function shouldPinDiscoverToolbar(scrollY: number) {
+  return scrollY >= DISCOVER_TOOLBAR_PIN_SCROLL_Y;
 }

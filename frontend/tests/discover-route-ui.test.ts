@@ -85,6 +85,22 @@ test("navbar exposes discover and stays opaque white", async () => {
   assert.doesNotMatch(navbar, /border-transparent bg-transparent|bg-white\/75|backdrop-blur-xl/);
 });
 
+test("discover route lets the main navbar scroll in normal document flow", async () => {
+  const appLayout = await readFile(
+    new URL("../src/app/AppLayout.tsx", import.meta.url),
+    "utf8"
+  );
+  const navbar = await readFile(
+    new URL("../src/components/Navbar.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(appLayout, /<Navbar fixed=\{!isDiscoverRoute && !isLegacyPublicRoute\} \/>/);
+  assert.match(navbar, /type NavbarProps = \{\s*fixed\?: boolean;/s);
+  assert.match(navbar, /fixed = true/);
+  assert.match(navbar, /fixed \? "fixed top-0 left-0 right-0" : "relative"/);
+});
+
 test("navbar routes home directly and removes guide/share entries", async () => {
   const navbar = await readFile(
     new URL("../src/components/Navbar.tsx", import.meta.url),
@@ -99,23 +115,31 @@ test("navbar routes home directly and removes guide/share entries", async () => 
   assert.doesNotMatch(navbar, /href: "\/#architecture"|href: "\/#pricing"/);
 });
 
-test("discover scroll hides only the main navbar and keeps toolbar visible", async () => {
-  const navbar = await readFile(
-    new URL("../src/components/Navbar.tsx", import.meta.url),
-    "utf8"
-  );
+test("discover toolbar becomes sticky only after the main navbar scrolls away", async () => {
   const discoverPage = await readFile(pageUrl, "utf8");
   const css = await readFile(new URL("../src/index.css", import.meta.url), "utf8");
 
-  assert.match(navbar, /DISCOVER_NAVBAR_VISIBILITY_EVENT/);
-  assert.match(navbar, /-translate-y-full/);
-  assert.doesNotMatch(
-    navbar,
-    /fixed top-0 left-0 right-0 z-50[^`]*transition-transform[^`]*duration-\d+/s
+  assert.match(discoverPage, /shouldPinDiscoverToolbar/);
+  assert.match(discoverPage, /discover-page--toolbar-pinned/);
+  assert.doesNotMatch(discoverPage, /discover-page--site-nav-hidden/);
+  assert.match(
+    css,
+    /\.discover-page\s*\{(?<styles>[^}]*)\}/s
   );
-  assert.match(discoverPage, /DISCOVER_NAVBAR_VISIBILITY_EVENT/);
-  assert.match(discoverPage, /discover-page--site-nav-hidden/);
-  assert.match(css, /\.discover-page--site-nav-hidden \.discover-toolbar/);
+  const pageStyles = css.match(/\.discover-page\s*\{(?<styles>[^}]*)\}/s)
+    ?.groups?.styles ?? "";
+  assert.doesNotMatch(pageStyles, /padding-top:\s*4rem/);
+
+  const toolbarStyles =
+    css.match(/\.discover-page \.discover-toolbar\s*\{(?<styles>[^}]*)\}/)
+      ?.groups?.styles ?? "";
+  assert.match(toolbarStyles, /position:\s*static;/);
+  assert.doesNotMatch(toolbarStyles, /position:\s*sticky;/);
+
+  assert.match(
+    css,
+    /\.discover-page--toolbar-pinned \.discover-toolbar\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;/s
+  );
 });
 
 test("discover toolbar stays opaque white like the reference site", async () => {
@@ -131,7 +155,7 @@ test("discover toolbar stays opaque white like the reference site", async () => 
   );
   assert.match(
     css,
-    /\.discover-page--site-nav-hidden \.discover-toolbar\s*\{[^}]*top:\s*0;/s
+    /\.discover-page--toolbar-pinned \.discover-toolbar\s*\{[^}]*top:\s*0;/s
   );
 });
 
@@ -141,6 +165,33 @@ test("discover toolbar filters do not render caret arrows", async () => {
 
   assert.doesNotMatch(discoverPage, /className="arrow"/);
   assert.doesNotMatch(css, /\.discover-page \.arrow/);
+});
+
+test("discover toolbar controls stay visible on every tab and use quiet layout icons", async () => {
+  const discoverPage = await readFile(pageUrl, "utf8");
+  const css = await readFile(new URL("../src/index.css", import.meta.url), "utf8");
+
+  assert.doesNotMatch(discoverPage, /canShowQueryBar/);
+  assert.match(discoverPage, /GalleryHorizontal/);
+  assert.match(discoverPage, /Grid2X2/);
+  assert.match(discoverPage, /<Icon size=\{18\} strokeWidth=\{2\} aria-hidden="true" \/>/);
+  assert.doesNotMatch(discoverPage, /Rows3|LayoutGrid/);
+
+  const switchStyles =
+    css.match(/\.discover-page \.discover-layout-switch\s*\{(?<styles>[^}]*)\}/)
+      ?.groups?.styles ?? "";
+  assert.doesNotMatch(switchStyles, /\bborder\s*:/);
+  assert.match(switchStyles, /\bgap:\s*2px;/);
+  assert.doesNotMatch(switchStyles, /\bbackground\s*:/);
+  const activeButtonStyles =
+    css.match(
+      /\.discover-page \.discover-layout-switch__button:hover,\s*\.discover-page \.discover-layout-switch__button\.selected\s*\{(?<styles>[^}]*)\}/
+    )?.groups?.styles ?? "";
+  assert.doesNotMatch(activeButtonStyles, /\bbackground(?:-color)?\s*:/);
+  assert.match(
+    css,
+    /\.discover-page \.px_tabs a\s*\{[^}]*font-weight:\s*700;/s
+  );
 });
 
 test("discover category filters are sent to cursor requests before local filtering", async () => {

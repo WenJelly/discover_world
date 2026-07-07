@@ -40,15 +40,15 @@ import {
     updateUserProfile,
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import {
-    DISCOVER_NAVBAR_VISIBILITY_EVENT,
-    type DiscoverNavbarVisibilityDetail,
-} from "@/lib/discover-navbar";
 
 const navItems = [
     { name: "首页", href: "/" },
     { name: "发现", href: "/discover" },
 ];
+
+type NavbarProps = {
+    fixed?: boolean;
+};
 
 function getAvatarFallback(userName?: string, userEmail?: string) {
     const source = (userName || userEmail || "U").trim();
@@ -65,10 +65,9 @@ function getUploadErrorMessage(error: unknown) {
     return "图片上传失败,请稍后重试";
 }
 
-export default function FadingSiblingsNavbar() {
+export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const [isOpen, setIsOpen] = useState(false);
-    const [siteNavbarVisible, setSiteNavbarVisible] = useState(true);
     const [authOpen, setAuthOpen] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -94,6 +93,7 @@ export default function FadingSiblingsNavbar() {
     const isAdmin =
         isAuthenticated &&
         (user?.role || user?.userRole || "").trim().toLowerCase() === "admin";
+    const navbarPositionClass = fixed ? "fixed top-0 left-0 right-0" : "relative";
 
     const handleInternalNavigation = (
         event: MouseEvent<HTMLAnchorElement>,
@@ -302,31 +302,10 @@ export default function FadingSiblingsNavbar() {
         }
     }, [isAuthenticated]);
 
-    useEffect(() => {
-        const handleDiscoverNavbarVisibility = (event: Event) => {
-            const detail = (event as CustomEvent<DiscoverNavbarVisibilityDetail>).detail;
-            setSiteNavbarVisible(detail?.visible !== false);
-        };
-
-        window.addEventListener(
-            DISCOVER_NAVBAR_VISIBILITY_EVENT,
-            handleDiscoverNavbarVisibility
-        );
-
-        return () => {
-            window.removeEventListener(
-                DISCOVER_NAVBAR_VISIBILITY_EVENT,
-                handleDiscoverNavbarVisibility
-            );
-        };
-    }, []);
-
     return (
         <LayoutGroup>
             <header
-                className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200/60 bg-white ${
-                    siteNavbarVisible ? "translate-y-0" : "-translate-y-full"
-                }`}
+                className={`${navbarPositionClass} z-50 border-b border-slate-200/60 bg-white`}
             >
                 <div className="w-full px-3 sm:px-5 lg:px-6">
                     <div className="flex h-16 items-center gap-4">

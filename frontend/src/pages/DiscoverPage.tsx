@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ImageOff, LayoutGrid, RefreshCw, Rows3 } from "lucide-react";
+import { GalleryHorizontal, Grid2X2, ImageOff, RefreshCw } from "lucide-react";
 import { DiscoverPictureCard } from "@/components/discover/DiscoverPictureCard";
 import { PhotoDetailDialog } from "@/components/photo/PhotoDetailDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -7,10 +7,7 @@ import { useInView } from "@/hooks/useInView";
 import { useInfinitePictures } from "@/hooks/useInfinitePictures";
 import { fetchMediaAssetDetail } from "@/lib/api";
 import type { MediaAssetResponse } from "@/lib/types";
-import {
-  DISCOVER_NAVBAR_VISIBILITY_EVENT,
-  shouldShowDiscoverNavbar,
-} from "@/lib/discover-navbar";
+import { shouldPinDiscoverToolbar } from "@/lib/discover-navbar";
 import {
   buildDiscoverSearch,
   buildJustifiedRows,
@@ -78,7 +75,9 @@ export default function DiscoverPage() {
   );
   const [discoverRefreshKey, setDiscoverRefreshKey] = useState(0);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
-  const [isSiteNavVisible, setIsSiteNavVisible] = useState(true);
+  const [isToolbarPinned, setIsToolbarPinned] = useState(() =>
+    shouldPinDiscoverToolbar(window.scrollY)
+  );
   const [assetOverrides, setAssetOverrides] = useState<
     Record<string, MediaAssetResponse>
   >({});
@@ -100,25 +99,15 @@ export default function DiscoverPage() {
   }, []);
 
   useEffect(() => {
-    const publishNavVisibility = (visible: boolean) => {
-      setIsSiteNavVisible(visible);
-      window.dispatchEvent(
-        new CustomEvent(DISCOVER_NAVBAR_VISIBILITY_EVENT, {
-          detail: { visible },
-        })
-      );
+    const syncToolbarPinning = () => {
+      setIsToolbarPinned(shouldPinDiscoverToolbar(window.scrollY));
     };
 
-    const syncNavVisibility = () => {
-      publishNavVisibility(shouldShowDiscoverNavbar(window.scrollY));
-    };
-
-    syncNavVisibility();
-    window.addEventListener("scroll", syncNavVisibility, { passive: true });
+    syncToolbarPinning();
+    window.addEventListener("scroll", syncToolbarPinning, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", syncNavVisibility);
-      publishNavVisibility(true);
+      window.removeEventListener("scroll", syncToolbarPinning);
     };
   }, []);
 
@@ -313,8 +302,6 @@ export default function DiscoverPage() {
     DISCOVER_CATEGORY_OPTIONS.find((item) => item.key === discoverState.category)
       ?.title || DISCOVER_CATEGORY_OPTIONS[0].title;
 
-  const canShowQueryBar = discoverState.tab === "rating";
-
   const navigateDiscover = (
     nextState: DiscoverSearchState,
     options: { refreshData?: boolean } = {}
@@ -372,7 +359,7 @@ export default function DiscoverPage() {
   const discoverPageClassName = [
     "discover-page",
     activePictureId ? "discover-page--preview-open" : "",
-    !isSiteNavVisible ? "discover-page--site-nav-hidden" : "",
+    isToolbarPinned ? "discover-page--toolbar-pinned" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -381,38 +368,37 @@ export default function DiscoverPage() {
     <section className={discoverPageClassName}>
       <div className="discover-toolbar">
         <div className="discover-toolbar__inner">
-          {canShowQueryBar ? (
-            <div className="discover_layout_navigation">
-              <div
-                className="discover-layout-switch"
-                role="group"
-                aria-label="切换图片流展示格式"
-              >
-                {DISCOVER_LAYOUT_OPTIONS.map((option) => {
-                  const active = option.key === discoverState.layout;
-                  const Icon = option.key === "justified" ? Rows3 : LayoutGrid;
+          <div className="discover_layout_navigation">
+            <div
+              className="discover-layout-switch"
+              role="group"
+              aria-label="切换图片流展示格式"
+            >
+              {DISCOVER_LAYOUT_OPTIONS.map((option) => {
+                const active = option.key === discoverState.layout;
+                const Icon =
+                  option.key === "justified" ? GalleryHorizontal : Grid2X2;
 
-                  return (
-                    <button
-                      key={option.key}
-                      type="button"
-                      className={
-                        active
-                          ? "discover-layout-switch__button selected"
-                          : "discover-layout-switch__button"
-                      }
-                      aria-label={option.title}
-                      aria-pressed={active}
-                      title={option.title}
-                      onClick={() => handleLayoutClick(option.key)}
-                    >
-                      <Icon size={16} strokeWidth={2} aria-hidden="true" />
-                    </button>
-                  );
-                })}
-              </div>
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className={
+                      active
+                        ? "discover-layout-switch__button selected"
+                        : "discover-layout-switch__button"
+                    }
+                    aria-label={option.title}
+                    aria-pressed={active}
+                    title={option.title}
+                    onClick={() => handleLayoutClick(option.key)}
+                  >
+                    <Icon size={18} strokeWidth={2} aria-hidden="true" />
+                  </button>
+                );
+              })}
             </div>
-          ) : null}
+          </div>
 
           <ul className="px_tabs" aria-label="发现导航标签">
             {DISCOVER_TABS.map((tab) => {
@@ -438,176 +424,174 @@ export default function DiscoverPage() {
             })}
           </ul>
 
-          {canShowQueryBar ? (
-            <div className="discover-filter-navigation">
-              <div className="discover-filter-options">
-                <div className="discover-filter">
-                  <button
-                    type="button"
-                    className="discover-filter__target"
-                    aria-expanded={openMenu === "sort"}
-                    onClick={() =>
-                      setOpenMenu((current) => (current === "sort" ? null : "sort"))
-                    }
-                  >
-                    {activeSortLabel}
-                  </button>
-                  {openMenu === "sort" ? (
-                    <div className="popup popup-centered discover-filter-popover">
-                      <div className="contain">
-                        <div className="inside">
-                          <div className="sort_options">
-                            <ul>
-                              {DISCOVER_SORT_OPTIONS.map((option) => (
-                                <li key={option.key}>
-                                  <a
-                                    href={getHref({
-                                      ...discoverState,
-                                      sort: option.key,
-                                    })}
-                                    className={
-                                      option.key === discoverState.sort
-                                        ? "selected"
-                                        : undefined
-                                    }
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      handleSortClick(option.key);
-                                    }}
-                                  >
-                                    {option.title}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
+          <div className="discover-filter-navigation">
+            <div className="discover-filter-options">
+              <div className="discover-filter">
+                <button
+                  type="button"
+                  className="discover-filter__target"
+                  aria-expanded={openMenu === "sort"}
+                  onClick={() =>
+                    setOpenMenu((current) => (current === "sort" ? null : "sort"))
+                  }
+                >
+                  {activeSortLabel}
+                </button>
+                {openMenu === "sort" ? (
+                  <div className="popup popup-centered discover-filter-popover">
+                    <div className="contain">
+                      <div className="inside">
+                        <div className="sort_options">
+                          <ul>
+                            {DISCOVER_SORT_OPTIONS.map((option) => (
+                              <li key={option.key}>
+                                <a
+                                  href={getHref({
+                                    ...discoverState,
+                                    sort: option.key,
+                                  })}
+                                  className={
+                                    option.key === discoverState.sort
+                                      ? "selected"
+                                      : undefined
+                                  }
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    handleSortClick(option.key);
+                                  }}
+                                >
+                                  {option.title}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       </div>
                     </div>
-                  ) : null}
-                </div>
-
-                <div className="discover-filter">
-                  <button
-                    type="button"
-                    className="discover-filter__target"
-                    aria-expanded={openMenu === "photographer"}
-                    onClick={() =>
-                      setOpenMenu((current) =>
-                        current === "photographer" ? null : "photographer"
-                      )
-                    }
-                  >
-                    {activePhotographerLabel}
-                  </button>
-                  {openMenu === "photographer" ? (
-                    <div className="popup popup-centered discover-filter-popover">
-                      <div className="contain">
-                        <div className="inside">
-                          <div className="sort_options">
-                            <ul>
-                              {DISCOVER_PHOTOGRAPHER_OPTIONS.map((option) => (
-                                <li key={option.key}>
-                                  <a
-                                    href={getHref({
-                                      ...discoverState,
-                                      photographerType: option.key,
-                                    })}
-                                    className={
-                                      option.key === discoverState.photographerType
-                                        ? "selected"
-                                        : undefined
-                                    }
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      handlePhotographerClick(option.key);
-                                    }}
-                                  >
-                                    {option.title}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="discover-category-region">
-                  <button
-                    type="button"
-                    className="discover-category-picker"
-                    aria-expanded={openMenu === "category"}
-                    onClick={() =>
-                      setOpenMenu((current) =>
-                        current === "category" ? null : "category"
-                      )
-                    }
-                  >
-                    <span className="discover-category-target">{activeCategoryLabel}</span>
-                  </button>
-                  {openMenu === "category" ? (
-                    <div className="popup popup-centered category_popover category_content">
-                      <div className="contain">
-                        <div className="inside clearfix">
-                          <div className="header clearfix">
-                            <a
-                              href={getHref({
-                                ...discoverState,
-                                category: "all",
-                              })}
-                              className={
-                                discoverState.category === "all"
-                                  ? "selected"
-                                  : undefined
-                              }
-                              onClick={(event) => {
-                                event.preventDefault();
-                                handleCategoryClick("all");
-                              }}
-                            >
-                              全部类别
-                            </a>
-                          </div>
-                          <div className="categories">
-                            <ul>
-                              {DISCOVER_CATEGORY_OPTIONS.filter(
-                                (option) => option.key !== "all"
-                              ).map((option) => (
-                                <li key={option.key}>
-                                  <a
-                                    href={getHref({
-                                      ...discoverState,
-                                      category: option.key,
-                                    })}
-                                    className={
-                                      option.key === discoverState.category
-                                        ? "selected"
-                                        : undefined
-                                    }
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      handleCategoryClick(option.key);
-                                    }}
-                                  >
-                                    {option.title}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div className="clearfix" />
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
+                  </div>
+                ) : null}
               </div>
+
+              <div className="discover-filter">
+                <button
+                  type="button"
+                  className="discover-filter__target"
+                  aria-expanded={openMenu === "photographer"}
+                  onClick={() =>
+                    setOpenMenu((current) =>
+                      current === "photographer" ? null : "photographer"
+                    )
+                  }
+                >
+                  {activePhotographerLabel}
+                </button>
+                {openMenu === "photographer" ? (
+                  <div className="popup popup-centered discover-filter-popover">
+                    <div className="contain">
+                      <div className="inside">
+                        <div className="sort_options">
+                          <ul>
+                            {DISCOVER_PHOTOGRAPHER_OPTIONS.map((option) => (
+                              <li key={option.key}>
+                                <a
+                                  href={getHref({
+                                    ...discoverState,
+                                    photographerType: option.key,
+                                  })}
+                                  className={
+                                    option.key === discoverState.photographerType
+                                      ? "selected"
+                                      : undefined
+                                  }
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    handlePhotographerClick(option.key);
+                                  }}
+                                >
+                                  {option.title}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="discover-category-region">
+                <button
+                  type="button"
+                  className="discover-category-picker"
+                  aria-expanded={openMenu === "category"}
+                  onClick={() =>
+                    setOpenMenu((current) =>
+                      current === "category" ? null : "category"
+                    )
+                  }
+                >
+                  <span className="discover-category-target">{activeCategoryLabel}</span>
+                </button>
+                {openMenu === "category" ? (
+                  <div className="popup popup-centered category_popover category_content">
+                    <div className="contain">
+                      <div className="inside clearfix">
+                        <div className="header clearfix">
+                          <a
+                            href={getHref({
+                              ...discoverState,
+                              category: "all",
+                            })}
+                            className={
+                              discoverState.category === "all"
+                                ? "selected"
+                                : undefined
+                            }
+                            onClick={(event) => {
+                              event.preventDefault();
+                              handleCategoryClick("all");
+                            }}
+                          >
+                            全部类别
+                          </a>
+                        </div>
+                        <div className="categories">
+                          <ul>
+                            {DISCOVER_CATEGORY_OPTIONS.filter(
+                              (option) => option.key !== "all"
+                            ).map((option) => (
+                              <li key={option.key}>
+                                <a
+                                  href={getHref({
+                                    ...discoverState,
+                                    category: option.key,
+                                  })}
+                                  className={
+                                    option.key === discoverState.category
+                                      ? "selected"
+                                      : undefined
+                                  }
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    handleCategoryClick(option.key);
+                                  }}
+                                >
+                                  {option.title}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="clearfix" />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
 

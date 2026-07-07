@@ -499,7 +499,7 @@ export function PhotoDetailDialog({
 
                   <section className="mt-4 space-y-2.5">
                     <h3 className="text-sm font-semibold text-slate-950">
-                      互动数据
+                      互动
                     </h3>
                     <PhotoStats
                       stats={displayStats}

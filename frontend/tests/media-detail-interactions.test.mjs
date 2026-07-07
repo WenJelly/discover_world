@@ -44,7 +44,7 @@ test("media detail dialog uses the reference card layout", async () => {
   assert.match(dialog, /height: rightPanelHeight/);
   assert.match(dialog, /尊重原创，请勿用于商业用途或二次修改后发布/);
   assert.match(dialog, /作品介绍/);
-  assert.match(dialog, /互动数据/);
+  assert.match(dialog, />互动</);
   assert.match(dialog, /text-\[24px\]/);
   assert.doesNotMatch(dialog, /text-\[26px\]/);
   assert.match(dialog, /REFERENCE_DETAIL_DEFAULTS/);
@@ -97,8 +97,13 @@ test("media detail dialog uses the reference card layout", async () => {
   assert.match(metadata, /Canon EOS R5/);
   assert.doesNotMatch(metadata, /wide/);
 
+  assert.match(stats, /ThumbsUp/);
   assert.match(stats, /onToggleLike/);
-  assert.match(stats, /active \? "rounded-full bg-rose-50 text-rose-500" : "rounded-full bg-slate-100 text-slate-500"/);
+  assert.doesNotMatch(stats, /rounded-full bg-rose-50/);
+  assert.doesNotMatch(stats, /rounded-full bg-slate-100/);
+  assert.match(stats, /active \? "fill-blue-500 text-blue-500"/);
+  assert.match(stats, /cursor-pointer/);
+  assert.match(stats, /motion\.span/);
   assert.doesNotMatch(stats, /isLike && activeClass/);
   assert.match(stats, /flex flex-wrap justify-start/);
   assert.match(stats, /size-8/);
