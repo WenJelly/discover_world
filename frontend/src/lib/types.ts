@@ -200,6 +200,42 @@ export interface MediaAssetToggleResponse {
   stats: MediaAssetStats;
 }
 
+export interface MediaAssetDirectUploadInitRequest {
+  id?: string;
+  fileName: string;
+  fileSize: number;
+  contentType?: string;
+  title?: string;
+  description?: string;
+  category?: string;
+  tags?: string[];
+  visibility?: string;
+  assetUsage?: string;
+  width?: number;
+  height?: number;
+  dominantColor?: string;
+  blurHash?: string;
+}
+
+export interface MediaAssetDirectUploadInitResponse {
+  sessionId: string;
+  assetId: string;
+  objectKey: string;
+  uploadUrl: string;
+  uploadMethod: "PUT" | string;
+  uploadHeaders: Record<string, string>;
+  expiresAt: string;
+}
+
+export interface MediaAssetDirectUploadCompleteRequest {
+  sessionId: string;
+  eTag?: string;
+  width?: number;
+  height?: number;
+  dominantColor?: string;
+  blurHash?: string;
+}
+
 export interface ProfilePostResponse {
   id: string;
   userId: string;

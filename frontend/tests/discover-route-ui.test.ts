@@ -190,12 +190,13 @@ test("discover preview is anchored by asset id when detail updates resort the li
   const discoverLib = await readFile(libUrl, "utf8");
 
   assert.match(discoverLib, /export function resolveDiscoverPreviewIndex/);
-  assert.match(discoverPage, /const \[previewAssetId, setPreviewAssetId\]/);
+  assert.match(discoverPage, /const \[activePictureId, setActivePictureId\]/);
   assert.match(
     discoverPage,
-    /const previewIndex = useMemo\(\s*\(\) => resolveDiscoverPreviewIndex\(filteredPictures, previewAssetId\)/s
+    /const activeIndex = useMemo\(\s*\(\) =>\s*resolveDiscoverPreviewIndex\(filteredPictures, activePictureId\)/s
   );
-  assert.match(discoverPage, /onOpen=\{\(picture\) => setPreviewAssetId\(picture\.id\)\}/);
+  assert.match(discoverPage, /const handleOpenPicture = \(picture: MediaAssetResponse\) => \{\s*setActivePictureId\(picture\.id\);/s);
+  assert.match(discoverPage, /onOpen=\{handleOpenPicture\}/);
   assert.doesNotMatch(discoverPage, /const \[previewIndex, setPreviewIndex\]/);
 });
 

@@ -281,6 +281,42 @@ type MediaAssetUploadByUrlRequest struct {
 	AssetUsage  string   `json:"assetUsage,optional"`
 }
 
+type MediaAssetDirectUploadInitRequest struct {
+	Id            string   `json:"id,optional"`
+	FileName      string   `json:"fileName"`
+	FileSize      int64    `json:"fileSize"`
+	ContentType   string   `json:"contentType,optional"`
+	Title         string   `json:"title,optional"`
+	Description   string   `json:"description,optional"`
+	Category      string   `json:"category,optional"`
+	Tags          []string `json:"tags,optional"`
+	Visibility    string   `json:"visibility,optional"`
+	AssetUsage    string   `json:"assetUsage,optional"`
+	Width         int64    `json:"width,optional"`
+	Height        int64    `json:"height,optional"`
+	DominantColor string   `json:"dominantColor,optional"`
+	BlurHash      string   `json:"blurHash,optional"`
+}
+
+type MediaAssetDirectUploadInitResponse struct {
+	SessionId     string            `json:"sessionId"`
+	AssetId       string            `json:"assetId"`
+	ObjectKey     string            `json:"objectKey"`
+	UploadUrl     string            `json:"uploadUrl"`
+	UploadMethod  string            `json:"uploadMethod"`
+	UploadHeaders map[string]string `json:"uploadHeaders"`
+	ExpiresAt     string            `json:"expiresAt"`
+}
+
+type MediaAssetDirectUploadCompleteRequest struct {
+	SessionId     string `json:"sessionId"`
+	ETag          string `json:"eTag,optional"`
+	Width         int64  `json:"width,optional"`
+	Height        int64  `json:"height,optional"`
+	DominantColor string `json:"dominantColor,optional"`
+	BlurHash      string `json:"blurHash,optional"`
+}
+
 type MediaAssetUrls struct {
 	Thumbnail string `json:"thumbnail"`
 	Preview   string `json:"preview"`

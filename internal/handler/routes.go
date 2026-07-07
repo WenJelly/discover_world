@@ -163,6 +163,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/media/upload/url",
 				Handler: media.UploadMediaAssetByUrlHandler(serverCtx),
 			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/media/upload/direct/init",
+				Handler: media.InitDirectMediaUploadHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/media/upload/direct/complete",
+				Handler: media.CompleteDirectMediaUploadHandler(serverCtx),
+			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api"),

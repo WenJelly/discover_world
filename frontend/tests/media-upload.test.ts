@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildAccountAvatarUploadFormData,
+  buildMediaAssetDirectUploadInitRequest,
   buildMediaAssetUploadFormData,
   buildMediaAssetUrlUploadRequest,
 } from "../src/lib/media-upload.ts";
@@ -36,6 +37,40 @@ test("buildMediaAssetUploadFormData sends explicit post usage for dynamic attach
   });
 
   assert.equal(formData.get("assetUsage"), "post");
+});
+
+test("buildMediaAssetDirectUploadInitRequest sends file facts and cleaned metadata", () => {
+  const file = new File(["image"], "mountain-view.jpeg", { type: "image/jpeg" });
+
+  const request = buildMediaAssetDirectUploadInitRequest(
+    file,
+    {
+      title: "  ",
+      description: " Ridge line ",
+      category: " 风景 ",
+      tags: [" 山 ", "", "云"],
+      visibility: "private",
+      assetUsage: "post",
+    },
+    {
+      width: 1600,
+      height: 900,
+    }
+  );
+
+  assert.deepEqual(request, {
+    fileName: "mountain-view.jpeg",
+    fileSize: file.size,
+    contentType: "image/jpeg",
+    title: "mountain-view",
+    description: "Ridge line",
+    category: "风景",
+    tags: ["山", "云"],
+    visibility: "private",
+    assetUsage: "post",
+    width: 1600,
+    height: 900,
+  });
 });
 
 test("buildAccountAvatarUploadFormData only sends the avatar file to the account endpoint", () => {

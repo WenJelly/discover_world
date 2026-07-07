@@ -22,25 +22,26 @@ type ServiceContext struct {
 	AdminCheck rest.Middleware
 	dbConn     sqlx.SqlConn
 
-	UserAccountModel      model.UserAccountModel
-	UserProfileModel      model.UserProfileModel
-	StorageProviderModel  model.StorageProviderModel
-	StorageBucketModel    model.StorageBucketModel
-	MediaAssetModel       model.MediaAssetModel
-	MediaObjectModel      model.MediaObjectModel
-	EntityStatModel       model.EntityStatModel
-	EntityStatHourlyModel model.EntityStatHourlyModel
-	TagModel              model.TagModel
-	TaggingModel          model.TaggingModel
-	AssetLinkModel        model.AssetLinkModel
-	PostModel             model.PostModel
-	AlbumModel            model.AlbumModel
-	ReactionModel         model.ReactionModel
-	FavoriteModel         model.FavoriteModel
-	CommentRecordModel    model.CommentRecordModel
-	SiteStatsModel        model.SiteStatsModel
-	SiteConfigModel       model.SiteConfigModel
-	SearchModel           model.SearchModel
+	UserAccountModel        model.UserAccountModel
+	UserProfileModel        model.UserProfileModel
+	StorageProviderModel    model.StorageProviderModel
+	StorageBucketModel      model.StorageBucketModel
+	MediaAssetModel         model.MediaAssetModel
+	MediaObjectModel        model.MediaObjectModel
+	MediaUploadSessionModel model.MediaUploadSessionModel
+	EntityStatModel         model.EntityStatModel
+	EntityStatHourlyModel   model.EntityStatHourlyModel
+	TagModel                model.TagModel
+	TaggingModel            model.TaggingModel
+	AssetLinkModel          model.AssetLinkModel
+	PostModel               model.PostModel
+	AlbumModel              model.AlbumModel
+	ReactionModel           model.ReactionModel
+	FavoriteModel           model.FavoriteModel
+	CommentRecordModel      model.CommentRecordModel
+	SiteStatsModel          model.SiteStatsModel
+	SiteConfigModel         model.SiteConfigModel
+	SearchModel             model.SearchModel
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -51,25 +52,26 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config: c,
 		dbConn: conn,
 
-		UserAccountModel:      model.NewUserAccountModel(conn),
-		UserProfileModel:      model.NewUserProfileModel(conn),
-		StorageProviderModel:  model.NewStorageProviderModel(conn),
-		StorageBucketModel:    model.NewStorageBucketModel(conn),
-		MediaAssetModel:       model.NewMediaAssetModel(conn),
-		MediaObjectModel:      model.NewMediaObjectModel(conn),
-		EntityStatModel:       model.NewEntityStatModel(conn),
-		EntityStatHourlyModel: model.NewEntityStatHourlyModel(conn),
-		TagModel:              model.NewTagModel(conn),
-		TaggingModel:          model.NewTaggingModel(conn),
-		AssetLinkModel:        model.NewAssetLinkModel(conn),
-		PostModel:             model.NewPostModel(conn),
-		AlbumModel:            model.NewAlbumModel(conn),
-		ReactionModel:         model.NewReactionModel(conn),
-		FavoriteModel:         model.NewFavoriteModel(conn),
-		CommentRecordModel:    model.NewCommentRecordModel(conn),
-		SiteStatsModel:        model.NewSiteStatsModel(conn),
-		SiteConfigModel:       model.NewSiteConfigModel(conn),
-		SearchModel:           model.NewSearchModel(conn),
+		UserAccountModel:        model.NewUserAccountModel(conn),
+		UserProfileModel:        model.NewUserProfileModel(conn),
+		StorageProviderModel:    model.NewStorageProviderModel(conn),
+		StorageBucketModel:      model.NewStorageBucketModel(conn),
+		MediaAssetModel:         model.NewMediaAssetModel(conn),
+		MediaObjectModel:        model.NewMediaObjectModel(conn),
+		MediaUploadSessionModel: model.NewMediaUploadSessionModel(conn),
+		EntityStatModel:         model.NewEntityStatModel(conn),
+		EntityStatHourlyModel:   model.NewEntityStatHourlyModel(conn),
+		TagModel:                model.NewTagModel(conn),
+		TaggingModel:            model.NewTaggingModel(conn),
+		AssetLinkModel:          model.NewAssetLinkModel(conn),
+		PostModel:               model.NewPostModel(conn),
+		AlbumModel:              model.NewAlbumModel(conn),
+		ReactionModel:           model.NewReactionModel(conn),
+		FavoriteModel:           model.NewFavoriteModel(conn),
+		CommentRecordModel:      model.NewCommentRecordModel(conn),
+		SiteStatsModel:          model.NewSiteStatsModel(conn),
+		SiteConfigModel:         model.NewSiteConfigModel(conn),
+		SearchModel:             model.NewSearchModel(conn),
 	}
 	svcCtx.AdminCheck = middleware.NewAdminCheckMiddleware(svcCtx).Handle
 
@@ -92,25 +94,26 @@ func (s *ServiceContext) withSession(session sqlx.Session) *ServiceContext {
 		AdminCheck: s.AdminCheck,
 		dbConn:     conn,
 
-		UserAccountModel:      model.NewUserAccountModel(conn),
-		UserProfileModel:      model.NewUserProfileModel(conn),
-		StorageProviderModel:  model.NewStorageProviderModel(conn),
-		StorageBucketModel:    model.NewStorageBucketModel(conn),
-		MediaAssetModel:       model.NewMediaAssetModel(conn),
-		MediaObjectModel:      model.NewMediaObjectModel(conn),
-		EntityStatModel:       model.NewEntityStatModel(conn),
-		EntityStatHourlyModel: model.NewEntityStatHourlyModel(conn),
-		TagModel:              model.NewTagModel(conn),
-		TaggingModel:          model.NewTaggingModel(conn),
-		AssetLinkModel:        model.NewAssetLinkModel(conn),
-		PostModel:             model.NewPostModel(conn),
-		AlbumModel:            model.NewAlbumModel(conn),
-		ReactionModel:         model.NewReactionModel(conn),
-		FavoriteModel:         model.NewFavoriteModel(conn),
-		CommentRecordModel:    model.NewCommentRecordModel(conn),
-		SiteStatsModel:        model.NewSiteStatsModel(conn),
-		SiteConfigModel:       model.NewSiteConfigModel(conn),
-		SearchModel:           model.NewSearchModel(conn),
+		UserAccountModel:        model.NewUserAccountModel(conn),
+		UserProfileModel:        model.NewUserProfileModel(conn),
+		StorageProviderModel:    model.NewStorageProviderModel(conn),
+		StorageBucketModel:      model.NewStorageBucketModel(conn),
+		MediaAssetModel:         model.NewMediaAssetModel(conn),
+		MediaObjectModel:        model.NewMediaObjectModel(conn),
+		MediaUploadSessionModel: model.NewMediaUploadSessionModel(conn),
+		EntityStatModel:         model.NewEntityStatModel(conn),
+		EntityStatHourlyModel:   model.NewEntityStatHourlyModel(conn),
+		TagModel:                model.NewTagModel(conn),
+		TaggingModel:            model.NewTaggingModel(conn),
+		AssetLinkModel:          model.NewAssetLinkModel(conn),
+		PostModel:               model.NewPostModel(conn),
+		AlbumModel:              model.NewAlbumModel(conn),
+		ReactionModel:           model.NewReactionModel(conn),
+		FavoriteModel:           model.NewFavoriteModel(conn),
+		CommentRecordModel:      model.NewCommentRecordModel(conn),
+		SiteStatsModel:          model.NewSiteStatsModel(conn),
+		SiteConfigModel:         model.NewSiteConfigModel(conn),
+		SearchModel:             model.NewSearchModel(conn),
 	}
 }
 

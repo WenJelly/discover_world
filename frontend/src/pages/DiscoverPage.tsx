@@ -1,8 +1,11 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImageOff, LayoutGrid, RefreshCw, Rows3 } from "lucide-react";
 import { DiscoverPictureCard } from "@/components/discover/DiscoverPictureCard";
+import { PhotoDetailDialog } from "@/components/photo/PhotoDetailDialog";
+import { useToast } from "@/hooks/use-toast";
 import { useInView } from "@/hooks/useInView";
 import { useInfinitePictures } from "@/hooks/useInfinitePictures";
+import { fetchMediaAssetDetail } from "@/lib/api";
 import type { MediaAssetResponse } from "@/lib/types";
 import {
   DISCOVER_NAVBAR_VISIBILITY_EVENT,
@@ -20,6 +23,7 @@ import {
   filterAndSortDiscoverPictures,
   getDiscoverCategoryQuery,
   parseDiscoverSearch,
+  resolveDiscoverPreviewIndex,
   type DiscoverCategoryKey,
   type DiscoverLayoutKey,
   type DiscoverPhotographerKey,
@@ -79,6 +83,8 @@ export default function DiscoverPage() {
     Record<string, MediaAssetResponse>
   >({});
   const [galleryWidth, setGalleryWidth] = useState(0);
+  const [activePictureId, setActivePictureId] = useState<string | null>(null);
+  const { toast } = useToast();
   const frameRef = useRef<HTMLDivElement | null>(null);
   const [sentinelRef, sentinelInView] = useInView<HTMLDivElement>({
     rootMargin: "480px 0px",
@@ -199,6 +205,64 @@ export default function DiscoverPage() {
     [mergedPictures, discoverState]
   );
 
+  const activeIndex = useMemo(
+    () =>
+      resolveDiscoverPreviewIndex(filteredPictures, activePictureId),
+    [activePictureId, filteredPictures]
+  );
+  const activePicture = activeIndex >= 0 ? filteredPictures[activeIndex] : null;
+
+  const handleOpenPicture = (picture: MediaAssetResponse) => {
+    setActivePictureId(picture.id);
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open) setActivePictureId(null);
+  };
+
+  const handleAssetChange = useCallback((asset: MediaAssetResponse) => {
+    setAssetOverrides((current) => ({
+      ...current,
+      [asset.id]: {
+        ...current[asset.id],
+        ...asset,
+      },
+    }));
+  }, []);
+
+  useEffect(() => {
+    if (!activePictureId) return;
+    let cancelled = false;
+
+    fetchMediaAssetDetail({
+      id: activePictureId,
+      variantOption: { compressType: 2 },
+    })
+      .then((detail) => {
+        if (!cancelled) handleAssetChange(detail);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        toast({
+          title: "作品详情加载失败",
+          description: error instanceof Error ? error.message : "请稍后重试",
+          variant: "destructive",
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePictureId, handleAssetChange, toast]);
+
+  const handleToggleFollow = () => {
+    toast({
+      title: "功能开发中",
+      description: "关注功能即将上线",
+      variant: "default",
+    });
+  };
+
   const targetRowHeight = isDesktopWidth(galleryWidth) ? 350 : 132;
   const gap = isDesktopWidth(galleryWidth) ? 10 : 8;
   const isDesktopGallery = isDesktopWidth(galleryWidth);
@@ -307,6 +371,7 @@ export default function DiscoverPage() {
   };
   const discoverPageClassName = [
     "discover-page",
+    activePictureId ? "discover-page--preview-open" : "",
     !isSiteNavVisible ? "discover-page--site-nav-hidden" : "",
   ]
     .filter(Boolean)
@@ -580,9 +645,7 @@ export default function DiscoverPage() {
                     >
                       <DiscoverPictureCard
                         picture={item.picture}
-                        onOpen={() => {
-                          // 详情功能已删除
-                        }}
+                        onOpen={handleOpenPicture}
                       />
                     </div>
                   ))}
@@ -655,6 +718,14 @@ export default function DiscoverPage() {
           ) : null}
         </div>
       </div>
+
+      <PhotoDetailDialog
+        media={activePicture}
+        open={!!activePicture}
+        onOpenChange={handleDialogOpenChange}
+        onToggleFollow={handleToggleFollow}
+        onAssetChange={handleAssetChange}
+      />
     </section>
   );
 }

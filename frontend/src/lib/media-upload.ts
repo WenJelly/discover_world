@@ -1,4 +1,7 @@
-import type { MediaAssetUploadByUrlRequest } from "./types";
+import type {
+  MediaAssetDirectUploadInitRequest,
+  MediaAssetUploadByUrlRequest,
+} from "./types";
 
 export type MediaUploadMetadata = {
   id?: string;
@@ -8,6 +11,13 @@ export type MediaUploadMetadata = {
   tags?: string[];
   visibility?: string;
   assetUsage?: string;
+};
+
+export type MediaDirectUploadImageMetadata = {
+  width?: number;
+  height?: number;
+  dominantColor?: string;
+  blurHash?: string;
 };
 
 function cleanText(value?: string) {
@@ -64,6 +74,42 @@ export function buildMediaAssetUploadFormData(
   formData.append("assetUsage", cleanText(metadata.assetUsage) || "work");
 
   return formData;
+}
+
+export function buildMediaAssetDirectUploadInitRequest(
+  file: File,
+  metadata: MediaUploadMetadata = {},
+  imageMetadata: MediaDirectUploadImageMetadata = {}
+): MediaAssetDirectUploadInitRequest {
+  const tags = cleanTags(metadata.tags);
+  const request: MediaAssetDirectUploadInitRequest = {
+    fileName: file.name,
+    fileSize: file.size,
+    contentType: cleanText(file.type),
+    title: cleanText(metadata.title) || titleFromFileName(file.name),
+    visibility: cleanText(metadata.visibility) || "public",
+    assetUsage: cleanText(metadata.assetUsage) || "work",
+  };
+
+  const id = cleanText(metadata.id);
+  const description = cleanText(metadata.description);
+  const category = cleanText(metadata.category);
+  const dominantColor = cleanText(imageMetadata.dominantColor);
+  const blurHash = cleanText(imageMetadata.blurHash);
+  if (id) request.id = id;
+  if (description) request.description = description;
+  if (category) request.category = category;
+  if (tags.length > 0) request.tags = tags;
+  if (imageMetadata.width && imageMetadata.width > 0) {
+    request.width = Math.round(imageMetadata.width);
+  }
+  if (imageMetadata.height && imageMetadata.height > 0) {
+    request.height = Math.round(imageMetadata.height);
+  }
+  if (dominantColor) request.dominantColor = dominantColor;
+  if (blurHash) request.blurHash = blurHash;
+
+  return request;
 }
 
 export function buildAccountAvatarUploadFormData(file: File) {

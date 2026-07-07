@@ -11,6 +11,8 @@ import type {
   HomepageConfigResponse,
   LoginRequest,
   LoginResponse,
+  MediaAssetDirectUploadCompleteRequest,
+  MediaAssetDirectUploadInitResponse,
   MediaAssetCursorListReq,
   MediaAssetCursorPageResponse,
   MediaAssetListReq,
@@ -40,8 +42,9 @@ import type {
 } from "./types";
 import {
   buildAccountAvatarUploadFormData,
-  buildMediaAssetUploadFormData,
+  buildMediaAssetDirectUploadInitRequest,
   buildMediaAssetUrlUploadRequest,
+  type MediaDirectUploadImageMetadata,
   type MediaUploadMetadata,
 } from "./media-upload";
 import {
@@ -58,6 +61,7 @@ const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8888";
 const REQUEST_TIMEOUT_MS = 12_000;
 const UPLOAD_REQUEST_TIMEOUT_MS = 60_000;
+const DIRECT_OBJECT_UPLOAD_TIMEOUT_MS = 5 * 60_000;
 
 export class ApiError extends Error {
   code: number;
@@ -252,6 +256,76 @@ async function requestFormData<T>(
     throw new ApiError(res.status, "服务暂时不可用,请稍后重试");
   }
   return json as T;
+}
+
+async function readDirectUploadImageMetadata(
+  file: File
+): Promise<MediaDirectUploadImageMetadata> {
+  if (
+    typeof URL === "undefined" ||
+    typeof URL.createObjectURL !== "function" ||
+    typeof Image === "undefined"
+  ) {
+    return {};
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    return await new Promise<MediaDirectUploadImageMetadata>((resolve) => {
+      const image = new Image();
+      image.onload = () => {
+        resolve({
+          width: image.naturalWidth || image.width,
+          height: image.naturalHeight || image.height,
+        });
+      };
+      image.onerror = () => resolve({});
+      image.src = objectUrl;
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function uploadDirectObject(
+  file: File,
+  upload: MediaAssetDirectUploadInitResponse
+): Promise<string> {
+  const headers = new Headers(upload.uploadHeaders ?? {});
+  if (!headers.has("Content-Type") && file.type) {
+    headers.set("Content-Type", file.type);
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, DIRECT_OBJECT_UPLOAD_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(upload.uploadUrl, {
+      method: upload.uploadMethod || "PUT",
+      headers,
+      body: file,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError(
+        0,
+        normalizeApiErrorMessage("上传超时", "upload")
+      );
+    }
+    throw new ApiError(0, "上传对象存储失败，请稍后重试");
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  if (!res.ok) {
+    throw new ApiError(res.status, "上传对象存储失败，请检查存储桶 CORS 配置");
+  }
+
+  return res.headers.get("ETag") ?? "";
 }
 
 function normalizeAccountSummary(account: AccountSummary | null | undefined): AccountSummary | null {
@@ -596,10 +670,34 @@ export async function uploadMediaAsset(
   file: File,
   metadata: MediaUploadMetadata = {}
 ): Promise<MediaAssetResponse> {
-  const resp = await requestFormData<MediaAssetResponse>(
-    "/api/media/upload",
-    buildMediaAssetUploadFormData(file, metadata),
-    { requireAuth: true }
+  const imageMetadata = await readDirectUploadImageMetadata(file);
+  const upload = await request<MediaAssetDirectUploadInitResponse>(
+    "/api/media/upload/direct/init",
+    buildMediaAssetDirectUploadInitRequest(file, metadata, imageMetadata),
+    {
+      requireAuth: true,
+      timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
+      errorContext: "upload",
+    }
+  );
+
+  const eTag = await uploadDirectObject(file, upload);
+  const completeRequest: MediaAssetDirectUploadCompleteRequest = {
+    sessionId: upload.sessionId,
+    eTag,
+    width: imageMetadata.width,
+    height: imageMetadata.height,
+    dominantColor: imageMetadata.dominantColor,
+    blurHash: imageMetadata.blurHash,
+  };
+  const resp = await request<MediaAssetResponse>(
+    "/api/media/upload/direct/complete",
+    completeRequest,
+    {
+      requireAuth: true,
+      timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
+      errorContext: "upload",
+    }
   );
   return normalizeMediaAsset(resp);
 }

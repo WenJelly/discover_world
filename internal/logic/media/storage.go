@@ -49,6 +49,12 @@ type mediaFileMetadata struct {
 	BlurHash      string
 }
 
+type objectStorageMetadata struct {
+	Size        int64
+	ContentType string
+	ETag        string
+}
+
 func loadStorageTarget(ctx context.Context, svcCtx *svc.ServiceContext, usageType string) (*storageTarget, error) {
 	var bucket *model.StorageBucket
 	var err error
@@ -66,6 +72,45 @@ func loadStorageTarget(ctx context.Context, svcCtx *svc.ServiceContext, usageTyp
 	}
 
 	provider, err := svcCtx.StorageProviderModel.FindOne(ctx, bucket.ProviderId)
+	if err != nil || provider.Status != 1 {
+		if errors.Is(err, model.ErrNotFound) {
+			return nil, commonresponse.InternalServerError("存储服务商不存在")
+		}
+		return nil, commonresponse.InternalServerError("查询存储服务商失败")
+	}
+
+	uploadURL := strings.TrimSpace(nullStringValue(bucket.Endpoint))
+	if uploadURL == "" {
+		uploadURL = strings.TrimSpace(nullStringValue(provider.Endpoint))
+	}
+
+	secretRef := nullStringValue(provider.SecretRef)
+	if secretRef == "" {
+		secretRef = "default"
+	}
+
+	return &storageTarget{
+		Bucket:    bucket,
+		Provider:  provider,
+		Secret:    svcCtx.StorageSecret(secretRef),
+		UploadURL: uploadURL,
+	}, nil
+}
+
+func loadStorageTargetByIDs(ctx context.Context, svcCtx *svc.ServiceContext, providerID, bucketID uint64) (*storageTarget, error) {
+	if providerID == 0 || bucketID == 0 {
+		return nil, commonresponse.InternalServerError("上传会话存储配置不完整")
+	}
+
+	bucket, err := svcCtx.StorageBucketModel.FindOne(ctx, bucketID)
+	if err != nil || bucket.ProviderId != providerID || bucket.Status != 1 {
+		if errors.Is(err, model.ErrNotFound) {
+			return nil, commonresponse.InternalServerError("存储桶不存在")
+		}
+		return nil, commonresponse.InternalServerError("查询存储桶失败")
+	}
+
+	provider, err := svcCtx.StorageProviderModel.FindOne(ctx, providerID)
 	if err != nil || provider.Status != 1 {
 		if errors.Is(err, model.ErrNotFound) {
 			return nil, commonresponse.InternalServerError("存储服务商不存在")
@@ -592,6 +637,102 @@ func uploadFileToObjectStorage(ctx context.Context, target *storageTarget, local
 	return nil
 }
 
+func headObjectStorage(ctx context.Context, target *storageTarget, objectKey string) (objectStorageMetadata, error) {
+	if target == nil || target.Provider == nil {
+		return objectStorageMetadata{}, commonresponse.InternalServerError("存储配置不存在")
+	}
+	if strings.ToLower(target.Provider.ProviderType) != "cos" {
+		return objectStorageMetadata{}, commonresponse.InternalServerError("当前仅支持 COS 上传")
+	}
+	if !hasCompleteStorageConfig(target) {
+		return objectStorageMetadata{}, commonresponse.InternalServerError("COS 配置不完整，请先配置本地密钥")
+	}
+
+	targetURL := buildObjectURL(target.UploadURL, objectKey)
+	parsedURL, err := url.Parse(targetURL)
+	if err != nil {
+		return objectStorageMetadata{}, commonresponse.InternalServerError("生成 COS 地址失败")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, targetURL, nil)
+	if err != nil {
+		return objectStorageMetadata{}, commonresponse.InternalServerError("创建 COS 校验请求失败")
+	}
+	req.Header.Set("Authorization", buildCOSAuthorization(target.Secret.SecretId, target.Secret.SecretKey, parsedURL, http.MethodHead))
+	req.Host = parsedURL.Host
+
+	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	if err != nil {
+		logx.WithContext(ctx).Errorf("COS head request failed: objectKey=%s url=%s err=%v", objectKey, targetURL, err)
+		return objectStorageMetadata{}, commonresponse.InternalServerError("校验 COS 对象失败")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return objectStorageMetadata{}, commonresponse.BadRequest("未找到已上传对象")
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		logx.WithContext(ctx).Errorf("COS head rejected: objectKey=%s url=%s status=%d requestId=%s", objectKey, targetURL, resp.StatusCode, resp.Header.Get("x-cos-request-id"))
+		return objectStorageMetadata{}, commonresponse.InternalServerError("校验 COS 对象失败")
+	}
+
+	return objectStorageMetadata{
+		Size:        resp.ContentLength,
+		ContentType: strings.TrimSpace(resp.Header.Get("Content-Type")),
+		ETag:        strings.Trim(strings.TrimSpace(resp.Header.Get("ETag")), "\""),
+	}, nil
+}
+
+func readObjectHeaderStorage(ctx context.Context, target *storageTarget, objectKey string, maxBytes int64) ([]byte, error) {
+	if maxBytes <= 0 {
+		maxBytes = 64
+	}
+	if target == nil || target.Provider == nil {
+		return nil, commonresponse.InternalServerError("存储配置不存在")
+	}
+	if strings.ToLower(target.Provider.ProviderType) != "cos" {
+		return nil, commonresponse.InternalServerError("当前仅支持 COS 上传")
+	}
+	if !hasCompleteStorageConfig(target) {
+		return nil, commonresponse.InternalServerError("COS 配置不完整，请先配置本地密钥")
+	}
+
+	targetURL := buildObjectURL(target.UploadURL, objectKey)
+	parsedURL, err := url.Parse(targetURL)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("生成 COS 地址失败")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("创建 COS 内容校验请求失败")
+	}
+	req.Header.Set("Authorization", buildCOSAuthorization(target.Secret.SecretId, target.Secret.SecretKey, parsedURL, http.MethodGet))
+	req.Header.Set("Range", fmt.Sprintf("bytes=0-%d", maxBytes-1))
+	req.Host = parsedURL.Host
+
+	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	if err != nil {
+		logx.WithContext(ctx).Errorf("COS header read request failed: objectKey=%s url=%s err=%v", objectKey, targetURL, err)
+		return nil, commonresponse.InternalServerError("校验 COS 对象内容失败")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, commonresponse.BadRequest("未找到已上传对象")
+	}
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		logx.WithContext(ctx).Errorf("COS header read rejected: objectKey=%s url=%s status=%d requestId=%s", objectKey, targetURL, resp.StatusCode, resp.Header.Get("x-cos-request-id"))
+		return nil, commonresponse.InternalServerError("校验 COS 对象内容失败")
+	}
+
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes))
+	if err != nil {
+		return nil, commonresponse.InternalServerError("读取 COS 对象内容失败")
+	}
+	return data, nil
+}
+
 func hasCompleteStorageConfig(target *storageTarget) bool {
 	return target != nil &&
 		strings.TrimSpace(target.UploadURL) != "" &&
@@ -611,7 +752,14 @@ func buildStorageURI(provider *model.StorageProvider, bucket *model.StorageBucke
 }
 
 func buildCOSAuthorization(secretID, secretKey string, parsedURL *url.URL, method string) string {
-	signTime := fmt.Sprintf("%d;%d", time.Now().Unix()-60, time.Now().Add(10*time.Minute).Unix())
+	return buildCOSAuthorizationAt(secretID, secretKey, parsedURL, method, time.Now(), 10*time.Minute)
+}
+
+func buildCOSAuthorizationAt(secretID, secretKey string, parsedURL *url.URL, method string, now time.Time, ttl time.Duration) string {
+	if ttl <= 0 {
+		ttl = 10 * time.Minute
+	}
+	signTime := fmt.Sprintf("%d;%d", now.Add(-60*time.Second).Unix(), now.Add(ttl).Unix())
 	httpString := fmt.Sprintf("%s\n%s\n\nhost=%s\n", strings.ToLower(method), parsedURL.EscapedPath(), strings.ToLower(parsedURL.Host))
 	stringToSign := fmt.Sprintf("sha1\n%s\n%s\n", signTime, sha1Hex(httpString))
 	signKey := hmacSha1Hex(secretKey, signTime)

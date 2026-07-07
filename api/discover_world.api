@@ -99,6 +99,39 @@ type (
 		Visibility  string   `json:"visibility,optional"`
 		AssetUsage  string   `json:"assetUsage,optional"`
 	}
+	MediaAssetDirectUploadInitRequest {
+		Id            string   `json:"id,optional"`
+		FileName      string   `json:"fileName"`
+		FileSize      int64    `json:"fileSize"`
+		ContentType   string   `json:"contentType,optional"`
+		Title         string   `json:"title,optional"`
+		Description   string   `json:"description,optional"`
+		Category      string   `json:"category,optional"`
+		Tags          []string `json:"tags,optional"`
+		Visibility    string   `json:"visibility,optional"`
+		AssetUsage    string   `json:"assetUsage,optional"`
+		Width         int64    `json:"width,optional"`
+		Height        int64    `json:"height,optional"`
+		DominantColor string   `json:"dominantColor,optional"`
+		BlurHash      string   `json:"blurHash,optional"`
+	}
+	MediaAssetDirectUploadInitResponse {
+		SessionId     string            `json:"sessionId"`
+		AssetId       string            `json:"assetId"`
+		ObjectKey     string            `json:"objectKey"`
+		UploadUrl     string            `json:"uploadUrl"`
+		UploadMethod  string            `json:"uploadMethod"`
+		UploadHeaders map[string]string `json:"uploadHeaders"`
+		ExpiresAt     string            `json:"expiresAt"`
+	}
+	MediaAssetDirectUploadCompleteRequest {
+		SessionId     string `json:"sessionId"`
+		ETag          string `json:"eTag,optional"`
+		Width         int64  `json:"width,optional"`
+		Height        int64  `json:"height,optional"`
+		DominantColor string `json:"dominantColor,optional"`
+		BlurHash      string `json:"blurHash,optional"`
+	}
 	AccountSummary {
 		Id        string `json:"id"`
 		Username  string `json:"username"`
@@ -581,6 +614,12 @@ service DiscoverWorld {
 
 	@handler UploadMediaAssetByUrl
 	post /media/upload/url (MediaAssetUploadByUrlRequest) returns (MediaAssetResponse)
+
+	@handler InitDirectMediaUpload
+	post /media/upload/direct/init (MediaAssetDirectUploadInitRequest) returns (MediaAssetDirectUploadInitResponse)
+
+	@handler CompleteDirectMediaUpload
+	post /media/upload/direct/complete (MediaAssetDirectUploadCompleteRequest) returns (MediaAssetResponse)
 
 	@handler DeleteMediaAsset
 	post /media/delete (DeleteMediaAssetRequest)
