@@ -19,7 +19,7 @@ import type { MediaAssetResponse, MediaAssetStats } from "@/lib/types";
 
 import { DownloadButton } from "./DownloadButton";
 import { PhotoMetadata, type PhotoExif } from "./PhotoMetadata";
-import { downloadAsset, parseExif } from "./photo-utils";
+import { parseExif } from "./photo-utils";
 import { PhotographerInfo } from "./PhotographerInfo";
 import { PhotoStats } from "./PhotoStats";
 import { PhotoViewer } from "./PhotoViewer";
@@ -61,8 +61,8 @@ const EMPTY_STATS: MediaAssetStats = {
 
 const DETAIL_CARD = {
   maxViewportWidthRatio: 0.96,
-  fixedDesktopHeight: 740,
-  mobileHeightRatio: 0.88,
+  fixedDesktopHeight: 760,
+  mobileHeightRatio: 0.9,
   desktopPadding: 40,
   mobilePadding: 32,
   tabletPadding: 40,
@@ -281,6 +281,8 @@ export function PhotoDetailDialog({
     () => getViewerLayout(viewportSize, imageAspectRatio),
     [imageAspectRatio, viewportSize]
   );
+  const rightPanelHeight =
+    viewportSize.width >= 1024 ? viewerLayout?.viewerHeight : undefined;
 
   const handleToggleLike = async () => {
     if (!media || likePending) return;
@@ -339,25 +341,12 @@ export function PhotoDetailDialog({
     }
   };
 
-  const handleFullscreen = () => {
-    if (detailUrl) window.open(detailUrl, "_blank", "noopener,noreferrer");
-  };
-
   const handleDownloaded = () => {
     setStats((current) =>
       current
         ? { ...current, downloadCount: current.downloadCount + 1 }
         : current
     );
-  };
-
-  const handleViewerDownload = async () => {
-    if (!originalUrl || !canDownload) return;
-    const ok = await downloadAsset(
-      originalUrl,
-      media?.originalFilename || media?.title
-    );
-    if (ok) handleDownloaded();
   };
 
   const visibility =
@@ -422,10 +411,6 @@ export function PhotoDetailDialog({
                 displayWidth={viewerLayout?.viewerWidth}
                 displayHeight={viewerLayout?.viewerHeight}
                 placeholderColor={media.dominantColor || media.picColor}
-                onFullscreen={handleFullscreen}
-                onDownload={
-                  originalUrl && canDownload ? handleViewerDownload : undefined
-                }
                 className="min-h-0"
               />
               <div className="flex w-full shrink-0 items-center gap-2 pl-1 text-xs text-slate-500">
@@ -435,7 +420,10 @@ export function PhotoDetailDialog({
             </div>
 
             {/* Right: info column */}
-            <div className="flex min-h-0 flex-col lg:pl-0">
+            <div
+              className="flex min-h-0 flex-col lg:pl-0"
+              style={{ height: rightPanelHeight }}
+            >
               <div className="min-h-0 flex-1 overflow-y-auto pr-0 pt-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:pt-1">
                 <div>
                   <PhotographerInfo

@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  Download,
   ImageOff,
   Loader2,
-  Maximize2,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -18,14 +16,11 @@ interface PhotoViewerProps {
   displayHeight?: number;
   /** Dominant color used as a placeholder while the image loads. */
   placeholderColor?: string;
-  onFullscreen?: () => void;
-  onDownload?: () => void;
   className?: string;
 }
 
 /**
- * Left-column image stage: shows the photo full-height without cropping, plus
- * fullscreen and download affordances.
+ * Left-column image stage: shows the photo full-height without cropping.
  */
 export function PhotoViewer({
   src,
@@ -34,8 +29,6 @@ export function PhotoViewer({
   displayWidth,
   displayHeight,
   placeholderColor,
-  onFullscreen,
-  onDownload,
   className,
 }: PhotoViewerProps) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">(
@@ -106,29 +99,6 @@ export function PhotoViewer({
         ) : null}
       </div>
 
-      {/* Fullscreen + download, bottom-right */}
-      <div className="absolute bottom-4 right-4 flex items-center gap-2.5">
-        {onFullscreen ? (
-          <button
-            type="button"
-            onClick={onFullscreen}
-            aria-label="全屏查看"
-            className="flex size-10 items-center justify-center rounded-full bg-black/55 text-white shadow-md backdrop-blur-sm transition-all hover:bg-black/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            <Maximize2 className="size-4" aria-hidden="true" />
-          </button>
-        ) : null}
-        {onDownload ? (
-          <button
-            type="button"
-            onClick={onDownload}
-            aria-label="下载图片"
-            className="flex size-10 items-center justify-center rounded-full bg-black/55 text-white shadow-md backdrop-blur-sm transition-all hover:bg-black/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            <Download className="size-4" aria-hidden="true" />
-          </button>
-        ) : null}
-      </div>
     </div>
   );
 }

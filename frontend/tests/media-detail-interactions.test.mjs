@@ -28,7 +28,7 @@ test("media detail dialog uses the reference card layout", async () => {
     "utf8"
   );
 
-  assert.match(dialog, /fixedDesktopHeight: 740/);
+  assert.match(dialog, /fixedDesktopHeight: 760/);
   assert.match(dialog, /rightColumnWidth: 360/);
   assert.match(dialog, /cardWidth/);
   assert.match(dialog, /width: viewerLayout\?\.cardWidth/);
@@ -39,6 +39,9 @@ test("media detail dialog uses the reference card layout", async () => {
   assert.match(dialog, /aspectRatio=\{imageAspectRatio\}/);
   assert.match(dialog, /viewerLayout/);
   assert.match(dialog, /viewerWidth/);
+  assert.match(dialog, /rightPanelHeight/);
+  assert.match(dialog, /viewportSize\.width >= 1024 \? viewerLayout\?\.viewerHeight : undefined/);
+  assert.match(dialog, /height: rightPanelHeight/);
   assert.match(dialog, /尊重原创，请勿用于商业用途或二次修改后发布/);
   assert.match(dialog, /作品介绍/);
   assert.match(dialog, /互动数据/);
@@ -54,6 +57,10 @@ test("media detail dialog uses the reference card layout", async () => {
   assert.match(dialog, /47_815_065/);
   assert.match(dialog, /onToggleLike=\{handleToggleLike\}/);
   assert.match(dialog, /DownloadButton/);
+  assert.doesNotMatch(dialog, /handleViewerDownload/);
+  assert.doesNotMatch(dialog, /handleFullscreen/);
+  assert.doesNotMatch(dialog, /onFullscreen=\{/);
+  assert.doesNotMatch(dialog, /onDownload=\{/);
   assert.match(dialog, /className="absolute right-3 top-2[\s\S]*?size-7/);
   assert.match(dialog, /<X className="size-4"/);
   assert.match(dialog, /<PhotographerInfo[\s\S]*?className="lg:pr-10"/);
@@ -70,7 +77,9 @@ test("media detail dialog uses the reference card layout", async () => {
   assert.doesNotMatch(viewer, /aria-label="上一张"/);
   assert.doesNotMatch(viewer, /aria-label="下一张"/);
   assert.doesNotMatch(viewer, /ChevronLeft|ChevronRight/);
-  assert.match(viewer, /bottom-4 right-4/);
+  assert.doesNotMatch(viewer, /aria-label="全屏查看"/);
+  assert.doesNotMatch(viewer, /aria-label="下载图片"/);
+  assert.doesNotMatch(viewer, /Maximize2|bottom-4 right-4/);
 
   assert.match(photographer, /BadgeCheck/);
   assert.match(photographer, /author\?\.role\s*===\s*"admin"/);
@@ -89,10 +98,14 @@ test("media detail dialog uses the reference card layout", async () => {
   assert.doesNotMatch(metadata, /wide/);
 
   assert.match(stats, /onToggleLike/);
-  assert.match(stats, /rounded-full bg-rose-50/);
+  assert.match(stats, /active \? "rounded-full bg-rose-50 text-rose-500" : "rounded-full bg-slate-100 text-slate-500"/);
+  assert.doesNotMatch(stats, /isLike && activeClass/);
   assert.match(stats, /flex flex-wrap justify-start/);
   assert.match(stats, /size-8/);
-  assert.match(stats, /fill-rose-500/);
+  assert.match(stats, /active && activeClass/);
+  assert.match(stats, /flex min-w-0 items-baseline justify-center gap-1\.5/);
+  assert.match(stats, /text-\[11px\] leading-none text-slate-500/);
+  assert.doesNotMatch(stats, /mt-0\.5 block text-\[11px\]/);
   assert.match(downloadButton, /下载原图/);
 });
 

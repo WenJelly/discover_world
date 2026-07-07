@@ -41,9 +41,7 @@ export function PhotoStats({
       {STATS.map(({ key, label, icon: Icon, activeClass }) => {
         const active = key === "reactionCount" && isLiked;
         const isLike = key === "reactionCount";
-        const iconTone = isLike
-          ? "rounded-full bg-rose-50 text-rose-500"
-          : "rounded-full bg-slate-100 text-slate-500";
+        const iconTone = active ? "rounded-full bg-rose-50 text-rose-500" : "rounded-full bg-slate-100 text-slate-500";
         const content = (
           <>
             <span
@@ -53,15 +51,15 @@ export function PhotoStats({
               )}
             >
               <Icon
-                className={cn("size-4", isLike && activeClass, active && activeClass)}
+                className={cn("size-4", active && activeClass)}
                 aria-hidden="true"
               />
             </span>
-            <span className="min-w-0">
-              <span className="block text-base font-semibold leading-none text-slate-950">
+            <span className="flex min-w-0 items-baseline justify-center gap-1.5">
+              <span className="text-base font-semibold leading-none text-slate-950">
                 {formatCount(stats[key] ?? 0)}
               </span>
-              <span className="mt-0.5 block text-[11px] text-slate-500">{label}</span>
+              <span className="text-[11px] leading-none text-slate-500">{label}</span>
             </span>
           </>
         );
@@ -71,7 +69,7 @@ export function PhotoStats({
             <button
               key={key}
               type="button"
-              className="flex min-w-[76px] items-center justify-start gap-2 rounded-none px-0 py-1 text-left transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-60"
+              className="flex min-w-[76px] items-center justify-center gap-2 rounded-none px-0 py-1 text-center transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-60"
               onClick={onToggleLike}
               disabled={likePending}
               aria-pressed={isLiked}
@@ -83,7 +81,7 @@ export function PhotoStats({
         }
 
         return (
-          <div key={key} className="flex min-w-[76px] items-center justify-start gap-2 px-0 py-1">
+          <div key={key} className="flex min-w-[76px] items-center justify-center gap-2 px-0 py-1 text-center">
             {content}
           </div>
         );
