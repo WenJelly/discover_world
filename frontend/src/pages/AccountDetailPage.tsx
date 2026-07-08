@@ -751,7 +751,7 @@ export default function AccountDetailPage() {
                   aria-label="打开发布动态面板"
                   onClick={handleNewPost}
                 >
-                  有什么新鲜事?
+                  最近有什么新鲜事吗?
                 </Button>
               </div>
             ) : null}
