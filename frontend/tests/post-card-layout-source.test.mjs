@@ -26,16 +26,13 @@ test("post card renders profile dynamic metadata and bottom action layout", asyn
   assert.match(source, /data-testid="post-right-actions"/);
   assert.match(
     source,
-    /data-testid="post-management-actions"[\s\S]*aria-label="修改动态可见范围"[\s\S]*aria-label="删除动态"[\s\S]*<\/div>[\s\S]*\{ipRegion\}/
+    /data-testid="post-management-actions"[\s\S]*ariaLabel="修改动态可见范围"[\s\S]*aria-label="删除动态"[\s\S]*<\/div>[\s\S]*\{ipRegion\}/
   );
   assert.doesNotMatch(source, /data-testid="post-visitor-actions"/);
   assert.match(source, /aria-label="删除动态"[\s\S]*<Trash2[\s\S]*删除/);
   assert.doesNotMatch(source, /<select[\s\S]*aria-label="修改动态可见范围"/);
-  assert.match(source, /aria-label="修改动态可见范围"[\s\S]*aria-expanded=\{visibilityMenuOpen\}/);
-  assert.match(source, /const visibilityMenuRef = useRef<HTMLDivElement \| null>\(null\)/);
-  assert.match(source, /document\.addEventListener\("pointerdown", handlePointerDown\)/);
-  assert.match(source, /document\.addEventListener\("keydown", handleKeyDown\)/);
-  assert.match(source, /className="absolute right-0 top-full[\s\S]*mt-1/);
+  assert.match(source, /import \{[\s\S]*PostVisibilityMenu[\s\S]*\} from "\.\/PostVisibilityMenu"/);
+  assert.match(source, /<PostVisibilityMenu[\s\S]*ariaLabel="修改动态可见范围"[\s\S]*loading=\{updatingVisibility\}/);
   assert.doesNotMatch(source, /className="absolute bottom-full/);
 
   assert.doesNotMatch(

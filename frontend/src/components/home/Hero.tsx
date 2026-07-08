@@ -175,12 +175,12 @@ export default function Hero() {
         >
           <span className="block overflow-hidden pb-1">
             <motion.span className="block" variants={rise}>
-              发现世界的
+              云流之上
             </motion.span>
           </span>
           <span className="block overflow-hidden pb-1">
             <motion.span className="block" variants={rise}>
-              高质量图库
+              晴空万里！
             </motion.span>
           </span>
         </h1>

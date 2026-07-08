@@ -24,7 +24,7 @@ test("post visibility updates are wired from card to API and account state", asy
 
   assert.match(cardSource, /canManage\?: boolean/);
   assert.match(cardSource, /onUpdated\?: \(post: ProfilePostResponse\) => void/);
-  assert.match(cardSource, /aria-label="修改动态可见范围"/);
+  assert.match(cardSource, /ariaLabel="修改动态可见范围"/);
   assert.match(cardSource, /updatePost\(\{/);
   assert.match(cardSource, /id:\s*post\.id/);
   assert.match(cardSource, /visibility:\s*nextVisibility/);

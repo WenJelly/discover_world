@@ -1,13 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bookmark,
-  Check,
-  ChevronDown,
-  Globe2,
   Heart,
   ImageOff,
   Loader2,
-  Lock,
   MapPin,
   MessageCircle,
   Pin,
@@ -31,6 +27,11 @@ import {
 import type { MediaAssetResponse, ProfilePostResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { PostAuthor } from "./PostComposerDialog";
+import { PostVisibilityMenu } from "./PostVisibilityMenu";
+import {
+  normalizePostVisibilityValue,
+  type PostVisibilityValue,
+} from "./postVisibility";
 
 export type PostCardProps = {
   post: ProfilePostResponse;
@@ -42,25 +43,34 @@ export type PostCardProps = {
 
 function imageGridClass(count: number) {
   if (count <= 1) return "grid-cols-1";
-  if (count === 2) return "grid-cols-2";
-  if (count === 3) return "grid-cols-3";
-  if (count === 4) return "grid-cols-2";
+  if (count === 2 || count === 4) return "grid-cols-2";
   return "grid-cols-3";
+}
+
+function imageItemClass(count: number) {
+  if (count === 1) return "aspect-[16/10] max-h-[460px]";
+  if (count === 2) return "aspect-[4/3]";
+  return "aspect-square";
 }
 
 function PostImageGrid({ images }: { images: MediaAssetResponse[] }) {
   if (images.length === 0) return null;
-  const single = images.length === 1;
+  const visibleImages = images.slice(0, 9);
   return (
-    <div className={cn("mt-3 grid gap-1", imageGridClass(images.length))}>
-      {images.map((image) => {
+    <div
+      className={cn(
+        "mt-3 grid gap-1.5 overflow-hidden rounded-lg",
+        imageGridClass(visibleImages.length)
+      )}
+    >
+      {visibleImages.map((image) => {
         const src = getMediaUrl(image);
         return (
           <div
             key={image.id}
             className={cn(
               "overflow-hidden border border-border bg-muted",
-              single ? "max-h-[420px]" : "aspect-square"
+              imageItemClass(visibleImages.length)
             )}
           >
             {src ? (
@@ -69,10 +79,7 @@ function PostImageGrid({ images }: { images: MediaAssetResponse[] }) {
                 alt={image.title || image.originalFilename || "图片"}
                 loading="lazy"
                 decoding="async"
-                className={cn(
-                  "h-full w-full object-cover",
-                  single ? "max-h-[420px]" : ""
-                )}
+                className="h-full w-full object-cover"
               />
             ) : (
               <div className="flex h-full min-h-[80px] items-center justify-center text-muted-foreground">
@@ -84,10 +91,6 @@ function PostImageGrid({ images }: { images: MediaAssetResponse[] }) {
       })}
     </div>
   );
-}
-
-function normalizePostVisibilityValue(value: string) {
-  return value === "private" ? "private" : "public";
 }
 
 export function PostCard({
@@ -108,35 +111,8 @@ export function PostCard({
   const [togglingLike, setTogglingLike] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
-  const [visibilityMenuOpen, setVisibilityMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const visibilityMenuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!visibilityMenuOpen) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const menu = visibilityMenuRef.current;
-      if (menu && event.target instanceof Node && menu.contains(event.target)) {
-        return;
-      }
-      setVisibilityMenuOpen(false);
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setVisibilityMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [visibilityMenuOpen]);
 
   useEffect(() => {
     setStats(post.stats);
@@ -144,7 +120,6 @@ export function PostCard({
     setLikedBy(post.likedBy ?? []);
     setFavorited(Boolean(post.isFavorited));
     setVisibility(normalizePostVisibilityValue(post.visibility));
-    setVisibilityMenuOpen(false);
     setConfirmDelete(false);
   }, [
     post.id,
@@ -218,13 +193,13 @@ export function PostCard({
     }
   };
 
-  const handleVisibilityChange = async (nextVisibility: string) => {
-    nextVisibility = normalizePostVisibilityValue(nextVisibility);
+  const handleVisibilityChange = async (
+    nextVisibility: PostVisibilityValue
+  ) => {
     if (nextVisibility === visibility || updatingVisibility) return;
 
     const previousVisibility = visibility;
     setVisibility(nextVisibility);
-    setVisibilityMenuOpen(false);
     setUpdatingVisibility(true);
     try {
       const updated = await updatePost({
@@ -421,105 +396,57 @@ export function PostCard({
             data-testid="post-right-actions"
           >
             {canManage ? (
-            <div
-              className="flex shrink-0 items-center justify-end gap-1"
-              data-testid="post-management-actions"
-            >
-              {confirmDelete ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={deleting}
-                    className="inline-flex items-center rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteClick}
-                    disabled={deleting}
-                    className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/20 disabled:opacity-50"
-                  >
-                    {deleting ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="size-3.5" />
-                    )}
-                    确认删除
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="relative" ref={visibilityMenuRef}>
+              <div
+                className="flex shrink-0 items-center justify-end gap-1"
+                data-testid="post-management-actions"
+              >
+                {confirmDelete ? (
+                  <>
                     <button
                       type="button"
-                      disabled={updatingVisibility}
-                      onClick={() => setVisibilityMenuOpen((open) => !open)}
-                      aria-label="修改动态可见范围"
-                      aria-expanded={visibilityMenuOpen}
-                      className="inline-flex h-8 min-w-[7.5rem] items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={deleting}
+                      className="inline-flex items-center rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
                     >
-                      {visibility === "private" ? (
-                        <Lock className="size-3.5" />
-                      ) : (
-                        <Globe2 className="size-3.5" />
-                      )}
-                      <span className="min-w-0 flex-1 text-left">
-                        {visibility === "private" ? "仅自己可见" : "公开"}
-                      </span>
-                      {updatingVisibility ? (
+                      取消
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteClick}
+                      disabled={deleting}
+                      className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/20 disabled:opacity-50"
+                    >
+                      {deleting ? (
                         <Loader2 className="size-3.5 animate-spin" />
                       ) : (
-                        <ChevronDown className="size-3.5" />
+                        <Trash2 className="size-3.5" />
                       )}
+                      确认删除
                     </button>
-                    {visibilityMenuOpen ? (
-                      <div
-                        role="listbox"
-                        className="absolute right-0 top-full z-20 mt-1 w-32 overflow-hidden rounded-md border border-border bg-popover p-1 text-xs shadow-lg"
-                      >
-                        {[
-                          { value: "public", label: "公开", icon: Globe2 },
-                          { value: "private", label: "仅自己可见", icon: Lock },
-                        ].map((item) => {
-                          const Icon = item.icon;
-                          const selected = visibility === item.value;
-                          return (
-                            <button
-                              key={item.value}
-                              type="button"
-                              role="option"
-                              aria-selected={selected}
-                              onClick={() =>
-                                void handleVisibilityChange(item.value)
-                              }
-                              className={cn(
-                                "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                                selected && "bg-muted text-foreground"
-                              )}
-                            >
-                              <Icon className="size-3.5" />
-                              <span className="flex-1">{item.label}</span>
-                              {selected ? <Check className="size-3.5" /> : null}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleDeleteClick}
-                    className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
-                    aria-label="删除动态"
-                  >
-                    <Trash2 className="size-4" />
-                    删除
-                  </button>
-                </>
-              )}
-            </div>
+                  </>
+                ) : (
+                  <>
+                    <PostVisibilityMenu
+                      value={visibility}
+                      onChange={(nextVisibility) =>
+                        void handleVisibilityChange(nextVisibility)
+                      }
+                      ariaLabel="修改动态可见范围"
+                      loading={updatingVisibility}
+                      disabled={updatingVisibility}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleDeleteClick}
+                      className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                      aria-label="删除动态"
+                    >
+                      <Trash2 className="size-4" />
+                      删除
+                    </button>
+                  </>
+                )}
+              </div>
             ) : null}
             {ipRegion}
           </div>

@@ -18,7 +18,6 @@ import {
   Loader2,
   MessageCircle,
   Pencil,
-  Plus,
   RefreshCw,
   Settings2,
   Sparkles,
@@ -744,15 +743,15 @@ export default function AccountDetailPage() {
         {activeTab === "posts" ? (
           <>
             {isOwnProfile ? (
-              <div className="mb-6">
+              <div className="mb-6 flex justify-end">
                 <Button
                   type="button"
                   size="lg"
-                  className="w-full"
+                  className="rounded-full px-5"
+                  aria-label="打开发布动态面板"
                   onClick={handleNewPost}
                 >
-                  <Plus />
-                  发表新动态
+                  有什么新鲜事?
                 </Button>
               </div>
             ) : null}
