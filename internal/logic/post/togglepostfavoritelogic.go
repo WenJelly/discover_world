@@ -57,5 +57,9 @@ func (l *TogglePostFavoriteLogic) TogglePostFavorite(req *types.TogglePostFavori
 		return nil, commonresponse.InternalServerError("toggle post favorite failed")
 	}
 	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypePost, post.Id)
-	return &types.PostToggleResponse{Active: active, Stats: buildStats(stat)}, nil
+	return &types.PostToggleResponse{
+		Active:  active,
+		Stats:   buildStats(stat),
+		LikedBy: []types.AccountSummary{},
+	}, nil
 }

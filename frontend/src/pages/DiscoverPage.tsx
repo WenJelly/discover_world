@@ -5,8 +5,14 @@ import { PhotoDetailDialog } from "@/components/photo/PhotoDetailDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useInView } from "@/hooks/useInView";
 import { useInfinitePictures } from "@/hooks/useInfinitePictures";
-import { fetchMediaAssetDetail } from "@/lib/api";
-import type { MediaAssetResponse } from "@/lib/types";
+import {
+  fetchFollowStatus,
+  fetchMediaAssetDetail,
+  followUser,
+  unfollowUser,
+} from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import type { FollowStatusResponse, MediaAssetResponse } from "@/lib/types";
 import { shouldPinDiscoverToolbar } from "@/lib/discover-navbar";
 import {
   buildDiscoverSearch,
@@ -83,7 +89,12 @@ export default function DiscoverPage() {
   >({});
   const [galleryWidth, setGalleryWidth] = useState(0);
   const [activePictureId, setActivePictureId] = useState<string | null>(null);
+  const [followStates, setFollowStates] = useState<
+    Record<string, FollowStatusResponse>
+  >({});
+  const [followPendingUserId, setFollowPendingUserId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
   const frameRef = useRef<HTMLDivElement | null>(null);
   const [sentinelRef, sentinelInView] = useInView<HTMLDivElement>({
     rootMargin: "480px 0px",
@@ -200,6 +211,13 @@ export default function DiscoverPage() {
     [activePictureId, filteredPictures]
   );
   const activePicture = activeIndex >= 0 ? filteredPictures[activeIndex] : null;
+  const activeOwnerId =
+    activePicture?.ownerUserId || activePicture?.owner?.id || "";
+  const activeOwnerFollowState = activeOwnerId
+    ? followStates[activeOwnerId]
+    : undefined;
+  const hideActiveFollow =
+    !activeOwnerId || Boolean(user?.id && activeOwnerId === user.id);
 
   const handleOpenPicture = (picture: MediaAssetResponse) => {
     setActivePictureId(picture.id);
@@ -244,13 +262,97 @@ export default function DiscoverPage() {
     };
   }, [activePictureId, handleAssetChange, toast]);
 
-  const handleToggleFollow = () => {
-    toast({
-      title: "功能开发中",
-      description: "关注功能即将上线",
-      variant: "default",
-    });
-  };
+  useEffect(() => {
+    if (!isAuthenticated || !activeOwnerId || hideActiveFollow) return;
+    let cancelled = false;
+
+    fetchFollowStatus({ targetUserId: activeOwnerId })
+      .then((status) => {
+        if (cancelled) return;
+        setFollowStates((current) => ({
+          ...current,
+          [activeOwnerId]: status,
+        }));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFollowStates((current) => ({
+          ...current,
+          [activeOwnerId]: {
+            targetUserId: activeOwnerId,
+            isFollowing: false,
+            followerCount: 0,
+            followingCount: 0,
+          },
+        }));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOwnerId, hideActiveFollow, isAuthenticated]);
+
+  const handleToggleFollow = useCallback(async () => {
+    if (!activeOwnerId || hideActiveFollow) return;
+    if (!isAuthenticated) {
+      toast({
+        title: "请先登录",
+        description: "登录后可以关注创作者",
+        variant: "default",
+      });
+      return;
+    }
+
+    const previous = activeOwnerFollowState;
+    const nextFollowing = !(previous?.isFollowing ?? false);
+    setFollowPendingUserId(activeOwnerId);
+    setFollowStates((current) => ({
+      ...current,
+      [activeOwnerId]: {
+        targetUserId: activeOwnerId,
+        isFollowing: nextFollowing,
+        followerCount: Math.max(
+          0,
+          (current[activeOwnerId]?.followerCount ?? 0) +
+            (nextFollowing ? 1 : -1)
+        ),
+        followingCount: current[activeOwnerId]?.followingCount ?? 0,
+      },
+    }));
+
+    try {
+      const status = nextFollowing
+        ? await followUser({ targetUserId: activeOwnerId })
+        : await unfollowUser({ targetUserId: activeOwnerId });
+      setFollowStates((current) => ({
+        ...current,
+        [activeOwnerId]: status,
+      }));
+    } catch (error) {
+      setFollowStates((current) => {
+        const next = { ...current };
+        if (previous) {
+          next[activeOwnerId] = previous;
+        } else {
+          delete next[activeOwnerId];
+        }
+        return next;
+      });
+      toast({
+        title: nextFollowing ? "关注失败" : "取消关注失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        variant: "destructive",
+      });
+    } finally {
+      setFollowPendingUserId(null);
+    }
+  }, [
+    activeOwnerFollowState,
+    activeOwnerId,
+    hideActiveFollow,
+    isAuthenticated,
+    toast,
+  ]);
 
   const targetRowHeight = isDesktopWidth(galleryWidth) ? 350 : 132;
   const gap = isDesktopWidth(galleryWidth) ? 10 : 8;
@@ -707,6 +809,9 @@ export default function DiscoverPage() {
         media={activePicture}
         open={!!activePicture}
         onOpenChange={handleDialogOpenChange}
+        isFollowing={activeOwnerFollowState?.isFollowing ?? false}
+        followPending={followPendingUserId === activeOwnerId}
+        hideFollow={hideActiveFollow}
         onToggleFollow={handleToggleFollow}
         onAssetChange={handleAssetChange}
       />

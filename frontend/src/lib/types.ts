@@ -7,6 +7,7 @@ export interface AccountSummary {
   bio: string;
   status: string;
   role: string;
+  isFollowing?: boolean;
   userEmail?: string;
   userName?: string;
   userAvatar?: string;
@@ -48,9 +49,36 @@ export interface DetailAccountResponse extends AuthUser {
   approvedPictureCount: number;
   pendingPictureCount: number;
   rejectedPictureCount: number;
+  followerCount: number;
+  followingCount: number;
+  isFollowing: boolean;
 }
 
 export type DetailUserResponse = DetailAccountResponse;
+
+export interface FollowTargetRequest {
+  targetUserId: string;
+}
+
+export interface FollowStatusResponse {
+  targetUserId: string;
+  isFollowing: boolean;
+  followerCount: number;
+  followingCount: number;
+}
+
+export interface FollowListRequest {
+  targetUserId?: string;
+  cursor?: string;
+  pageSize?: number;
+}
+
+export interface FollowUserListResponse {
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor: string;
+  list: AccountSummary[];
+}
 
 export interface LoginRequest {
   userEmail: string;
@@ -190,6 +218,10 @@ export interface GetMediaAssetRequest {
   variantOption?: MediaVariantRequest;
 }
 
+export interface DownloadMediaAssetRequest {
+  id: string;
+}
+
 export interface ToggleMediaReactionRequest {
   id: string;
   reactionType?: string;
@@ -197,6 +229,13 @@ export interface ToggleMediaReactionRequest {
 
 export interface MediaAssetToggleResponse {
   active: boolean;
+  stats: MediaAssetStats;
+}
+
+export interface MediaAssetDownloadResponse {
+  url: string;
+  filename: string;
+  fileSize: number;
   stats: MediaAssetStats;
 }
 
@@ -247,6 +286,7 @@ export interface ProfilePostResponse {
   pinnedAt: string;
   images: MediaAssetResponse[];
   stats: MediaAssetStats;
+  likedBy: AccountSummary[];
   isLiked: boolean;
   isFavorited: boolean;
   createdAt: string;
@@ -271,6 +311,7 @@ export interface UpdatePostRequest {
 export interface PostToggleResponse {
   active: boolean;
   stats: MediaAssetStats;
+  likedBy?: AccountSummary[];
 }
 
 export interface ProfilePostCursorPageResponse {
@@ -494,6 +535,7 @@ export interface UserProfile {
   joinedAt: string;
   followers: number;
   following: number;
+  isFollowing: boolean;
   likes: number;
   imageCount: number;
   achievementCount: number;

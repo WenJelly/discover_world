@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bookmark,
+  Check,
+  ChevronDown,
   Globe2,
   Heart,
   ImageOff,
@@ -57,7 +59,7 @@ function PostImageGrid({ images }: { images: MediaAssetResponse[] }) {
           <div
             key={image.id}
             className={cn(
-              "overflow-hidden rounded-md border border-border bg-muted",
+              "overflow-hidden border border-border bg-muted",
               single ? "max-h-[420px]" : "aspect-square"
             )}
           >
@@ -98,6 +100,7 @@ export function PostCard({
   const { toast } = useToast();
   const [stats, setStats] = useState(post.stats);
   const [liked, setLiked] = useState(Boolean(post.isLiked));
+  const [likedBy, setLikedBy] = useState(post.likedBy ?? []);
   const [favorited, setFavorited] = useState(Boolean(post.isFavorited));
   const [visibility, setVisibility] = useState(
     normalizePostVisibilityValue(post.visibility)
@@ -105,21 +108,58 @@ export function PostCard({
   const [togglingLike, setTogglingLike] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
+  const [visibilityMenuOpen, setVisibilityMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const visibilityMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!visibilityMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const menu = visibilityMenuRef.current;
+      if (menu && event.target instanceof Node && menu.contains(event.target)) {
+        return;
+      }
+      setVisibilityMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setVisibilityMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [visibilityMenuOpen]);
 
   useEffect(() => {
     setStats(post.stats);
     setLiked(Boolean(post.isLiked));
+    setLikedBy(post.likedBy ?? []);
     setFavorited(Boolean(post.isFavorited));
     setVisibility(normalizePostVisibilityValue(post.visibility));
+    setVisibilityMenuOpen(false);
     setConfirmDelete(false);
-  }, [post.id, post.isLiked, post.isFavorited, post.stats, post.visibility]);
+  }, [
+    post.id,
+    post.isLiked,
+    post.isFavorited,
+    post.likedBy,
+    post.stats,
+    post.visibility,
+  ]);
 
   const handleLike = async () => {
     if (togglingLike) return;
     const prevLiked = liked;
     const prevStats = stats;
+    const prevLikedBy = likedBy;
     setLiked(!prevLiked);
     setStats((current) => ({
       ...current,
@@ -133,9 +173,11 @@ export function PostCard({
       const res = await togglePostReaction(post.id, "like");
       setLiked(res.active);
       setStats(res.stats);
+      setLikedBy(res.likedBy ?? []);
     } catch (err) {
       setLiked(prevLiked);
       setStats(prevStats);
+      setLikedBy(prevLikedBy);
       toast({
         title: "操作失败",
         description: err instanceof ApiError ? err.message : "请稍后重试。",
@@ -182,6 +224,7 @@ export function PostCard({
 
     const previousVisibility = visibility;
     setVisibility(nextVisibility);
+    setVisibilityMenuOpen(false);
     setUpdatingVisibility(true);
     try {
       const updated = await updatePost({
@@ -236,10 +279,26 @@ export function PostCard({
 
   const actionClass =
     "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:pointer-events-none disabled:opacity-50";
+  const likedByNames = likedBy
+    .map((user) => (user.nickname || user.username).trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join("、");
+  const ipRegion = (
+    <div
+      className="inline-flex h-8 shrink-0 items-center gap-1 text-xs text-muted-foreground"
+      data-testid="post-ip-region"
+    >
+      <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+      <span>中国</span>
+      <span aria-hidden>·</span>
+      <span>上海</span>
+    </div>
+  );
 
   return (
     <article className="rounded-xl bg-card p-3 sm:p-4">
-      <header className="flex items-start gap-3">
+      <header className="flex items-center gap-3">
         <Avatar className="size-10 shrink-0">
           {author?.avatarUrl ? (
             <AvatarImage src={author.avatarUrl} alt={author.username} />
@@ -287,69 +346,6 @@ export function PostCard({
             </div>
           ) : null}
         </div>
-
-        {canManage ? (
-          <div className="flex shrink-0 items-center gap-1">
-            {confirmDelete ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(false)}
-                  disabled={deleting}
-                  className="inline-flex items-center rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
-                >
-                  取消
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeleteClick}
-                  disabled={deleting}
-                  className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/20 disabled:opacity-50"
-                >
-                  {deleting ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="size-3.5" />
-                  )}
-                  确认删除
-                </button>
-              </>
-            ) : (
-              <>
-                <label className="relative inline-flex h-8 items-center">
-                  {visibility === "private" ? (
-                    <Lock className="pointer-events-none absolute left-2 size-3.5 text-muted-foreground" />
-                  ) : (
-                    <Globe2 className="pointer-events-none absolute left-2 size-3.5 text-muted-foreground" />
-                  )}
-                  <select
-                    value={visibility}
-                    onChange={(event) =>
-                      void handleVisibilityChange(event.target.value)
-                    }
-                    disabled={updatingVisibility}
-                    aria-label="修改动态可见范围"
-                    className="h-8 w-[7.5rem] appearance-none rounded-md border border-border bg-background pl-7 pr-2 text-xs text-muted-foreground shadow-xs outline-none transition-[border-color,box-shadow,color] hover:text-foreground focus-visible:border-blue-500 focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="public">公开</option>
-                    <option value="private">仅自己可见</option>
-                  </select>
-                  {updatingVisibility ? (
-                    <Loader2 className="pointer-events-none absolute right-2 size-3.5 animate-spin text-muted-foreground" />
-                  ) : null}
-                </label>
-                <button
-                  type="button"
-                  onClick={handleDeleteClick}
-                  className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
-                  aria-label="删除动态"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </>
-            )}
-          </div>
-        ) : null}
       </header>
 
       {post.content ? (
@@ -360,55 +356,180 @@ export function PostCard({
 
       <PostImageGrid images={post.images} />
 
-      <footer className="mt-3 flex items-center gap-1">
-        <button
-          type="button"
-          onClick={handleLike}
-          disabled={togglingLike}
-          className={cn(
-            actionClass,
-            liked && "text-rose-600 hover:text-rose-600 hover:bg-rose-500/10"
-          )}
-          aria-pressed={liked}
+      <footer className="mt-3">
+        <div
+          className="flex flex-wrap items-center justify-between gap-2"
+          data-testid="post-action-row"
         >
-          <Heart
-            className={cn("size-[18px]", liked && "fill-current")}
-            aria-hidden
-          />
-          <span className="tabular-nums">
-            {formatCount(stats.reactionCount)}
-          </span>
-        </button>
+          <div
+            className="flex min-w-0 items-center gap-1"
+            data-testid="post-reactions"
+          >
+            <button
+              type="button"
+              onClick={handleLike}
+              disabled={togglingLike}
+              className={cn(
+                actionClass,
+                liked && "text-rose-600 hover:text-rose-600 hover:bg-rose-500/10"
+              )}
+              aria-pressed={liked}
+            >
+              <Heart
+                className={cn("size-[18px]", liked && "fill-current")}
+                aria-hidden
+              />
+              <span className="tabular-nums">
+                {formatCount(stats.reactionCount)}
+              </span>
+            </button>
 
-        <span
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground"
-          title="评论功能即将上线"
-        >
-          <MessageCircle className="size-[18px]" aria-hidden />
-          <span className="tabular-nums">
-            {formatCount(stats.commentCount)}
-          </span>
-        </span>
+            <span
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground"
+              title="评论功能即将上线"
+            >
+              <MessageCircle className="size-[18px]" aria-hidden />
+              <span className="tabular-nums">
+                {formatCount(stats.commentCount)}
+              </span>
+            </span>
 
-        <button
-          type="button"
-          onClick={handleFavorite}
-          disabled={togglingFav}
-          className={cn(
-            actionClass,
-            favorited &&
-              "text-amber-600 hover:text-amber-600 hover:bg-amber-500/10"
-          )}
-          aria-pressed={favorited}
-        >
-          <Bookmark
-            className={cn("size-[18px]", favorited && "fill-current")}
-            aria-hidden
-          />
-          <span className="tabular-nums">
-            {formatCount(stats.favoriteCount)}
-          </span>
-        </button>
+            <button
+              type="button"
+              onClick={handleFavorite}
+              disabled={togglingFav}
+              className={cn(
+                actionClass,
+                favorited &&
+                  "text-amber-600 hover:text-amber-600 hover:bg-amber-500/10"
+              )}
+              aria-pressed={favorited}
+            >
+              <Bookmark
+                className={cn("size-[18px]", favorited && "fill-current")}
+                aria-hidden
+              />
+              <span className="tabular-nums">
+                {formatCount(stats.favoriteCount)}
+              </span>
+            </button>
+
+          </div>
+
+          <div
+            className="flex shrink-0 items-center justify-end gap-2"
+            data-testid="post-right-actions"
+          >
+            {canManage ? (
+            <div
+              className="flex shrink-0 items-center justify-end gap-1"
+              data-testid="post-management-actions"
+            >
+              {confirmDelete ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    disabled={deleting}
+                    className="inline-flex items-center rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteClick}
+                    disabled={deleting}
+                    className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/20 disabled:opacity-50"
+                  >
+                    {deleting ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-3.5" />
+                    )}
+                    确认删除
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="relative" ref={visibilityMenuRef}>
+                    <button
+                      type="button"
+                      disabled={updatingVisibility}
+                      onClick={() => setVisibilityMenuOpen((open) => !open)}
+                      aria-label="修改动态可见范围"
+                      aria-expanded={visibilityMenuOpen}
+                      className="inline-flex h-8 min-w-[7.5rem] items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {visibility === "private" ? (
+                        <Lock className="size-3.5" />
+                      ) : (
+                        <Globe2 className="size-3.5" />
+                      )}
+                      <span className="min-w-0 flex-1 text-left">
+                        {visibility === "private" ? "仅自己可见" : "公开"}
+                      </span>
+                      {updatingVisibility ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <ChevronDown className="size-3.5" />
+                      )}
+                    </button>
+                    {visibilityMenuOpen ? (
+                      <div
+                        role="listbox"
+                        className="absolute right-0 top-full z-20 mt-1 w-32 overflow-hidden rounded-md border border-border bg-popover p-1 text-xs shadow-lg"
+                      >
+                        {[
+                          { value: "public", label: "公开", icon: Globe2 },
+                          { value: "private", label: "仅自己可见", icon: Lock },
+                        ].map((item) => {
+                          const Icon = item.icon;
+                          const selected = visibility === item.value;
+                          return (
+                            <button
+                              key={item.value}
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              onClick={() =>
+                                void handleVisibilityChange(item.value)
+                              }
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                                selected && "bg-muted text-foreground"
+                              )}
+                            >
+                              <Icon className="size-3.5" />
+                              <span className="flex-1">{item.label}</span>
+                              {selected ? <Check className="size-3.5" /> : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDeleteClick}
+                    className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                    aria-label="删除动态"
+                  >
+                    <Trash2 className="size-4" />
+                    删除
+                  </button>
+                </>
+              )}
+            </div>
+            ) : null}
+            {ipRegion}
+          </div>
+        </div>
+
+        {likedByNames ? (
+          <p className="mt-0.5 px-2 text-xs text-muted-foreground">
+            {likedByNames} 点赞了
+          </p>
+        ) : null}
       </footer>
     </article>
   );

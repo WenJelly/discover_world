@@ -8,6 +8,7 @@ import (
 
 	account "discover_world/internal/handler/account"
 	admin "discover_world/internal/handler/admin"
+	follow "discover_world/internal/handler/follow"
 	homepage "discover_world/internal/handler/homepage"
 	media "discover_world/internal/handler/media"
 	overview "discover_world/internal/handler/overview"
@@ -52,6 +53,38 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/account/update",
 				Handler: account.UpdateAccountHandler(serverCtx),
+			},
+		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/follow/cancel",
+				Handler: follow.CancelFollowHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/follow/create",
+				Handler: follow.CreateFollowHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/follow/follower/list",
+				Handler: follow.GetFollowerListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/follow/following/list",
+				Handler: follow.GetFollowingListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/follow/status",
+				Handler: follow.GetFollowStatusHandler(serverCtx),
 			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
@@ -147,6 +180,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/media/detail",
 				Handler: media.GetMediaAssetHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/media/download",
+				Handler: media.DownloadMediaAssetHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,

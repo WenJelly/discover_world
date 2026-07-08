@@ -74,6 +74,13 @@ func (l *DetailAccountLogic) DetailAccount(req *types.DetailAccountRequest) (res
 	if err != nil {
 		return nil, err
 	}
+	if loginUser.Id != target.Id {
+		isFollowing, err := l.svcCtx.UserFollowModel.IsFollowing(l.ctx, loginUser.Id, target.Id)
+		if err != nil {
+			return nil, commonresponse.InternalServerError("查询关注状态失败")
+		}
+		resp.IsFollowing = isFollowing
+	}
 	maskDetailAccountForViewer(l.svcCtx, loginUser, target, resp)
 	return resp, nil
 }

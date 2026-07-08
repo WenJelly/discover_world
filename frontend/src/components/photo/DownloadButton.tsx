@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { MediaAssetDownloadResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { downloadAsset, formatFileSize } from "./photo-utils";
@@ -15,8 +16,10 @@ interface DownloadButtonProps {
   fileSize?: number;
   /** Whether the viewer is permitted to download the original. */
   canDownload?: boolean;
+  /** Optionally asks the backend to authorize and count the download first. */
+  onDownloadRequest?: () => Promise<MediaAssetDownloadResponse>;
   /** Fired after a download is initiated (e.g. to bump the download count). */
-  onDownloaded?: () => void;
+  onDownloaded?: (response?: MediaAssetDownloadResponse) => void;
   className?: string;
 }
 
@@ -29,17 +32,24 @@ export function DownloadButton({
   filename,
   fileSize = 0,
   canDownload = true,
+  onDownloadRequest,
   onDownloaded,
   className,
 }: DownloadButtonProps) {
   const [loading, setLoading] = useState(false);
   const sizeLabel = formatFileSize(fileSize);
-  const disabled = !url || !canDownload || loading;
+  const disabled = (!url && !onDownloadRequest) || !canDownload || loading;
 
   const handleDownload = async () => {
     if (disabled) return;
     setLoading(true);
     try {
+      if (onDownloadRequest) {
+        const res = await onDownloadRequest();
+        const ok = await downloadAsset(res.url, res.filename || filename);
+        if (ok) onDownloaded?.(res);
+        return;
+      }
       const ok = await downloadAsset(url, filename);
       if (ok) onDownloaded?.();
     } finally {

@@ -3,6 +3,8 @@ package account
 import (
 	"context"
 	"database/sql"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -67,6 +69,45 @@ func TestBuildDetailAccountResponseReturnsAccountRoleColumn(t *testing.T) {
 
 	if resp.Role != "editor" {
 		t.Fatalf("resp.Role = %q, want role column value", resp.Role)
+	}
+}
+
+func TestApplyFollowStateToDetailAccountResponse(t *testing.T) {
+	resp := &types.DetailAccountResponse{}
+
+	applyFollowState(resp, 7, 3, true)
+
+	if resp.FollowerCount != 7 || resp.FollowingCount != 3 || !resp.IsFollowing {
+		t.Fatalf("unexpected follow state: %#v", resp)
+	}
+}
+
+func TestDetailAccountLoadsFollowCountsAndViewerState(t *testing.T) {
+	commonSource, err := os.ReadFile("account_common.go")
+	if err != nil {
+		t.Fatalf("read account_common.go: %v", err)
+	}
+	detailSource, err := os.ReadFile("detailaccountlogic.go")
+	if err != nil {
+		t.Fatalf("read detailaccountlogic.go: %v", err)
+	}
+
+	for _, fragment := range []string{
+		"UserFollowModel.CountFollowers",
+		"UserFollowModel.CountFollowing",
+		"applyFollowState(resp, followerCount, followingCount, false)",
+	} {
+		if !strings.Contains(string(commonSource), fragment) {
+			t.Fatalf("account_common.go missing %q", fragment)
+		}
+	}
+	for _, fragment := range []string{
+		"UserFollowModel.IsFollowing",
+		"resp.IsFollowing = isFollowing",
+	} {
+		if !strings.Contains(string(detailSource), fragment) {
+			t.Fatalf("detailaccountlogic.go missing %q", fragment)
+		}
 	}
 }
 

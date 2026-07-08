@@ -12,6 +12,7 @@ import {
   BookOpen,
   CalendarDays,
   Camera,
+  Check,
   Heart,
   ImageIcon,
   Loader2,
@@ -34,6 +35,8 @@ import {
   fetchProfileFeaturedMediaList,
   fetchProfilePostCursorList,
   fetchUserProfile,
+  followUser,
+  unfollowUser,
   updateProfileFeaturedMedia,
 } from "@/lib/api";
 import {
@@ -148,6 +151,7 @@ export default function AccountDetailPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [followPending, setFollowPending] = useState(false);
 
   // Preview state
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
@@ -376,10 +380,52 @@ export default function AccountDetailPage() {
     if (!profile) return [];
     return [
       { label: "作品", value: profile.imageCount },
-      { label: "精选", value: featuredImages.length },
-      { label: "相册", value: albums.length },
+      { label: "粉丝", value: profile.followers },
+      { label: "关注", value: profile.following },
     ];
-  }, [profile, featuredImages.length, albums.length]);
+  }, [profile]);
+
+  const handleToggleProfileFollow = useCallback(async () => {
+    if (!profile || isOwnProfile || followPending) return;
+
+    const previous = profile;
+    const nextFollowing = !profile.isFollowing;
+    setFollowPending(true);
+    setProfile((current) =>
+      current
+        ? {
+            ...current,
+            isFollowing: nextFollowing,
+            followers: Math.max(0, current.followers + (nextFollowing ? 1 : -1)),
+          }
+        : current
+    );
+
+    try {
+      const status = nextFollowing
+        ? await followUser({ targetUserId: profile.id })
+        : await unfollowUser({ targetUserId: profile.id });
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              isFollowing: status.isFollowing,
+              followers: status.followerCount,
+              following: status.followingCount,
+            }
+          : current
+      );
+    } catch (error) {
+      setProfile(previous);
+      toast({
+        title: nextFollowing ? "关注失败" : "取消关注失败",
+        description: errorMessage(error, "请稍后重试"),
+        variant: "destructive",
+      });
+    } finally {
+      setFollowPending(false);
+    }
+  }, [followPending, isOwnProfile, profile, toast]);
 
   const handleImageClick = (image: ImageItem, index: number) => {
     setPreviewImage(image);
@@ -642,6 +688,23 @@ export default function AccountDetailPage() {
                     ))}
                   </div>
                 </div>
+                {!isOwnProfile ? (
+                  <Button
+                    type="button"
+                    variant={profile.isFollowing ? "outline" : "default"}
+                    className="w-24 shrink-0"
+                    disabled={followPending}
+                    onClick={() => void handleToggleProfileFollow()}
+                  >
+                    {followPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : null}
+                    {profile.isFollowing && !followPending ? (
+                      <Check className="size-4" aria-hidden="true" />
+                    ) : null}
+                    {profile.isFollowing ? "已关注" : "关注"}
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>

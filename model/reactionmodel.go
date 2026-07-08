@@ -15,6 +15,7 @@ type (
 	// and implement the added methods in customReactionModel.
 	ReactionModel interface {
 		reactionModel
+		FindActiveUserIDsByTargets(ctx context.Context, targetType string, targetIDs []uint64, reactionType string, limitPerTarget int64) (map[uint64][]uint64, error)
 		FindActiveTargetIDsByUser(ctx context.Context, userID uint64, targetType string, targetIDs []uint64, reactionType string) (map[uint64]bool, error)
 		ToggleStatus(ctx context.Context, userID uint64, targetType string, targetID uint64, reactionType string) (active bool, delta int64, err error)
 		withSession(session sqlx.Session) ReactionModel
@@ -57,6 +58,46 @@ func (m *customReactionModel) FindActiveTargetIDsByUser(ctx context.Context, use
 	}
 	for _, row := range rows {
 		resp[row.TargetId] = true
+	}
+	return resp, nil
+}
+
+func (m *customReactionModel) FindActiveUserIDsByTargets(ctx context.Context, targetType string, targetIDs []uint64, reactionType string, limitPerTarget int64) (map[uint64][]uint64, error) {
+	resp := make(map[uint64][]uint64)
+	targetIDs = uniquePositiveIDs(targetIDs)
+	if targetType == "" || reactionType == "" || len(targetIDs) == 0 || limitPerTarget == 0 {
+		return resp, nil
+	}
+
+	args := []any{targetType, reactionType}
+	for _, id := range targetIDs {
+		args = append(args, id)
+	}
+
+	query := fmt.Sprintf("select `target_id`, `user_id` from %s where `target_type` = ? and `reaction_type` = ? and `status` = 1 and `target_id` in (%s) order by `target_id` asc, `updated_at` desc, `id` desc", m.table, inPlaceholders(len(targetIDs)))
+	var rows []struct {
+		TargetId uint64 `db:"target_id"`
+		UserId   uint64 `db:"user_id"`
+	}
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+		return nil, err
+	}
+	seen := make(map[uint64]map[uint64]struct{}, len(targetIDs))
+	for _, row := range rows {
+		if row.TargetId == 0 || row.UserId == 0 {
+			continue
+		}
+		if limitPerTarget > 0 && int64(len(resp[row.TargetId])) >= limitPerTarget {
+			continue
+		}
+		if seen[row.TargetId] == nil {
+			seen[row.TargetId] = map[uint64]struct{}{}
+		}
+		if _, ok := seen[row.TargetId][row.UserId]; ok {
+			continue
+		}
+		seen[row.TargetId][row.UserId] = struct{}{}
+		resp[row.TargetId] = append(resp[row.TargetId], row.UserId)
 	}
 	return resp, nil
 }

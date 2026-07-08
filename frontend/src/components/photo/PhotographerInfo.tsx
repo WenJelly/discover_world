@@ -1,4 +1,4 @@
-import { BadgeCheck, Loader2, MapPin } from "lucide-react";
+import { BadgeCheck, Check, Loader2, MapPin } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -90,6 +90,9 @@ export function PhotographerInfo({
         >
           {followPending ? (
             <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+          ) : null}
+          {isFollowing && !followPending ? (
+            <Check className="size-3.5" aria-hidden="true" />
           ) : null}
           {isFollowing ? "已关注" : "关注"}
         </Button>

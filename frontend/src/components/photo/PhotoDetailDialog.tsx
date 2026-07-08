@@ -13,7 +13,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { toggleMediaReaction } from "@/lib/api";
+import { downloadMediaAsset, toggleMediaReaction } from "@/lib/api";
 import { getMediaDetailUrl } from "@/lib/format";
 import type { MediaAssetResponse, MediaAssetStats } from "@/lib/types";
 
@@ -343,12 +343,26 @@ export function PhotoDetailDialog({
     }
   };
 
-  const handleDownloaded = () => {
-    setStats((current) =>
-      current
-        ? { ...current, downloadCount: current.downloadCount + 1 }
-        : current
-    );
+  const handleDownloadRequest = async () => {
+    if (!media) throw new Error("媒体资源不存在");
+    try {
+      const res = await downloadMediaAsset({ id: media.id });
+      setStats(res.stats);
+      onAssetChange?.({
+        ...media,
+        stats: res.stats,
+        likeCount: res.stats.reactionCount,
+        viewCount: res.stats.viewCount,
+      });
+      return res;
+    } catch (error) {
+      toast({
+        title: "下载失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const visibility =
@@ -529,7 +543,7 @@ export function PhotoDetailDialog({
                   filename={media.originalFilename || media.title}
                   fileSize={displayFileSize}
                   canDownload={canDownload}
-                  onDownloaded={handleDownloaded}
+                  onDownloadRequest={handleDownloadRequest}
                   className="h-10 rounded-none bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"
                 />
                 <Button

@@ -80,6 +80,9 @@ type (
 		Id           string `json:"id"`
 		ReactionType string `json:"reactionType,optional"`
 	}
+	DownloadMediaAssetRequest {
+		Id string `json:"id"`
+	}
 	DeleteMediaAssetRequest {
 		Id    string `json:"id"`
 		Force bool   `json:"force,optional"`
@@ -197,6 +200,12 @@ type (
 		Active bool            `json:"active"`
 		Stats  MediaAssetStats `json:"stats"`
 	}
+	MediaAssetDownloadResponse {
+		Url      string          `json:"url"`
+		Filename string          `json:"filename"`
+		FileSize int64           `json:"fileSize"`
+		Stats    MediaAssetStats `json:"stats"`
+	}
 	MediaAssetPageResponse {
 		PageNum  int64                `json:"pageNum"`
 		PageSize int64                `json:"pageSize"`
@@ -277,6 +286,29 @@ type (
 		ApprovedMediaAssetCount int64  `json:"approvedMediaAssetCount"`
 		PendingMediaAssetCount  int64  `json:"pendingMediaAssetCount"`
 		RejectedMediaAssetCount int64  `json:"rejectedMediaAssetCount"`
+		FollowerCount           int64  `json:"followerCount"`
+		FollowingCount          int64  `json:"followingCount"`
+		IsFollowing             bool   `json:"isFollowing"`
+	}
+	FollowTargetRequest {
+		TargetUserId string `json:"targetUserId"`
+	}
+	FollowStatusResponse {
+		TargetUserId    string `json:"targetUserId"`
+		IsFollowing     bool   `json:"isFollowing"`
+		FollowerCount   int64  `json:"followerCount"`
+		FollowingCount  int64  `json:"followingCount"`
+	}
+	FollowListRequest {
+		TargetUserId string `json:"targetUserId,optional"`
+		Cursor       string `json:"cursor,optional"`
+		PageSize     int64  `json:"pageSize,optional"`
+	}
+	FollowUserListResponse {
+		PageSize   int64            `json:"pageSize"`
+		HasMore    bool             `json:"hasMore"`
+		NextCursor string           `json:"nextCursor"`
+		List       []AccountSummary `json:"list"`
 	}
 	ProfilePostListRequest {
 		UserId   string `json:"userId,optional"`
@@ -294,6 +326,7 @@ type (
 		PinnedAt    string               `json:"pinnedAt"`
 		Images      []MediaAssetResponse `json:"images"`
 		Stats       MediaAssetStats      `json:"stats"`
+		LikedBy     []AccountSummary     `json:"likedBy"`
 		IsLiked     bool                 `json:"isLiked"`
 		IsFavorited bool                 `json:"isFavorited"`
 		CreatedAt   string               `json:"createdAt"`
@@ -375,8 +408,9 @@ type (
 		Id string `json:"id"`
 	}
 	PostToggleResponse {
-		Active bool            `json:"active"`
-		Stats  MediaAssetStats `json:"stats"`
+		Active  bool             `json:"active"`
+		Stats   MediaAssetStats  `json:"stats"`
+		LikedBy []AccountSummary `json:"likedBy"`
 	}
 	CreatePostCommentRequest {
 		PostId  string `json:"postId"`
@@ -489,6 +523,28 @@ service DiscoverWorld {
 
 	@handler UploadAccountAvatar
 	post /account/avatar/upload returns (DetailAccountResponse)
+}
+
+@server (
+	prefix: /api
+	group:  follow
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler CreateFollow
+	post /follow/create (FollowTargetRequest) returns (FollowStatusResponse)
+
+	@handler CancelFollow
+	post /follow/cancel (FollowTargetRequest) returns (FollowStatusResponse)
+
+	@handler GetFollowStatus
+	post /follow/status (FollowTargetRequest) returns (FollowStatusResponse)
+
+	@handler GetFollowerList
+	post /follow/follower/list (FollowListRequest) returns (FollowUserListResponse)
+
+	@handler GetFollowingList
+	post /follow/following/list (FollowListRequest) returns (FollowUserListResponse)
 }
 
 @server (
@@ -608,6 +664,9 @@ service DiscoverWorld {
 
 	@handler ToggleMediaReaction
 	post /media/reaction/toggle (ToggleMediaReactionRequest) returns (MediaAssetToggleResponse)
+
+	@handler DownloadMediaAsset
+	post /media/download (DownloadMediaAssetRequest) returns (MediaAssetDownloadResponse)
 
 	@handler UploadMediaAsset
 	post /media/upload returns (MediaAssetResponse)

@@ -24,6 +24,7 @@ const (
 	maxPostCommentLength = 1000
 	maxPostImageCount    = 9
 	maxPostLocationLen   = 255
+	maxPostLikedByCount  = 3
 	defaultCommentPage   = 20
 	maxCommentPage       = 50
 
@@ -345,6 +346,10 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post viewer state failed")
 	}
+	likedByByPost, err := loadPostLikedBySummaries(ctx, svcCtx, postIDs)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query post liked users failed")
+	}
 
 	resp := make([]types.ProfilePostResponse, 0, len(posts))
 	for _, post := range posts {
@@ -358,6 +363,7 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 			}
 		}
 		isPinned, pinnedAt := buildPostPinState(post)
+		likedBy := nonNilAccountSummaries(likedByByPost[post.Id])
 		item := types.ProfilePostResponse{
 			Id:         formatID(post.Id),
 			UserId:     formatID(post.UserId),
@@ -369,11 +375,61 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 			PinnedAt:   pinnedAt,
 			Images:     images,
 			Stats:      buildStats(statsByPost[post.Id]),
+			LikedBy:    likedBy,
 			CreatedAt:  formatTime(post.CreatedAt),
 			UpdatedAt:  formatTime(post.UpdatedAt),
 		}
 		applyPostViewerState(&item, post.Id, viewerState)
 		resp = append(resp, item)
+	}
+	return resp, nil
+}
+
+func nonNilAccountSummaries(list []types.AccountSummary) []types.AccountSummary {
+	if list == nil {
+		return []types.AccountSummary{}
+	}
+	return list
+}
+
+func loadPostLikedBySummaries(ctx context.Context, svcCtx *svc.ServiceContext, postIDs []uint64) (map[uint64][]types.AccountSummary, error) {
+	resp := make(map[uint64][]types.AccountSummary)
+	likedUserIDsByPost, err := svcCtx.ReactionModel.FindActiveUserIDsByTargets(ctx, targetTypePost, postIDs, defaultReaction, maxPostLikedByCount)
+	if err != nil {
+		return nil, err
+	}
+	if len(likedUserIDsByPost) == 0 {
+		return resp, nil
+	}
+
+	userIDs := make([]uint64, 0)
+	for _, ids := range likedUserIDsByPost {
+		userIDs = append(userIDs, ids...)
+	}
+	accounts, err := svcCtx.UserAccountModel.FindByIDs(ctx, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	profiles, err := svcCtx.UserProfileModel.FindByUserIDs(ctx, userIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	accountsByID := make(map[uint64]*model.UserAccount, len(accounts))
+	for _, account := range accounts {
+		if account != nil {
+			accountsByID[account.Id] = account
+		}
+	}
+
+	for postID, ids := range likedUserIDsByPost {
+		for _, userID := range ids {
+			account := accountsByID[userID]
+			if account == nil {
+				continue
+			}
+			resp[postID] = append(resp[postID], buildAccountSummary(svcCtx, account, profiles[userID]))
+		}
 	}
 	return resp, nil
 }

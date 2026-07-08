@@ -82,10 +82,28 @@ func loadDetailAccountResponse(ctx context.Context, svcCtx *svc.ServiceContext, 
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询公开媒体资源统计失败")
 	}
+	followerCount, err := svcCtx.UserFollowModel.CountFollowers(ctx, account.Id)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询粉丝数失败")
+	}
+	followingCount, err := svcCtx.UserFollowModel.CountFollowing(ctx, account.Id)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询关注数失败")
+	}
 
 	resp := buildDetailAccountResponse(svcCtx, account, profile, stats, publicMediaAssetCount)
+	applyFollowState(resp, followerCount, followingCount, false)
 	resp.AvatarUrl = mediaLogic.LoadAvatarURL(ctx, svcCtx, profile)
 	return resp, nil
+}
+
+func applyFollowState(resp *types.DetailAccountResponse, followerCount, followingCount int64, isFollowing bool) {
+	if resp == nil {
+		return
+	}
+	resp.FollowerCount = followerCount
+	resp.FollowingCount = followingCount
+	resp.IsFollowing = isFollowing
 }
 
 func canViewAccountDetail(svcCtx *svc.ServiceContext, viewer, target *model.UserAccount) bool {

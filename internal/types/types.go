@@ -110,6 +110,33 @@ type DetailAccountResponse struct {
 	ApprovedMediaAssetCount int64  `json:"approvedMediaAssetCount"`
 	PendingMediaAssetCount  int64  `json:"pendingMediaAssetCount"`
 	RejectedMediaAssetCount int64  `json:"rejectedMediaAssetCount"`
+	FollowerCount           int64  `json:"followerCount"`
+	FollowingCount          int64  `json:"followingCount"`
+	IsFollowing             bool   `json:"isFollowing"`
+}
+
+type FollowTargetRequest struct {
+	TargetUserId string `json:"targetUserId"`
+}
+
+type FollowStatusResponse struct {
+	TargetUserId   string `json:"targetUserId"`
+	IsFollowing    bool   `json:"isFollowing"`
+	FollowerCount  int64  `json:"followerCount"`
+	FollowingCount int64  `json:"followingCount"`
+}
+
+type FollowListRequest struct {
+	TargetUserId string `json:"targetUserId,optional"`
+	Cursor       string `json:"cursor,optional"`
+	PageSize     int64  `json:"pageSize,optional"`
+}
+
+type FollowUserListResponse struct {
+	PageSize   int64            `json:"pageSize"`
+	HasMore    bool             `json:"hasMore"`
+	NextCursor string           `json:"nextCursor"`
+	List       []AccountSummary `json:"list"`
 }
 
 type GetHomepageConfigRequest struct {
@@ -119,6 +146,10 @@ type GetHomepageConfigRequest struct {
 type GetMediaAssetRequest struct {
 	Id      string              `json:"id"`
 	Variant MediaVariantRequest `json:"variantOption,optional"`
+}
+
+type DownloadMediaAssetRequest struct {
+	Id string `json:"id"`
 }
 
 type ToggleMediaReactionRequest struct {
@@ -261,6 +292,13 @@ type MediaAssetToggleResponse struct {
 	Stats  MediaAssetStats `json:"stats"`
 }
 
+type MediaAssetDownloadResponse struct {
+	Url      string          `json:"url"`
+	Filename string          `json:"filename"`
+	FileSize int64           `json:"fileSize"`
+	Stats    MediaAssetStats `json:"stats"`
+}
+
 type MediaAssetStats struct {
 	ViewCount     int64 `json:"viewCount"`
 	ReactionCount int64 `json:"reactionCount"`
@@ -367,8 +405,9 @@ type PostCommentResponse struct {
 }
 
 type PostToggleResponse struct {
-	Active bool            `json:"active"`
-	Stats  MediaAssetStats `json:"stats"`
+	Active  bool             `json:"active"`
+	Stats   MediaAssetStats  `json:"stats"`
+	LikedBy []AccountSummary `json:"likedBy"`
 }
 
 type ProfileAlbumListRequest struct {
@@ -427,6 +466,7 @@ type ProfilePostResponse struct {
 	PinnedAt    string               `json:"pinnedAt"`
 	Images      []MediaAssetResponse `json:"images"`
 	Stats       MediaAssetStats      `json:"stats"`
+	LikedBy     []AccountSummary     `json:"likedBy"`
 	IsLiked     bool                 `json:"isLiked"`
 	IsFavorited bool                 `json:"isFavorited"`
 	CreatedAt   string               `json:"createdAt"`

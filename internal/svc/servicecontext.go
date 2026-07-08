@@ -36,6 +36,7 @@ type ServiceContext struct {
 	AssetLinkModel          model.AssetLinkModel
 	PostModel               model.PostModel
 	AlbumModel              model.AlbumModel
+	UserFollowModel         model.UserFollowModel
 	ReactionModel           model.ReactionModel
 	FavoriteModel           model.FavoriteModel
 	CommentRecordModel      model.CommentRecordModel
@@ -66,6 +67,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		AssetLinkModel:          model.NewAssetLinkModel(conn),
 		PostModel:               model.NewPostModel(conn),
 		AlbumModel:              model.NewAlbumModel(conn),
+		UserFollowModel:         model.NewUserFollowModel(conn),
 		ReactionModel:           model.NewReactionModel(conn),
 		FavoriteModel:           model.NewFavoriteModel(conn),
 		CommentRecordModel:      model.NewCommentRecordModel(conn),
@@ -108,6 +110,7 @@ func (s *ServiceContext) withSession(session sqlx.Session) *ServiceContext {
 		AssetLinkModel:          model.NewAssetLinkModel(conn),
 		PostModel:               model.NewPostModel(conn),
 		AlbumModel:              model.NewAlbumModel(conn),
+		UserFollowModel:         model.NewUserFollowModel(conn),
 		ReactionModel:           model.NewReactionModel(conn),
 		FavoriteModel:           model.NewFavoriteModel(conn),
 		CommentRecordModel:      model.NewCommentRecordModel(conn),

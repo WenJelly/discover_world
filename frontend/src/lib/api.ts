@@ -4,6 +4,11 @@ import type {
   CreatePostRequest,
   DetailAccountResponse,
   DetailUserResponse,
+  DownloadMediaAssetRequest,
+  FollowListRequest,
+  FollowStatusResponse,
+  FollowTargetRequest,
+  FollowUserListResponse,
   GetMediaAssetRequest,
   GetHomepageConfigRequest,
   GlobalSearchRequest,
@@ -15,6 +20,7 @@ import type {
   MediaAssetDirectUploadInitResponse,
   MediaAssetCursorListReq,
   MediaAssetCursorPageResponse,
+  MediaAssetDownloadResponse,
   MediaAssetListReq,
   MediaAssetPageResponse,
   MediaAssetResponse,
@@ -362,6 +368,12 @@ function normalizeAccount<T extends DetailAccountResponse | LoginResponse>(accou
     "publicMediaAssetCount" in account
       ? account.publicMediaAssetCount
       : approvedMediaAssetCount;
+  const followerCount =
+    "followerCount" in account ? account.followerCount ?? 0 : 0;
+  const followingCount =
+    "followingCount" in account ? account.followingCount ?? 0 : 0;
+  const isFollowing =
+    "isFollowing" in account ? account.isFollowing ?? false : false;
 
   return {
     ...account,
@@ -381,7 +393,23 @@ function normalizeAccount<T extends DetailAccountResponse | LoginResponse>(accou
     approvedPictureCount: approvedMediaAssetCount,
     pendingPictureCount: pendingMediaAssetCount,
     rejectedPictureCount: rejectedMediaAssetCount,
+    followerCount,
+    followingCount,
+    isFollowing,
   } as T;
+}
+
+function normalizeMediaStats(
+  stats: Partial<MediaAssetResponse["stats"]> | null | undefined
+): MediaAssetResponse["stats"] {
+  return {
+    viewCount: stats?.viewCount ?? 0,
+    reactionCount: stats?.reactionCount ?? 0,
+    favoriteCount: stats?.favoriteCount ?? 0,
+    commentCount: stats?.commentCount ?? 0,
+    shareCount: stats?.shareCount ?? 0,
+    downloadCount: stats?.downloadCount ?? 0,
+  };
 }
 
 function auditStatusToLegacy(status: string): number {
@@ -397,14 +425,7 @@ function auditStatusToLegacy(status: string): number {
 
 function normalizeMediaAsset(asset: MediaAssetResponse): MediaAssetResponse {
   const urls = asset.urls ?? { thumbnail: "", preview: "", detail: "", original: "" };
-  const stats = asset.stats ?? {
-    viewCount: 0,
-    reactionCount: 0,
-    favoriteCount: 0,
-    commentCount: 0,
-    shareCount: 0,
-    downloadCount: 0,
-  };
+  const stats = normalizeMediaStats(asset.stats);
   const owner = normalizeAccountSummary(asset.owner);
   const url = urls.original || urls.detail || urls.preview || urls.thumbnail || asset.url || "";
 
@@ -459,6 +480,7 @@ function normalizeProfilePost(post: ProfilePostResponse): ProfilePostResponse {
       shareCount: 0,
       downloadCount: 0,
     },
+    likedBy: post.likedBy ?? [],
     isLiked: post.isLiked ?? false,
     isFavorited: post.isFavorited ?? false,
   };
@@ -656,6 +678,20 @@ export async function fetchMediaAssetDetail(
   return normalizeMediaAsset(resp);
 }
 
+export async function downloadMediaAsset(
+  req: DownloadMediaAssetRequest
+): Promise<MediaAssetDownloadResponse> {
+  const resp = await request<MediaAssetDownloadResponse>(
+    "/api/media/download",
+    { id: req.id },
+    { requireAuth: true }
+  );
+  return {
+    ...resp,
+    stats: normalizeMediaStats(resp.stats),
+  };
+}
+
 export async function toggleMediaReaction(
   req: ToggleMediaReactionRequest
 ): Promise<MediaAssetToggleResponse> {
@@ -801,6 +837,62 @@ export async function updateProfileFeaturedMedia(
     { requireAuth: true }
   );
   return normalizeMediaAssetPage(page);
+}
+
+export async function followUser(
+  req: FollowTargetRequest
+): Promise<FollowStatusResponse> {
+  return request<FollowStatusResponse>("/api/follow/create", req, {
+    requireAuth: true,
+  });
+}
+
+export async function unfollowUser(
+  req: FollowTargetRequest
+): Promise<FollowStatusResponse> {
+  return request<FollowStatusResponse>("/api/follow/cancel", req, {
+    requireAuth: true,
+  });
+}
+
+export async function fetchFollowStatus(
+  req: FollowTargetRequest
+): Promise<FollowStatusResponse> {
+  return request<FollowStatusResponse>("/api/follow/status", req, {
+    requireAuth: true,
+  });
+}
+
+export async function fetchFollowerList(
+  req: FollowListRequest = {}
+): Promise<FollowUserListResponse> {
+  const page = await request<FollowUserListResponse>(
+    "/api/follow/follower/list",
+    req,
+    { requireAuth: true }
+  );
+  return {
+    ...page,
+    list: (page.list ?? [])
+      .map((user) => normalizeAccountSummary(user))
+      .filter((user): user is AccountSummary => Boolean(user)),
+  };
+}
+
+export async function fetchFollowingList(
+  req: FollowListRequest = {}
+): Promise<FollowUserListResponse> {
+  const page = await request<FollowUserListResponse>(
+    "/api/follow/following/list",
+    req,
+    { requireAuth: true }
+  );
+  return {
+    ...page,
+    list: (page.list ?? [])
+      .map((user) => normalizeAccountSummary(user))
+      .filter((user): user is AccountSummary => Boolean(user)),
+  };
 }
 
 export async function fetchProfileAlbumList(

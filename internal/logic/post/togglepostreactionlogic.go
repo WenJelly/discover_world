@@ -61,5 +61,13 @@ func (l *TogglePostReactionLogic) TogglePostReaction(req *types.TogglePostReacti
 		return nil, commonresponse.InternalServerError("toggle post reaction failed")
 	}
 	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypePost, post.Id)
-	return &types.PostToggleResponse{Active: active, Stats: buildStats(stat)}, nil
+	likedByByPost, err := loadPostLikedBySummaries(l.ctx, l.svcCtx, []uint64{post.Id})
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query post liked users failed")
+	}
+	return &types.PostToggleResponse{
+		Active:  active,
+		Stats:   buildStats(stat),
+		LikedBy: nonNilAccountSummaries(likedByByPost[post.Id]),
+	}, nil
 }

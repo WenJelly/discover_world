@@ -46,8 +46,9 @@ type TogglePostFavoriteRequest struct {
 }
 
 type PostToggleResponse struct {
-	Active bool            `json:"active"`
-	Stats  MediaAssetStats `json:"stats"`
+	Active  bool             `json:"active"`
+	Stats   MediaAssetStats  `json:"stats"`
+	LikedBy []AccountSummary `json:"likedBy"`
 }
 
 type CreatePostCommentRequest struct {
