@@ -189,7 +189,7 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 		}
 	}
 
-	avatarURLs, err := loadAvatarURLsByOwner(ctx, svcCtx, profiles)
+	avatarURLs, err := LoadAvatarURLsByOwner(ctx, svcCtx, profiles)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +282,7 @@ func buildAccountSummary(_ *svc.ServiceContext, account *model.UserAccount, prof
 	}
 
 	// AvatarUrl is resolved by the caller (LoadAvatarURL for a single asset,
-	// loadAvatarURLsByOwner for lists) and assigned onto Owner.AvatarUrl after
+	// LoadAvatarURLsByOwner for lists) and assigned onto Owner.AvatarUrl after
 	// this summary is built — resolving it here would be N+1 queries per item.
 	return types.AccountSummary{
 		Id:        formatID(account.Id),
@@ -333,10 +333,10 @@ func collectAvatarAssetIDs(profiles map[uint64]*model.UserProfile) []uint64 {
 	return ids
 }
 
-// loadAvatarURLsByOwner bulk-resolves avatar URLs for a set of user profiles
+// LoadAvatarURLsByOwner bulk-resolves avatar URLs for a set of user profiles
 // (keyed by owner user ID), so a page of N assets costs only two extra
 // queries regardless of how many distinct owners it has.
-func loadAvatarURLsByOwner(ctx context.Context, svcCtx *svc.ServiceContext, profiles map[uint64]*model.UserProfile) (map[uint64]string, error) {
+func LoadAvatarURLsByOwner(ctx context.Context, svcCtx *svc.ServiceContext, profiles map[uint64]*model.UserProfile) (map[uint64]string, error) {
 	out := make(map[uint64]string, len(profiles))
 	if len(profiles) == 0 {
 		return out, nil

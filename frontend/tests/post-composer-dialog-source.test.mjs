@@ -11,10 +11,16 @@ test("post composer entry and dialog match the fresh-news card shape", async () 
     new URL("../src/components/post/PostComposerDialog.tsx", import.meta.url),
     "utf8"
   );
+  const entrySource =
+    accountSource.match(
+      /className="mb-6 flex justify-end pr-3 sm:pr-4"[\s\S]*?data-testid="profile-post-composer-entry"[\s\S]*?<\/Button>/
+    )?.[0] ?? "";
 
-  assert.match(accountSource, /className="mb-6 flex justify-end"/);
-  assert.match(accountSource, />\s*有什么新鲜事\?\s*</);
-  assert.match(accountSource, /aria-label="打开发布动态面板"/);
+  assert.notEqual(entrySource, "");
+  assert.match(entrySource, /className="mb-6 flex justify-end pr-3 sm:pr-4"/);
+  assert.match(entrySource, />\s*有什么新鲜事\?\s*</);
+  assert.match(entrySource, /aria-label="打开发布动态面板"/);
+  assert.doesNotMatch(entrySource, /<Send|<img|src="\/logo\.svg"/);
   assert.doesNotMatch(accountSource, /发表新动态/);
 
   assert.match(dialogSource, /<DialogTitle[\s\S]*分享新鲜事/);

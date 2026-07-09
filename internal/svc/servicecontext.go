@@ -35,6 +35,10 @@ type ServiceContext struct {
 	TaggingModel            model.TaggingModel
 	AssetLinkModel          model.AssetLinkModel
 	PostModel               model.PostModel
+	ForumBoardModel         model.ForumBoardModel
+	PostDiscussionModel     model.PostDiscussionModel
+	ModerationReportModel   model.ModerationReportModel
+	NotificationModel       model.NotificationModel
 	AlbumModel              model.AlbumModel
 	UserFollowModel         model.UserFollowModel
 	ReactionModel           model.ReactionModel
@@ -66,6 +70,10 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		TaggingModel:            model.NewTaggingModel(conn),
 		AssetLinkModel:          model.NewAssetLinkModel(conn),
 		PostModel:               model.NewPostModel(conn),
+		ForumBoardModel:         model.NewForumBoardModel(conn),
+		PostDiscussionModel:     model.NewPostDiscussionModel(conn),
+		ModerationReportModel:   model.NewModerationReportModel(conn),
+		NotificationModel:       model.NewNotificationModel(conn),
 		AlbumModel:              model.NewAlbumModel(conn),
 		UserFollowModel:         model.NewUserFollowModel(conn),
 		ReactionModel:           model.NewReactionModel(conn),
@@ -109,6 +117,10 @@ func (s *ServiceContext) withSession(session sqlx.Session) *ServiceContext {
 		TaggingModel:            model.NewTaggingModel(conn),
 		AssetLinkModel:          model.NewAssetLinkModel(conn),
 		PostModel:               model.NewPostModel(conn),
+		ForumBoardModel:         model.NewForumBoardModel(conn),
+		PostDiscussionModel:     model.NewPostDiscussionModel(conn),
+		ModerationReportModel:   model.NewModerationReportModel(conn),
+		NotificationModel:       model.NewNotificationModel(conn),
 		AlbumModel:              model.NewAlbumModel(conn),
 		UserFollowModel:         model.NewUserFollowModel(conn),
 		ReactionModel:           model.NewReactionModel(conn),

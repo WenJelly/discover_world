@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { AuthDialog } from "@/components/auth/AuthDialog";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 const navItems = [
     { name: "首页", href: "/" },
     { name: "发现", href: "/discover" },
+    { name: "公开动态", href: "/community" },
 ];
 
 type NavbarProps = {
@@ -394,7 +396,7 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                         aria-label="搜索全站内容"
                                         placeholder="搜索图片、动态、用户"
                                         autoComplete="off"
-                                        className={`h-[42px] rounded-lg border border-slate-200/80 bg-white pl-[52px] pr-4 text-[15px] font-normal text-slate-900 placeholder:text-slate-400 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus:border-indigo-400 focus:shadow-md focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-indigo-500/60 dark:focus:ring-indigo-500/20 ${
+                                        className={`h-[42px] rounded-lg border border-slate-200/80 bg-slate-100 pl-[52px] pr-4 text-[15px] font-normal text-slate-900 placeholder:text-slate-400 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md focus:border-indigo-400 focus:bg-white focus:shadow-md focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-indigo-500/60 dark:focus:ring-indigo-500/20 ${
                                             searchQuery ? 'pr-10' : ''
                                         }`}
                                     />
@@ -412,6 +414,7 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                             </form>
 
                             <div className="navbar-account-actions flex items-center gap-4">
+                                {isAuthenticated ? <NotificationBell /> : null}
                                 {isAuthenticated && user ? (
                                     <div ref={accountMenuRef} className="relative">
                                         <button
@@ -588,7 +591,7 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                             aria-label="搜索全站内容"
                                             placeholder="搜索图片、动态、用户"
                                             autoComplete="off"
-                                            className={`h-11 rounded-lg border border-slate-200 bg-white pl-[52px] text-[15px] font-normal placeholder:text-slate-400 transition-all dark:border-slate-700 dark:bg-slate-900 dark:placeholder:text-slate-500 ${
+                                            className={`h-11 rounded-lg border border-slate-200 bg-slate-100 pl-[52px] text-[15px] font-normal placeholder:text-slate-400 transition-all focus:bg-white dark:border-slate-700 dark:bg-slate-900 dark:placeholder:text-slate-500 ${
                                                 searchQuery ? 'pr-10' : 'pr-3'
                                             }`}
                                         />

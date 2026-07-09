@@ -18,6 +18,7 @@ import {
   Loader2,
   MessageCircle,
   Pencil,
+  Plus,
   RefreshCw,
   Settings2,
   Sparkles,
@@ -33,6 +34,8 @@ import {
   fetchProfileAlbumList,
   fetchProfileFeaturedMediaList,
   fetchProfilePostCursorList,
+  fetchFollowerList,
+  fetchFollowingList,
   fetchUserProfile,
   followUser,
   unfollowUser,
@@ -71,6 +74,7 @@ import {
 import { isForceDeleteMediaConflict } from "@/lib/api-error";
 import type {
   ImageItem,
+  AccountSummary,
   MediaAssetResponse,
   ProfileAlbumResponse,
   ProfilePostResponse,
@@ -79,6 +83,7 @@ import type {
 import { cn } from "@/lib/utils";
 
 type AccountTab = "posts" | "pictures" | "featured" | "albums";
+type FollowListKind = "followers" | "following";
 type DeleteConfirmation = {
   imageId: string;
   mode: "standard" | "force";
@@ -96,6 +101,10 @@ const POST_PAGE_SIZE = 10;
 const PICTURES_PAGE_SIZE = 20;
 const MAX_FEATURED_COUNT = 20;
 const ALBUM_PAGE_SIZE = 12;
+
+type LoadPostsOptions = {
+  silent?: boolean;
+};
 
 function getImageUrl(image: ImageItem) {
   return image.url;
@@ -139,6 +148,161 @@ function LoadingBlock() {
     <div className="flex min-h-64 items-center justify-center">
       <Loader2 className="size-6 animate-spin text-muted-foreground" />
     </div>
+  );
+}
+
+function FollowListDialog({
+  open,
+  onOpenChange,
+  targetUserId,
+  kind,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  targetUserId: string;
+  kind: FollowListKind;
+}) {
+  const [users, setUsers] = useState<AccountSummary[]>([]);
+  const [cursor, setCursor] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const title = kind === "followers" ? "粉丝列表" : "关注列表";
+
+  const load = useCallback(
+    async (mode: "reset" | "append" = "reset") => {
+      if (!targetUserId) return;
+      setLoading(true);
+      try {
+        const page =
+          kind === "followers"
+            ? await fetchFollowerList({
+                targetUserId,
+                cursor: mode === "append" ? cursor : "",
+                pageSize: 20,
+              })
+            : await fetchFollowingList({
+                targetUserId,
+                cursor: mode === "append" ? cursor : "",
+                pageSize: 20,
+              });
+        setUsers((current) =>
+          mode === "append" ? [...current, ...page.list] : page.list
+        );
+        setCursor(page.nextCursor);
+        setHasMore(page.hasMore);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [cursor, kind, targetUserId]
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    setCursor("");
+    void load("reset");
+    // Reset load should run only when the dialog target changes.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind, open, targetUserId]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            查看这个账户的{kind === "followers" ? "粉丝" : "关注"}用户。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[24rem] space-y-2 overflow-y-auto">
+          {loading && users.length === 0 ? (
+            <div className="flex justify-center py-8 text-muted-foreground">
+              <Loader2 className="size-5 animate-spin" aria-label="加载中" />
+            </div>
+          ) : users.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+              暂无用户
+            </p>
+          ) : (
+            users.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                onClick={() => {
+                  window.history.pushState({}, "", `/account?userId=${item.id}`);
+                  window.dispatchEvent(new Event("popstate"));
+                  onOpenChange(false);
+                }}
+              >
+                <Avatar className="size-9">
+                  {item.avatarUrl ? (
+                    <AvatarImage src={item.avatarUrl} alt={item.nickname || item.username} />
+                  ) : null}
+                  <AvatarFallback>
+                    {getAvatarFallback(item.nickname || item.username || "用户")}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-foreground">
+                    {item.nickname || item.username || "用户"}
+                  </span>
+                  {item.username ? (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      @{item.username}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+        {hasMore ? (
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={() => void load("append")}
+            >
+              {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+              加载更多
+            </Button>
+          </DialogFooter>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AlbumManagerDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>相册管理</DialogTitle>
+          <DialogDescription>
+            后端相册管理接口尚未开放，当前只能读取相册列表。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {["创建相册", "编辑相册", "删除相册", "添加作品"].map((label) => (
+            <Button key={label} type="button" variant="outline" disabled>
+              {label}
+            </Button>
+          ))}
+        </div>
+        <p className="rounded-lg bg-muted px-3 py-2 text-sm leading-6 text-muted-foreground">
+          需要后端补充创建相册、编辑相册、删除相册、维护相册作品的接口后，这里即可接入真实保存。
+        </p>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -189,6 +353,9 @@ export default function AccountDetailPage() {
   const [albums, setAlbums] = useState<ProfileAlbumResponse[]>([]);
   const [albumLoading, setAlbumLoading] = useState(false);
   const [albumError, setAlbumError] = useState<string | null>(null);
+  const [followListKind, setFollowListKind] =
+    useState<FollowListKind | null>(null);
+  const [albumManagerOpen, setAlbumManagerOpen] = useState(false);
 
   const ownerId = targetUserId || user?.id;
   const isOwnProfile = Boolean(user?.id && ownerId === user.id);
@@ -296,7 +463,7 @@ export default function AccountDetailPage() {
   }, [isAuthenticated, ownerId]);
 
   const loadPosts = useCallback(
-    async (reset = false) => {
+    async (reset = false, options: LoadPostsOptions = {}) => {
       if (!isAuthenticated || !ownerId) {
         setPosts([]);
         setPostError(null);
@@ -307,8 +474,10 @@ export default function AccountDetailPage() {
 
       if (reset) {
         postCursorRef.current = "";
+      }
+      if (reset && !options.silent) {
         setPostLoading(true);
-      } else {
+      } else if (!reset) {
         setPostLoadingMore(true);
       }
       setPostError(null);
@@ -324,7 +493,7 @@ export default function AccountDetailPage() {
         setPosts((current) => (reset ? resp.list : [...current, ...resp.list]));
       } catch (error) {
         setPostError(errorMessage(error, "动态加载失败"));
-        if (reset) {
+        if (reset && !options.silent) {
           setPosts([]);
           setPostHasMore(false);
         }
@@ -425,6 +594,10 @@ export default function AccountDetailPage() {
       setFollowPending(false);
     }
   }, [followPending, isOwnProfile, profile, toast]);
+
+  const openFollowList = (kind: FollowListKind) => {
+    setFollowListKind(kind);
+  };
 
   const handleImageClick = (image: ImageItem, index: number) => {
     setPreviewImage(image);
@@ -557,6 +730,11 @@ export default function AccountDetailPage() {
     setPosts((prev) => prev.map((item) => (item.id === post.id ? post : item)));
   };
 
+  const handlePostPinChanged = (post: ProfilePostResponse) => {
+    setPosts((prev) => prev.map((item) => (item.id === post.id ? post : item)));
+    void loadPosts(true, { silent: true });
+  };
+
   const postAuthor: PostAuthor | null = profile
     ? {
         username: profile.username,
@@ -678,12 +856,24 @@ export default function AccountDetailPage() {
                   </div>
                   <div className="mt-3 flex items-center gap-5 text-sm">
                     {stats.map((stat) => (
-                      <div key={stat.label}>
+                      <button
+                        key={stat.label}
+                        type="button"
+                        disabled={stat.label === "作品"}
+                        onClick={() =>
+                          stat.label === "粉丝"
+                            ? openFollowList("followers")
+                            : stat.label === "关注"
+                              ? openFollowList("following")
+                              : undefined
+                        }
+                        className="rounded-md text-left transition-colors enabled:hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-default"
+                      >
                         <span className="font-semibold text-foreground">
                           {formatCount(stat.value)}
                         </span>{" "}
                         <span className="text-muted-foreground">{stat.label}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -743,7 +933,10 @@ export default function AccountDetailPage() {
         {activeTab === "posts" ? (
           <>
             {isOwnProfile ? (
-              <div className="mb-6 flex justify-end">
+              <div
+                className="mb-6 flex justify-end pr-3 sm:pr-4"
+                data-testid="profile-post-composer-entry"
+              >
                 <Button
                   type="button"
                   size="lg"
@@ -751,7 +944,7 @@ export default function AccountDetailPage() {
                   aria-label="打开发布动态面板"
                   onClick={handleNewPost}
                 >
-                  最近有什么新鲜事吗?
+                  有什么新鲜事?
                 </Button>
               </div>
             ) : null}
@@ -770,6 +963,7 @@ export default function AccountDetailPage() {
                   canManage={isOwnProfile}
                   onDeleted={handlePostDeleted}
                   onUpdated={handlePostUpdated}
+                  onPinChanged={handlePostPinChanged}
                 />
               {postError ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
@@ -947,55 +1141,81 @@ export default function AccountDetailPage() {
           )}
           </div>
         ) : (
-          albumLoading ? (
-            <LoadingBlock />
-          ) : albumError ? (
-            <EmptyState title="相册加载失败" description={albumError} />
-          ) : albums.length === 0 ? (
-            <EmptyState title="暂无相册" description="创建的相册会展示在这里" />
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {albums.map((album) => {
-                const coverUrl = getMediaUrl(album.cover);
-                return (
-                  <article
-                    key={album.id}
-                    className="overflow-hidden rounded-lg border border-border bg-card"
-                  >
-                    <div className="aspect-video bg-muted">
-                      {coverUrl ? (
-                        <img
-                          src={coverUrl}
-                          alt={album.name}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-muted-foreground">
-                          <BookOpen className="size-8" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold text-foreground line-clamp-1">
-                        {album.name}
-                      </h3>
-                      {album.description ? (
-                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                          {album.description}
-                        </p>
-                      ) : null}
-                      <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-                        <span>{formatCount(album.itemCount)} 张</span>
-                        <span>{formatDate(album.updatedAt)}</span>
+          <div className="space-y-4">
+            {isOwnProfile ? (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAlbumManagerOpen(true)}
+                >
+                  <Plus className="size-4" />
+                  管理相册
+                </Button>
+              </div>
+            ) : null}
+            {albumLoading ? (
+              <LoadingBlock />
+            ) : albumError ? (
+              <EmptyState title="相册加载失败" description={albumError} />
+            ) : albums.length === 0 ? (
+              <EmptyState
+                title="暂无相册"
+                description="创建的相册会展示在这里"
+                action={
+                  isOwnProfile ? (
+                    <Button type="button" onClick={() => setAlbumManagerOpen(true)}>
+                      <Plus className="size-4" />
+                      创建相册
+                    </Button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {albums.map((album) => {
+                  const coverUrl = getMediaUrl(album.cover);
+                  return (
+                    <article
+                      key={album.id}
+                      className="overflow-hidden rounded-lg border border-border bg-card"
+                    >
+                      <div className="aspect-video bg-muted">
+                        {coverUrl ? (
+                          <img
+                            src={coverUrl}
+                            alt={album.name}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-muted-foreground">
+                            <BookOpen className="size-8" />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )
+                      <div className="p-4">
+                        <h3 className="font-semibold text-foreground line-clamp-1">
+                          {album.name}
+                        </h3>
+                        {album.description ? (
+                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                            {album.description}
+                          </p>
+                        ) : null}
+                        <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
+                          <span>{formatCount(album.itemCount)} 张</span>
+                          <span>{formatDate(album.updatedAt)}</span>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </main>
 
@@ -1116,7 +1336,24 @@ export default function AccountDetailPage() {
             onOpenChange={setShowUploadDialog}
             onUploaded={handleProfileUploadComplete}
           />
+          <AlbumManagerDialog
+            open={albumManagerOpen}
+            onOpenChange={setAlbumManagerOpen}
+          />
         </>
+      ) : null}
+
+      {followListKind ? (
+        <FollowListDialog
+          open={Boolean(followListKind)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setFollowListKind(null);
+            }
+          }}
+          targetUserId={ownerId ?? ""}
+          kind={followListKind}
+        />
       ) : null}
 
       {/* New Post Dialog */}

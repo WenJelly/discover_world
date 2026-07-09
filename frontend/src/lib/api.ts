@@ -1,6 +1,11 @@
 import type {
   AccountSummary,
+  AdminModeratePostRequest,
+  AdminQueryMediaAssetRequest,
   ApiResponse,
+  CreateForumPostRequest,
+  CreateModerationReportRequest,
+  CreatePostCommentRequest,
   CreatePostRequest,
   DetailAccountResponse,
   DetailUserResponse,
@@ -9,6 +14,14 @@ import type {
   FollowStatusResponse,
   FollowTargetRequest,
   FollowUserListResponse,
+  FollowingMediaListReq,
+  FollowingPostListReq,
+  ForumBoardListRequest,
+  ForumBoardListResponse,
+  ForumPostCursorPageResponse,
+  ForumPostListRequest,
+  ForumPostResponse,
+  GetPostDetailRequest,
   GetMediaAssetRequest,
   GetHomepageConfigRequest,
   GlobalSearchRequest,
@@ -25,12 +38,25 @@ import type {
   MediaAssetPageResponse,
   MediaAssetResponse,
   MediaAssetToggleResponse,
+  ModerationReportResponse,
   OverviewStatsResponse,
   PictureCursorListReq,
   PictureCursorPageResponse,
   PictureListReq,
   PicturePageResponse,
+  PinPostRequest,
+  PostCommentCursorListRequest,
+  PostCommentCursorPageResponse,
+  PostCommentResponse,
   PostToggleResponse,
+  PublicPostCursorPageResponse,
+  PublicPostListReq,
+  PublicPostResponse,
+  MarkAllNotificationsReadRequest,
+  MarkNotificationReadRequest,
+  NotificationCursorPageResponse,
+  NotificationListReq,
+  NotificationResponse,
   ProfileAlbumListReq,
   ProfileAlbumPageResponse,
   ProfileFeaturedMediaListReq,
@@ -39,12 +65,15 @@ import type {
   ProfilePostResponse,
   RegisterRequest,
   RegisterResponse,
+  ReviewMediaAssetRequest,
   ToggleMediaReactionRequest,
   UpdateHomepageFeaturedRequest,
   UpdateHomepageHeroRequest,
   UpdatePostRequest,
   UpdateProfileFeaturedMediaReq,
   UpdateUserRequest,
+  UnpinPostRequest,
+  UnreadNotificationCountResponse,
 } from "./types";
 import {
   buildAccountAvatarUploadFormData,
@@ -486,12 +515,79 @@ function normalizeProfilePost(post: ProfilePostResponse): ProfilePostResponse {
   };
 }
 
+function normalizePostComment(comment: PostCommentResponse): PostCommentResponse {
+  return {
+    ...comment,
+    author: normalizeAccountSummary(comment.author) ?? comment.author,
+  };
+}
+
+function normalizePostCommentPage(
+  page: PostCommentCursorPageResponse
+): PostCommentCursorPageResponse {
+  return {
+    ...page,
+    list: (page.list ?? []).map(normalizePostComment),
+  };
+}
+
+function normalizePublicPost(post: PublicPostResponse): PublicPostResponse {
+  return {
+    ...normalizeProfilePost(post),
+    author: normalizeAccountSummary(post.author) ?? post.author,
+  };
+}
+
+function normalizePublicPostPage(
+  page: PublicPostCursorPageResponse
+): PublicPostCursorPageResponse {
+  return {
+    ...page,
+    list: (page.list ?? []).map(normalizePublicPost),
+  };
+}
+
 function normalizeProfilePostPage(
   page: ProfilePostCursorPageResponse
 ): ProfilePostCursorPageResponse {
   return {
     ...page,
     list: (page.list ?? []).map(normalizeProfilePost),
+  };
+}
+
+function normalizeForumPost(post: ForumPostResponse): ForumPostResponse {
+  return {
+    ...post,
+    post: normalizePublicPost(post.post),
+  };
+}
+
+function normalizeForumPostPage(
+  page: ForumPostCursorPageResponse
+): ForumPostCursorPageResponse {
+  return {
+    ...page,
+    list: (page.list ?? []).map(normalizeForumPost),
+  };
+}
+
+function normalizeNotification(
+  notification: NotificationResponse
+): NotificationResponse {
+  return {
+    ...notification,
+    actor: normalizeAccountSummary(notification.actor) ?? notification.actor,
+    isRead: Boolean(notification.isRead),
+  };
+}
+
+function normalizeNotificationPage(
+  page: NotificationCursorPageResponse
+): NotificationCursorPageResponse {
+  return {
+    ...page,
+    list: (page.list ?? []).map(normalizeNotification),
   };
 }
 
@@ -658,6 +754,149 @@ export function fetchOverviewStats(): Promise<OverviewStatsResponse> {
   return request<OverviewStatsResponse>("/api/overview/stats", {});
 }
 
+export async function fetchPublicPostCursorList(
+  req: PublicPostListReq = {}
+): Promise<PublicPostCursorPageResponse> {
+  const page = await request<PublicPostCursorPageResponse>(
+    "/api/post/public/list/cursor",
+    req
+  );
+  return normalizePublicPostPage(page);
+}
+
+export async function fetchPostDetail(
+  req: GetPostDetailRequest
+): Promise<ProfilePostResponse> {
+  const resp = await request<ProfilePostResponse>("/api/post/detail", req, {
+    requireAuth: true,
+  });
+  return normalizeProfilePost(resp);
+}
+
+export function fetchForumBoardList(
+  req: ForumBoardListRequest = {}
+): Promise<ForumBoardListResponse> {
+  return request<ForumBoardListResponse>("/api/forum/board/list", req);
+}
+
+export async function fetchForumPostCursorList(
+  req: ForumPostListRequest = {}
+): Promise<ForumPostCursorPageResponse> {
+  const page = await request<ForumPostCursorPageResponse>(
+    "/api/forum/post/list/cursor",
+    req
+  );
+  return normalizeForumPostPage(page);
+}
+
+export async function createForumPost(
+  req: CreateForumPostRequest
+): Promise<ForumPostResponse> {
+  const resp = await request<ForumPostResponse>(
+    "/api/forum/post/create",
+    req,
+    { requireAuth: true }
+  );
+  return normalizeForumPost(resp);
+}
+
+export async function adminLockForumPost(
+  req: AdminModeratePostRequest
+): Promise<void> {
+  return request<void>("/api/admin/forum/post/lock", req, {
+    requireAuth: true,
+  });
+}
+
+export async function adminUnlockForumPost(
+  req: AdminModeratePostRequest
+): Promise<void> {
+  return request<void>("/api/admin/forum/post/unlock", req, {
+    requireAuth: true,
+  });
+}
+
+export async function adminPinForumPost(
+  req: AdminModeratePostRequest
+): Promise<void> {
+  return request<void>("/api/admin/forum/post/pin", req, {
+    requireAuth: true,
+  });
+}
+
+export async function adminUnpinForumPost(
+  req: AdminModeratePostRequest
+): Promise<void> {
+  return request<void>("/api/admin/forum/post/unpin", req, {
+    requireAuth: true,
+  });
+}
+
+export async function fetchFollowingPostCursorList(
+  req: FollowingPostListReq = {}
+): Promise<PublicPostCursorPageResponse> {
+  const page = await request<PublicPostCursorPageResponse>(
+    "/api/feed/following/post/list/cursor",
+    req,
+    { requireAuth: true }
+  );
+  return normalizePublicPostPage(page);
+}
+
+export async function fetchFollowingMediaCursorList(
+  req: FollowingMediaListReq = {}
+): Promise<MediaAssetCursorPageResponse> {
+  const page = await request<MediaAssetCursorPageResponse>(
+    "/api/feed/following/media/list/cursor",
+    req,
+    { requireAuth: true }
+  );
+  return normalizeMediaAssetPage(page);
+}
+
+export async function createModerationReport(
+  req: CreateModerationReportRequest
+): Promise<ModerationReportResponse> {
+  return request<ModerationReportResponse>(
+    "/api/moderation/report/create",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export async function fetchNotificationCursorList(
+  req: NotificationListReq = {}
+): Promise<NotificationCursorPageResponse> {
+  const page = await request<NotificationCursorPageResponse>(
+    "/api/notification/list/cursor",
+    req,
+    { requireAuth: true }
+  );
+  return normalizeNotificationPage(page);
+}
+
+export function fetchUnreadNotificationCount(): Promise<UnreadNotificationCountResponse> {
+  return request<UnreadNotificationCountResponse>(
+    "/api/notification/unread/count",
+    {},
+    { requireAuth: true }
+  );
+}
+
+export function markNotificationRead(
+  req: MarkNotificationReadRequest
+): Promise<void> {
+  return request<void>("/api/notification/read", req, { requireAuth: true });
+}
+
+export function markAllNotificationsRead(
+  req: MarkAllNotificationsReadRequest = {}
+): Promise<void> {
+  return request<void>("/api/notification/read/all", req, {
+    requireAuth: true,
+  });
+}
+
 export async function deleteMediaAsset(
   id: string,
   options: { force?: boolean } = {}
@@ -673,6 +912,26 @@ export async function fetchMediaAssetDetail(
   req: GetMediaAssetRequest
 ): Promise<MediaAssetResponse> {
   const resp = await request<MediaAssetResponse>("/api/media/detail", req, {
+    requireAuth: true,
+  });
+  return normalizeMediaAsset(resp);
+}
+
+export async function fetchAdminMediaAssetList(
+  req: AdminQueryMediaAssetRequest = {}
+): Promise<MediaAssetPageResponse> {
+  const page = await request<MediaAssetPageResponse>(
+    "/api/admin/media/list",
+    req,
+    { requireAuth: true }
+  );
+  return normalizeMediaAssetPage(page);
+}
+
+export async function reviewMediaAsset(
+  req: ReviewMediaAssetRequest
+): Promise<MediaAssetResponse> {
+  const resp = await request<MediaAssetResponse>("/api/media/review", req, {
     requireAuth: true,
   });
   return normalizeMediaAsset(resp);
@@ -792,8 +1051,42 @@ export async function updatePost(
   return normalizeProfilePost(resp);
 }
 
+export async function pinPost(
+  req: PinPostRequest
+): Promise<ProfilePostResponse> {
+  const resp = await request<ProfilePostResponse>("/api/post/pin", req, {
+    requireAuth: true,
+  });
+  return normalizeProfilePost(resp);
+}
+
+export async function unpinPost(
+  req: UnpinPostRequest
+): Promise<ProfilePostResponse> {
+  const resp = await request<ProfilePostResponse>("/api/post/unpin", req, {
+    requireAuth: true,
+  });
+  return normalizeProfilePost(resp);
+}
+
 export async function deletePost(id: string): Promise<void> {
   return request<void>("/api/post/delete", { id }, { requireAuth: true });
+}
+
+export async function adminHidePost(
+  req: AdminModeratePostRequest
+): Promise<void> {
+  return request<void>("/api/admin/moderation/post/hide", req, {
+    requireAuth: true,
+  });
+}
+
+export async function adminRestorePost(
+  req: AdminModeratePostRequest
+): Promise<void> {
+  return request<void>("/api/admin/moderation/post/restore", req, {
+    requireAuth: true,
+  });
 }
 
 export async function togglePostReaction(
@@ -815,6 +1108,28 @@ export async function togglePostFavorite(
     { id },
     { requireAuth: true }
   );
+}
+
+export async function fetchPostCommentCursorList(
+  req: PostCommentCursorListRequest
+): Promise<PostCommentCursorPageResponse> {
+  const page = await request<PostCommentCursorPageResponse>(
+    "/api/post/comment/list/cursor",
+    req,
+    { requireAuth: true }
+  );
+  return normalizePostCommentPage(page);
+}
+
+export async function createPostComment(
+  req: CreatePostCommentRequest
+): Promise<PostCommentResponse> {
+  const resp = await request<PostCommentResponse>(
+    "/api/post/comment/create",
+    req,
+    { requireAuth: true }
+  );
+  return normalizePostComment(resp);
 }
 
 export async function fetchProfileFeaturedMediaList(

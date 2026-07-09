@@ -32,3 +32,10 @@ test("search page uses neutral text tabs instead of saturated pill tabs", async 
   assert.doesNotMatch(page, /bg-rose-600\s+text-white/);
   assert.doesNotMatch(page, /border-2\s+border-slate-200/);
 });
+
+test("search page main input uses a gray interior", async () => {
+  const { css } = await readSearchSources();
+
+  assert.match(css, /\.search-main-input\s*\{[^}]*background:\s*oklch\(0\.94/);
+  assert.doesNotMatch(css, /\.search-main-input\s*\{[^}]*background:\s*oklch\(0\.998/);
+});

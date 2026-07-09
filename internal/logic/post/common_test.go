@@ -2,10 +2,11 @@ package post
 
 import (
 	"database/sql"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
-	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
 )
@@ -168,7 +169,7 @@ func TestApplyPostViewerStateMarksLikedAndFavoritedPosts(t *testing.T) {
 }
 
 func TestBuildAccountSummaryKeepsEmailPrivate(t *testing.T) {
-	summary := buildAccountSummary(&svc.ServiceContext{}, &model.UserAccount{
+	summary := buildAccountSummary(&model.UserAccount{
 		Id:       7,
 		Username: "alice",
 		Email: sql.NullString{
@@ -182,7 +183,7 @@ func TestBuildAccountSummaryKeepsEmailPrivate(t *testing.T) {
 			String: "Alice Chen",
 			Valid:  true,
 		},
-	})
+	}, "")
 
 	if summary.Username != "alice" {
 		t.Fatalf("summary.Username = %q, want alice", summary.Username)
@@ -195,5 +196,21 @@ func TestBuildAccountSummaryKeepsEmailPrivate(t *testing.T) {
 	}
 	if summary.Role != "editor" {
 		t.Fatalf("summary.Role = %q, want role column value", summary.Role)
+	}
+}
+
+func TestPostAccountSummaryResolvesAvatarURLSourceContract(t *testing.T) {
+	source, err := os.ReadFile("common.go")
+	if err != nil {
+		t.Fatalf("read common.go: %v", err)
+	}
+	text := string(source)
+	for _, fragment := range []string{
+		"mediaLogic.LoadAvatarURLsByOwner(ctx, svcCtx, profiles)",
+		"AvatarUrl: avatarURL",
+	} {
+		if !strings.Contains(text, fragment) {
+			t.Fatalf("common.go missing avatar source fragment %q", fragment)
+		}
 	}
 }

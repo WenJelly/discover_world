@@ -6,6 +6,9 @@ package post
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"strings"
+	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
@@ -49,6 +52,13 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 	if err != nil {
 		return nil, err
 	}
+	discussion, err := l.svcCtx.PostDiscussionModel.FindByPostID(l.ctx, post.Id)
+	if err != nil && !errors.Is(err, model.ErrNotFound) {
+		return nil, commonresponse.InternalServerError("query forum post failed")
+	}
+	if discussion != nil && discussion.IsLocked == 1 {
+		return nil, commonresponse.Forbidden("forum post is locked")
+	}
 
 	var commentID uint64
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
@@ -70,7 +80,29 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 			return sql.ErrNoRows
 		}
 		commentID = uint64(id)
-		return txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "comment_count", 1)
+		if err := txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "comment_count", 1); err != nil {
+			return err
+		}
+		if err := txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypePost, post.Id, "comment_count", 1); err != nil {
+			return err
+		}
+		if err := txSvc.PostDiscussionModel.TouchActivity(ctx, post.Id, time.Now()); err != nil {
+			return err
+		}
+		if post.UserId != loginUser.Id {
+			if _, err := txSvc.NotificationModel.Insert(ctx, &model.Notification{
+				RecipientUserId: post.UserId,
+				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
+				EventType:       "post_comment",
+				TargetType:      targetTypePost,
+				TargetId:        post.Id,
+				Title:           "新的评论",
+				Content:         sql.NullString{String: content, Valid: strings.TrimSpace(content) != ""},
+			}); err != nil {
+				logx.WithContext(ctx).Errorf("create post comment notification failed: postId=%d actorId=%d err=%v", post.Id, loginUser.Id, err)
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("create post comment failed")

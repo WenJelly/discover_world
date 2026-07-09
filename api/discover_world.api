@@ -437,6 +437,135 @@ type (
 		NextCursor string                `json:"nextCursor"`
 		List       []PostCommentResponse `json:"list"`
 	}
+	PublicPostListRequest {
+		Cursor     string              `json:"cursor,optional"`
+		PageSize   int64               `json:"pageSize,optional"`
+		Sort       string              `json:"sort,optional"`
+		SearchText string              `json:"searchText,optional"`
+		Variant    MediaVariantRequest `json:"variantOption,optional"`
+	}
+	PublicPostResponse {
+		Id          string               `json:"id"`
+		UserId      string               `json:"userId"`
+		Author      AccountSummary       `json:"author"`
+		Content     string               `json:"content"`
+		Visibility  string               `json:"visibility"`
+		Status      string               `json:"status"`
+		Location    string               `json:"location"`
+		Images      []MediaAssetResponse `json:"images"`
+		Stats       MediaAssetStats      `json:"stats"`
+		LikedBy     []AccountSummary     `json:"likedBy"`
+		IsLiked     bool                 `json:"isLiked"`
+		IsFavorited bool                 `json:"isFavorited"`
+		CreatedAt   string               `json:"createdAt"`
+		UpdatedAt   string               `json:"updatedAt"`
+	}
+	PublicPostCursorPageResponse {
+		PageSize   int64                `json:"pageSize"`
+		HasMore    bool                 `json:"hasMore"`
+		NextCursor string               `json:"nextCursor"`
+		List       []PublicPostResponse `json:"list"`
+	}
+	ForumBoardListRequest {
+		PageSize int64 `json:"pageSize,optional"`
+	}
+	ForumBoardResponse {
+		Id          string `json:"id"`
+		Slug        string `json:"slug"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Status      string `json:"status"`
+		SortOrder   int64  `json:"sortOrder"`
+		CreatedAt   string `json:"createdAt"`
+		UpdatedAt   string `json:"updatedAt"`
+	}
+	ForumBoardListResponse {
+		List []ForumBoardResponse `json:"list"`
+	}
+	ForumPostListRequest {
+		BoardId  string              `json:"boardId,optional"`
+		Cursor   string              `json:"cursor,optional"`
+		PageSize int64               `json:"pageSize,optional"`
+		Variant  MediaVariantRequest `json:"variantOption,optional"`
+	}
+	ForumPostResponse {
+		Post          PublicPostResponse `json:"post"`
+		Board         ForumBoardResponse `json:"board"`
+		Title         string             `json:"title"`
+		IsLocked      bool               `json:"isLocked"`
+		IsBoardPinned bool               `json:"isBoardPinned"`
+		LastActivityAt string            `json:"lastActivityAt"`
+	}
+	ForumPostCursorPageResponse {
+		PageSize   int64               `json:"pageSize"`
+		HasMore    bool                `json:"hasMore"`
+		NextCursor string              `json:"nextCursor"`
+		List       []ForumPostResponse `json:"list"`
+	}
+	CreateForumPostRequest {
+		BoardId    string   `json:"boardId"`
+		Title      string   `json:"title"`
+		Content    string   `json:"content,optional"`
+		Location   string   `json:"location,optional"`
+		ImageIds   []string `json:"imageIds,optional"`
+	}
+	CreateModerationReportRequest {
+		TargetType  string `json:"targetType"`
+		TargetId    string `json:"targetId"`
+		Reason      string `json:"reason"`
+		Description string `json:"description,optional"`
+	}
+	ModerationReportResponse {
+		Id         string `json:"id"`
+		TargetType string `json:"targetType"`
+		TargetId   string `json:"targetId"`
+		Reason     string `json:"reason"`
+		Status     string `json:"status"`
+		CreatedAt  string `json:"createdAt"`
+	}
+	AdminModeratePostRequest {
+		Id string `json:"id"`
+	}
+	NotificationListRequest {
+		Cursor   string `json:"cursor,optional"`
+		PageSize int64  `json:"pageSize,optional"`
+	}
+	NotificationResponse {
+		Id          string         `json:"id"`
+		ActorUserId string        `json:"actorUserId"`
+		Actor       AccountSummary `json:"actor"`
+		EventType   string        `json:"eventType"`
+		TargetType  string        `json:"targetType"`
+		TargetId    string        `json:"targetId"`
+		Title       string        `json:"title"`
+		Content     string        `json:"content"`
+		IsRead      bool          `json:"isRead"`
+		CreatedAt   string        `json:"createdAt"`
+	}
+	NotificationCursorPageResponse {
+		PageSize   int64                  `json:"pageSize"`
+		HasMore    bool                   `json:"hasMore"`
+		NextCursor string                 `json:"nextCursor"`
+		List       []NotificationResponse `json:"list"`
+	}
+	UnreadNotificationCountRequest {}
+	UnreadNotificationCountResponse {
+		UnreadCount int64 `json:"unreadCount"`
+	}
+	MarkNotificationReadRequest {
+		Id string `json:"id"`
+	}
+	MarkAllNotificationsReadRequest {}
+	FollowingPostListRequest {
+		Cursor   string              `json:"cursor,optional"`
+		PageSize int64               `json:"pageSize,optional"`
+		Variant  MediaVariantRequest `json:"variantOption,optional"`
+	}
+	FollowingMediaListRequest {
+		Cursor   string              `json:"cursor,optional"`
+		PageSize int64               `json:"pageSize,optional"`
+		Variant  MediaVariantRequest `json:"variantOption,optional"`
+	}
 	ProfileFeaturedMediaListRequest {
 		UserId   string              `json:"userId,optional"`
 		PageSize int64               `json:"pageSize,optional"`
@@ -569,6 +698,15 @@ service DiscoverWorld {
 @server (
 	prefix: /api
 	group:  post
+)
+service DiscoverWorld {
+	@handler GetPublicPostCursorList
+	post /post/public/list/cursor (PublicPostListRequest) returns (PublicPostCursorPageResponse)
+}
+
+@server (
+	prefix: /api
+	group:  post
 	jwt:    Auth
 )
 service DiscoverWorld {
@@ -601,6 +739,70 @@ service DiscoverWorld {
 
 	@handler GetPostCommentCursorList
 	post /post/comment/list/cursor (PostCommentCursorListRequest) returns (PostCommentCursorPageResponse)
+}
+
+@server (
+	prefix: /api
+	group:  forum
+)
+service DiscoverWorld {
+	@handler GetForumBoardList
+	post /forum/board/list (ForumBoardListRequest) returns (ForumBoardListResponse)
+
+	@handler GetForumPostCursorList
+	post /forum/post/list/cursor (ForumPostListRequest) returns (ForumPostCursorPageResponse)
+}
+
+@server (
+	prefix: /api
+	group:  forum
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler CreateForumPost
+	post /forum/post/create (CreateForumPostRequest) returns (ForumPostResponse)
+}
+
+@server (
+	prefix: /api
+	group:  moderation
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler CreateModerationReport
+	post /moderation/report/create (CreateModerationReportRequest) returns (ModerationReportResponse)
+}
+
+@server (
+	prefix: /api
+	group:  notification
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler GetNotificationCursorList
+	post /notification/list/cursor (NotificationListRequest) returns (NotificationCursorPageResponse)
+
+	@handler GetUnreadNotificationCount
+	post /notification/unread/count (UnreadNotificationCountRequest) returns (UnreadNotificationCountResponse)
+
+	@handler MarkNotificationRead
+	post /notification/read (MarkNotificationReadRequest)
+
+	@handler MarkAllNotificationsRead
+	post /notification/read/all (MarkAllNotificationsReadRequest)
+}
+
+@server (
+	prefix: /api
+	group:  feed
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler GetFollowingPostCursorList
+	post /feed/following/post/list/cursor (FollowingPostListRequest) returns (PublicPostCursorPageResponse)
+
+	@handler GetFollowingMediaCursorList
+	post /feed/following/media/list/cursor (FollowingMediaListRequest) returns (MediaAssetCursorPageResponse)
 }
 
 @server (
@@ -710,4 +912,30 @@ service DiscoverWorld {
 service DiscoverWorld {
 	@handler ReviewMediaAsset
 	post /media/review (ReviewMediaAssetRequest) returns (MediaAssetResponse)
+}
+
+@server (
+	prefix:     /api/admin
+	group:      moderation
+	jwt:        Auth
+	middleware: AdminCheck
+)
+service DiscoverWorld {
+	@handler AdminHidePost
+	post /moderation/post/hide (AdminModeratePostRequest)
+
+	@handler AdminRestorePost
+	post /moderation/post/restore (AdminModeratePostRequest)
+
+	@handler AdminLockForumPost
+	post /forum/post/lock (AdminModeratePostRequest)
+
+	@handler AdminUnlockForumPost
+	post /forum/post/unlock (AdminModeratePostRequest)
+
+	@handler AdminPinForumPost
+	post /forum/post/pin (AdminModeratePostRequest)
+
+	@handler AdminUnpinForumPost
+	post /forum/post/unpin (AdminModeratePostRequest)
 }

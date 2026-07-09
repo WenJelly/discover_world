@@ -5,6 +5,7 @@ package media
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	commonauth "discover_world/internal/common/auth"
@@ -70,6 +71,19 @@ func (l *ToggleMediaReactionLogic) ToggleMediaReaction(req *types.ToggleMediaRea
 		if txSvc.EntityStatHourlyModel != nil {
 			if err := txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypeMediaAsset, asset.Id, "reaction_count", delta); err != nil {
 				logx.WithContext(ctx).Errorf("record media hourly reaction stat failed: assetId=%d err=%v", asset.Id, err)
+			}
+		}
+		if nextActive && asset.OwnerUserId != loginUser.Id {
+			if _, err := txSvc.NotificationModel.Insert(ctx, &model.Notification{
+				RecipientUserId: asset.OwnerUserId,
+				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
+				EventType:       "media_reaction",
+				TargetType:      targetTypeMediaAsset,
+				TargetId:        asset.Id,
+				Title:           "新的点赞",
+				Content:         sql.NullString{String: reactionType, Valid: reactionType != ""},
+			}); err != nil {
+				logx.WithContext(ctx).Errorf("create media reaction notification failed: assetId=%d actorId=%d err=%v", asset.Id, loginUser.Id, err)
 			}
 		}
 		return nil

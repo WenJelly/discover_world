@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Globe2, Loader2, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { PostVisibilityValue } from "./postVisibility";
 
@@ -73,14 +74,16 @@ export function PostVisibilityMenu({
 
   return (
     <div className="relative" ref={menuRef}>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="default"
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
         aria-label={ariaLabel}
         aria-expanded={open}
         className={cn(
-          "inline-flex h-8 min-w-[7.5rem] items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "h-8 min-w-[7.5rem] justify-start gap-1 rounded-md px-2 text-xs font-normal text-muted-foreground disabled:cursor-not-allowed",
           buttonClassName
         )}
       >
@@ -93,7 +96,7 @@ export function PostVisibilityMenu({
         ) : (
           <ChevronDown className="size-3.5 shrink-0" />
         )}
-      </button>
+      </Button>
       {open ? (
         <div
           role="listbox"

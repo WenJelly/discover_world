@@ -194,6 +194,42 @@ test("discover toolbar controls stay visible on every tab and use quiet layout i
   );
 });
 
+test("discover toolbar controls align to the gallery content edge", async () => {
+  const css = await readFile(new URL("../src/index.css", import.meta.url), "utf8");
+
+  const pageStyles = css.match(/\.discover-page\s*\{(?<styles>[^}]*)\}/s)
+    ?.groups?.styles ?? "";
+  const toolbarInnerStyles =
+    css.match(/\.discover-page \.discover-toolbar__inner\s*\{(?<styles>[^}]*)\}/)
+      ?.groups?.styles ?? "";
+  const leftNavigationStyles =
+    css.match(/\.discover-page \.discover_layout_navigation\s*\{(?<styles>[^}]*)\}/)
+      ?.groups?.styles ?? "";
+  const rightNavigationStyles =
+    css.match(/\.discover-page \.discover-filter-navigation\s*\{(?<styles>[^}]*)\}/)
+      ?.groups?.styles ?? "";
+  const photoGridStyles =
+    css.match(/\.discover-page \.photo_grid_region\s*\{(?<styles>[^}]*)\}/)
+      ?.groups?.styles ?? "";
+
+  assert.match(pageStyles, /--discover-content-edge:\s*40px;/);
+  assert.match(toolbarInnerStyles, /padding:\s*0 var\(--discover-content-edge\);/);
+  assert.match(leftNavigationStyles, /left:\s*var\(--discover-content-edge\);/);
+  assert.match(rightNavigationStyles, /right:\s*var\(--discover-content-edge\);/);
+  assert.match(
+    photoGridStyles,
+    /padding:\s*20px var\(--discover-content-edge\) 56px;/
+  );
+  assert.match(
+    css,
+    /@media only screen and \(max-width: 1024px\)\s*\{[\s\S]*?\.discover-page\s*\{[^}]*--discover-content-edge:\s*20px;/
+  );
+  assert.match(
+    css,
+    /@media only screen and \(max-width: 720px\)\s*\{[\s\S]*?\.discover-page\s*\{[^}]*--discover-content-edge:\s*5px;/
+  );
+});
+
 test("discover category filters are sent to cursor requests before local filtering", async () => {
   const discoverPage = await readFile(pageUrl, "utf8");
   const discoverLib = await readFile(libUrl, "utf8");

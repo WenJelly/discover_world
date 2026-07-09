@@ -5,10 +5,12 @@ package post
 
 import (
 	"context"
+	"database/sql"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
+	"discover_world/model"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -55,7 +57,26 @@ func (l *TogglePostReactionLogic) TogglePostReaction(req *types.TogglePostReacti
 			return err
 		}
 		active = nextActive
-		return txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "reaction_count", delta)
+		if err := txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "reaction_count", delta); err != nil {
+			return err
+		}
+		if err := txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypePost, post.Id, "reaction_count", delta); err != nil {
+			return err
+		}
+		if nextActive && post.UserId != loginUser.Id {
+			if _, err := txSvc.NotificationModel.Insert(ctx, &model.Notification{
+				RecipientUserId: post.UserId,
+				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
+				EventType:       "post_reaction",
+				TargetType:      targetTypePost,
+				TargetId:        post.Id,
+				Title:           "新的点赞",
+				Content:         sql.NullString{String: reactionType, Valid: reactionType != ""},
+			}); err != nil {
+				logx.WithContext(ctx).Errorf("create post reaction notification failed: postId=%d actorId=%d err=%v", post.Id, loginUser.Id, err)
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("toggle post reaction failed")

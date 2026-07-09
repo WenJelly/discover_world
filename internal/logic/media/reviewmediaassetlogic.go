@@ -5,6 +5,7 @@ package media
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"strings"
 	"time"
@@ -67,6 +68,25 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 	asset.MetadataJson = mergeReviewMetadata(asset.MetadataJson, strings.TrimSpace(req.ReviewMessage), formatID(adminUser.Id), formatTime(now))
 	if err := l.svcCtx.MediaAssetModel.Update(l.ctx, asset); err != nil {
 		return nil, commonresponse.InternalServerError("审核媒体资源失败")
+	}
+	if asset.OwnerUserId != adminUser.Id {
+		title := "作品审核已更新"
+		if auditStatus == "approved" {
+			title = "作品审核通过"
+		} else if auditStatus == "rejected" {
+			title = "作品审核未通过"
+		}
+		if _, err := l.svcCtx.NotificationModel.Insert(l.ctx, &model.Notification{
+			RecipientUserId: asset.OwnerUserId,
+			ActorUserId:     sql.NullInt64{Int64: int64(adminUser.Id), Valid: true},
+			EventType:       "media_review",
+			TargetType:      targetTypeMediaAsset,
+			TargetId:        asset.Id,
+			Title:           title,
+			Content:         sql.NullString{String: strings.TrimSpace(req.ReviewMessage), Valid: strings.TrimSpace(req.ReviewMessage) != ""},
+		}); err != nil {
+			l.Errorf("create media review notification failed: assetId=%d ownerId=%d err=%v", asset.Id, asset.OwnerUserId, err)
+		}
 	}
 
 	owner, _ := l.svcCtx.UserAccountModel.FindOne(l.ctx, asset.OwnerUserId)

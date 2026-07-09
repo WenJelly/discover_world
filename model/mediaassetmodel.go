@@ -22,6 +22,7 @@ type (
 		FindPublicApprovedByIDs(ctx context.Context, ids []uint64) (map[uint64]*MediaAsset, error)
 		FindOwnerPublicApprovedByIDs(ctx context.Context, ownerUserID uint64, ids []uint64) (map[uint64]*MediaAsset, error)
 		CountPublicApprovedByOwner(ctx context.Context, ownerUserID uint64) (int64, error)
+		FindPublicWorkByOwnersBeforeID(ctx context.Context, ownerIDs []uint64, beforeID uint64, limit int64) ([]*MediaAsset, error)
 		FindByWhere(ctx context.Context, whereSQL, orderSQL string, limit, offset int64, args ...any) ([]*MediaAsset, error)
 		FindByWhereBeforeID(ctx context.Context, whereSQL, orderSQL string, beforeID, limit int64, args ...any) ([]*MediaAsset, error)
 		FindByWhereBeforeCreatedAt(ctx context.Context, whereSQL string, beforeCreatedAt time.Time, beforeID uint64, limit int64, args ...any) ([]*MediaAsset, error)
@@ -129,6 +130,45 @@ func (m *customMediaAssetModel) CountPublicApprovedByOwner(ctx context.Context, 
 	var resp int64
 	if err := m.conn.QueryRowCtx(ctx, &resp, query, ownerUserID); err != nil {
 		return 0, err
+	}
+	return resp, nil
+}
+
+func (m *customMediaAssetModel) FindPublicWorkByOwnersBeforeID(ctx context.Context, ownerIDs []uint64, beforeID uint64, limit int64) ([]*MediaAsset, error) {
+	ownerIDs = uniquePositiveIDs(ownerIDs)
+	if len(ownerIDs) == 0 {
+		return []*MediaAsset{}, nil
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	args := make([]any, 0, len(ownerIDs)+2)
+	for _, id := range ownerIDs {
+		args = append(args, id)
+	}
+	conditions := []string{
+		fmt.Sprintf("`owner_user_id` in (%s)", inPlaceholders(len(ownerIDs))),
+		"`status` = 'active'",
+		"`visibility` = 'public'",
+		"`audit_status` = 'approved'",
+		"`asset_usage` = 'work'",
+		"`deleted_at` is null",
+	}
+	if beforeID > 0 {
+		conditions = append(conditions, "`id` < ?")
+		args = append(args, beforeID)
+	}
+
+	query := fmt.Sprintf("select %s from %s where %s order by `id` desc limit ?", mediaAssetRows, m.table, strings.Join(conditions, " and "))
+	args = append(args, limit)
+
+	var resp []*MediaAsset
+	if err := m.conn.QueryRowsCtx(ctx, &resp, query, args...); err != nil {
+		return nil, err
 	}
 	return resp, nil
 }

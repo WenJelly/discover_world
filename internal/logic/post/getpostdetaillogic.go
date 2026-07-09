@@ -43,7 +43,12 @@ func (l *GetPostDetailLogic) GetPostDetail(req *types.GetPostDetailRequest) (*ty
 	if err != nil {
 		return nil, err
 	}
-	if err := l.svcCtx.EntityStatModel.IncrementCounter(l.ctx, targetTypePost, post.Id, "view_count", 1); err != nil {
+	if err := l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
+		if err := txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "view_count", 1); err != nil {
+			return err
+		}
+		return txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypePost, post.Id, "view_count", 1)
+	}); err != nil {
 		return nil, commonresponse.InternalServerError("update post view count failed")
 	}
 	return buildPostResponse(l.ctx, l.svcCtx, post, loginUser)

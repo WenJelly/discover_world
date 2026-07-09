@@ -10,6 +10,7 @@ export type PostTimelineProps = {
   canManage?: boolean;
   onDeleted?: (id: string) => void;
   onUpdated?: (post: ProfilePostResponse) => void;
+  onPinChanged?: (post: ProfilePostResponse) => void;
 };
 
 type PostGroup = {
@@ -88,6 +89,7 @@ export function PostTimeline({
   canManage = false,
   onDeleted,
   onUpdated,
+  onPinChanged,
 }: PostTimelineProps) {
   const now = new Date();
   const groups = groupPostsByDay(posts, now);
@@ -136,6 +138,7 @@ export function PostTimeline({
                   canManage={canManage}
                   onDeleted={onDeleted}
                   onUpdated={onUpdated}
+                  onPinChanged={onPinChanged}
                 />
               </li>
             ))}

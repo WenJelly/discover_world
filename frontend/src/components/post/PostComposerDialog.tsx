@@ -263,7 +263,7 @@ export function PostComposerDialog({
               ref={textareaRef}
               value={content}
               onChange={(event) => setContent(event.target.value)}
-              placeholder="注意，这个人有话要说！"
+              placeholder="有什么新鲜事想分享？"
               rows={denseImageGrid ? 5 : 7}
               disabled={submitting}
               autoFocus

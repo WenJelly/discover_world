@@ -10,12 +10,15 @@ import {
   ArrowLeft,
   ArrowRight,
   Crosshair,
+  EyeOff,
   ImagePlus,
   LayoutGrid,
   Loader2,
+  MessageSquare,
   Plus,
   RefreshCw,
   Replace,
+  RotateCcw,
   ShieldAlert,
   Sparkles,
   Trash2,
@@ -27,13 +30,28 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
+  adminHidePost,
+  adminLockForumPost,
+  adminPinForumPost,
+  adminRestorePost,
+  adminUnlockForumPost,
+  adminUnpinForumPost,
   ApiError,
+  fetchAdminMediaAssetList,
+  fetchForumPostCursorList,
   fetchHomepageConfig,
+  fetchPublicPostCursorList,
+  reviewMediaAsset,
   updateHomepageFeatured,
   updateHomepageHero,
 } from "@/lib/api";
 import { getMediaDetailUrl, getMediaUrl } from "@/lib/format";
-import type { HomepageConfigResponse, MediaAssetResponse } from "@/lib/types";
+import type {
+  ForumPostResponse,
+  HomepageConfigResponse,
+  MediaAssetResponse,
+  PublicPostResponse,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const MAX_FEATURED_COUNT = 20;
@@ -62,6 +80,14 @@ type HeroDraft = {
   focalY: number;
 };
 
+type AdminTab = "homepage" | "mediaReview" | "moderation";
+
+const ADMIN_TABS: Array<{ id: AdminTab; label: string }> = [
+  { id: "homepage", label: "首页配置" },
+  { id: "mediaReview", label: "媒体审核" },
+  { id: "moderation", label: "内容治理" },
+];
+
 function navigateTo(path: string) {
   window.history.pushState({}, "", path);
   window.dispatchEvent(new Event("popstate"));
@@ -89,6 +115,15 @@ export default function AdminPage() {
   const [heroPickerOpen, setHeroPickerOpen] = useState(false);
   const [featuredPickerOpen, setFeaturedPickerOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [activeTab, setActiveTab] = useState<AdminTab>("homepage");
+  const [pendingMedia, setPendingMedia] = useState<MediaAssetResponse[]>([]);
+  const [mediaReviewLoading, setMediaReviewLoading] = useState(false);
+  const [mediaReviewMessage, setMediaReviewMessage] = useState("");
+  const [reviewingMediaId, setReviewingMediaId] = useState("");
+  const [moderationPosts, setModerationPosts] = useState<PublicPostResponse[]>([]);
+  const [moderationForumPosts, setModerationForumPosts] = useState<ForumPostResponse[]>([]);
+  const [moderationLoading, setModerationLoading] = useState(false);
+  const [moderatingId, setModeratingId] = useState("");
 
   const heroPreviewRef = useRef<HTMLDivElement | null>(null);
 
@@ -117,10 +152,68 @@ export default function AdminPage() {
     }
   }, [applyConfig]);
 
+  const loadPendingMedia = useCallback(async () => {
+    setMediaReviewLoading(true);
+    try {
+      const page = await fetchAdminMediaAssetList({
+        auditStatus: "pending",
+        pageNum: 1,
+        pageSize: 24,
+        variantOption: { compressType: 2 },
+      });
+      setPendingMedia(page.list ?? []);
+    } catch (error) {
+      toast({
+        title: "待审核作品加载失败",
+        description: getErrorMessage(error, "请稍后重试"),
+        variant: "destructive",
+      });
+    } finally {
+      setMediaReviewLoading(false);
+    }
+  }, [toast]);
+
+  const loadModerationContent = useCallback(async () => {
+    setModerationLoading(true);
+    try {
+      const [posts, forums] = await Promise.all([
+        fetchPublicPostCursorList({
+          pageSize: 20,
+          sort: "latest",
+          variantOption: { compressType: 2 },
+        }),
+        fetchForumPostCursorList({
+          pageSize: 20,
+          variantOption: { compressType: 2 },
+        }),
+      ]);
+      setModerationPosts(posts.list ?? []);
+      setModerationForumPosts(forums.list ?? []);
+    } catch (error) {
+      toast({
+        title: "治理内容加载失败",
+        description: getErrorMessage(error, "请稍后重试"),
+        variant: "destructive",
+      });
+    } finally {
+      setModerationLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     if (!isAdmin) return;
     loadConfig();
   }, [isAdmin, loadConfig]);
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== "mediaReview") return;
+    void loadPendingMedia();
+  }, [activeTab, isAdmin, loadPendingMedia]);
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== "moderation") return;
+    void loadModerationContent();
+  }, [activeTab, isAdmin, loadModerationContent]);
 
   const heroDirty = useMemo(() => {
     if (!config) return false;
@@ -219,6 +312,115 @@ export default function AdminPage() {
     }
   };
 
+  const handleReviewMedia = async (
+    asset: MediaAssetResponse,
+    auditStatus: "approved" | "rejected"
+  ) => {
+    setReviewingMediaId(asset.id);
+    try {
+      await reviewMediaAsset({
+        id: asset.id,
+        auditStatus,
+        reviewMessage: mediaReviewMessage.trim() || undefined,
+      });
+      setPendingMedia((current) => current.filter((item) => item.id !== asset.id));
+      setMediaReviewMessage("");
+      toast({
+        title: auditStatus === "approved" ? "作品已通过" : "作品已拒绝",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "审核操作失败",
+        description: getErrorMessage(error, "请稍后重试"),
+        variant: "destructive",
+      });
+    } finally {
+      setReviewingMediaId("");
+    }
+  };
+
+  const handleModeratePost = async (
+    post: PublicPostResponse,
+    action: "hide" | "restore"
+  ) => {
+    setModeratingId(post.id);
+    try {
+      if (action === "hide") {
+        await adminHidePost({ id: post.id });
+        setModerationPosts((current) =>
+          current.map((item) =>
+            item.id === post.id ? { ...item, status: "hidden" } : item
+          )
+        );
+      } else {
+        await adminRestorePost({ id: post.id });
+        setModerationPosts((current) =>
+          current.map((item) =>
+            item.id === post.id ? { ...item, status: "active" } : item
+          )
+        );
+      }
+      toast({ title: action === "hide" ? "动态已隐藏" : "动态已恢复", variant: "success" });
+    } catch (error) {
+      toast({
+        title: "动态治理失败",
+        description: getErrorMessage(error, "请稍后重试"),
+        variant: "destructive",
+      });
+    } finally {
+      setModeratingId("");
+    }
+  };
+
+  const handleModerateForumPost = async (
+    item: ForumPostResponse,
+    action: "lock" | "unlock" | "pin" | "unpin"
+  ) => {
+    setModeratingId(item.post.id);
+    try {
+      if (action === "lock") {
+        await adminLockForumPost({ id: item.post.id });
+      } else if (action === "unlock") {
+        await adminUnlockForumPost({ id: item.post.id });
+      } else if (action === "pin") {
+        await adminPinForumPost({ id: item.post.id });
+      } else {
+        await adminUnpinForumPost({ id: item.post.id });
+      }
+      setModerationForumPosts((current) =>
+        current.map((entry) =>
+          entry.post.id === item.post.id
+            ? {
+                ...entry,
+                isLocked:
+                  action === "lock"
+                    ? true
+                    : action === "unlock"
+                      ? false
+                      : entry.isLocked,
+                isBoardPinned:
+                  action === "pin"
+                    ? true
+                    : action === "unpin"
+                      ? false
+                      : entry.isBoardPinned,
+              }
+            : entry
+        )
+      );
+      toast({ title: "帖子治理操作已完成", variant: "success" });
+    } catch (error) {
+      toast({
+        title: "帖子治理失败",
+        description: getErrorMessage(error, "请稍后重试"),
+        variant: "destructive",
+      });
+    } finally {
+      setModeratingId("");
+    }
+  };
+
   const moveFeatured = (index: number, direction: -1 | 1) => {
     setFeaturedDraft((prev) => {
       const target = index + direction;
@@ -284,7 +486,26 @@ export default function AdminPage() {
           </p>
         </header>
 
-        {loading ? (
+        <nav className="flex gap-1 border-b border-slate-200 dark:border-slate-800" aria-label="后台管理导航">
+          {ADMIN_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "h-10 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20",
+                activeTab === tab.id
+                  ? "border-slate-950 text-slate-950 dark:border-slate-100 dark:text-slate-100"
+                  : "border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        {activeTab === "homepage" ? (
+          loading ? (
           <div
             className="flex flex-col gap-8"
             role="status"
@@ -293,7 +514,7 @@ export default function AdminPage() {
             <div className="h-96 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" />
             <div className="h-72 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" />
           </div>
-        ) : loadError ? (
+          ) : loadError ? (
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white py-20 text-center dark:border-slate-800 dark:bg-slate-900">
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {loadError}
@@ -674,6 +895,205 @@ export default function AdminPage() {
               </div>
             </section>
           </>
+          )
+        ) : activeTab === "mediaReview" ? (
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <ShieldAlert className="size-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                    媒体审核
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    查看待审核作品，并通过或拒绝公开展示。
+                  </p>
+                </div>
+              </div>
+              <Button type="button" variant="outline" onClick={() => void loadPendingMedia()}>
+                <RefreshCw className="size-4" aria-hidden="true" />
+                刷新
+              </Button>
+            </div>
+            <div className="space-y-4 px-6 py-6">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                审核备注
+                <textarea
+                  value={mediaReviewMessage}
+                  onChange={(event) => setMediaReviewMessage(event.target.value)}
+                  placeholder="拒绝时建议填写原因，通过可留空"
+                  rows={3}
+                  className="mt-2 w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950"
+                />
+              </label>
+              {mediaReviewLoading ? (
+                <div className="flex justify-center py-12 text-slate-500">
+                  <Loader2 className="size-5 animate-spin" aria-label="媒体审核加载中" />
+                </div>
+              ) : pendingMedia.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                  暂无待审核作品
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {pendingMedia.map((asset) => (
+                    <article key={asset.id} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
+                      <div className="aspect-[4/3] bg-slate-200 dark:bg-slate-800">
+                        <img
+                          src={getMediaUrl(asset)}
+                          alt={asset.title}
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="space-y-3 p-4">
+                        <div>
+                          <h3 className="line-clamp-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {asset.title}
+                          </h3>
+                          <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+                            {asset.owner?.nickname || asset.owner?.username || "未知用户"}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={reviewingMediaId === asset.id}
+                            onClick={() => void handleReviewMedia(asset, "approved")}
+                          >
+                            {reviewingMediaId === asset.id ? <Loader2 className="size-4 animate-spin" /> : null}
+                            通过
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            disabled={reviewingMediaId === asset.id}
+                            onClick={() => void handleReviewMedia(asset, "rejected")}
+                          >
+                            拒绝
+                          </Button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <MessageSquare className="size-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                    内容治理
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    隐藏或恢复动态，锁定/解锁论坛帖，并管理分区置顶。
+                  </p>
+                </div>
+              </div>
+              <Button type="button" variant="outline" onClick={() => void loadModerationContent()}>
+                <RefreshCw className="size-4" aria-hidden="true" />
+                刷新
+              </Button>
+            </div>
+            <div className="grid gap-6 px-6 py-6 lg:grid-cols-2">
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  动态
+                </h3>
+                {moderationLoading ? (
+                  <div className="py-8 text-center text-sm text-slate-500">加载中...</div>
+                ) : moderationPosts.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500 dark:border-slate-700">
+                    暂无可治理动态
+                  </div>
+                ) : (
+                  moderationPosts.map((post) => (
+                    <article key={post.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                      <p className="line-clamp-2 text-sm text-slate-800 dark:text-slate-200">
+                        {post.content || "无文字动态"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {post.author?.nickname || post.author?.username || "未知用户"} · {post.status}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={moderatingId === post.id}
+                          onClick={() => void handleModeratePost(post, "hide")}
+                        >
+                          <EyeOff className="size-4" aria-hidden="true" />
+                          隐藏动态
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={moderatingId === post.id}
+                          onClick={() => void handleModeratePost(post, "restore")}
+                        >
+                          <RotateCcw className="size-4" aria-hidden="true" />
+                          恢复动态
+                        </Button>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  论坛帖子
+                </h3>
+                {moderationForumPosts.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500 dark:border-slate-700">
+                    暂无论坛帖子
+                  </div>
+                ) : (
+                  moderationForumPosts.map((item) => (
+                    <article key={item.post.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {item.title}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {item.board.name} · {item.isLocked ? "已锁定" : "未锁定"} · {item.isBoardPinned ? "分区置顶" : "未置顶"}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={moderatingId === item.post.id}
+                          onClick={() => void handleModerateForumPost(item, item.isLocked ? "unlock" : "lock")}
+                        >
+                          {item.isLocked ? "解锁帖子" : "锁定帖子"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={moderatingId === item.post.id}
+                          onClick={() => void handleModerateForumPost(item, item.isBoardPinned ? "unpin" : "pin")}
+                        >
+                          {item.isBoardPinned ? "取消分区置顶" : "分区置顶"}
+                        </Button>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
         )}
       </div>
 

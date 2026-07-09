@@ -2,9 +2,12 @@ package follow
 
 import (
 	"context"
+	"database/sql"
 
+	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
+	"discover_world/model"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -36,8 +39,25 @@ func (l *CreateFollowLogic) CreateFollow(req *types.FollowTargetRequest) (*types
 	if err != nil {
 		return nil, err
 	}
+	wasFollowing, err := l.svcCtx.UserFollowModel.IsFollowing(l.ctx, loginUser.Id, target.Id)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query follow status failed")
+	}
 	if err := l.svcCtx.UserFollowModel.Follow(l.ctx, loginUser.Id, target.Id); err != nil {
 		return nil, err
+	}
+	if !wasFollowing {
+		if _, err := l.svcCtx.NotificationModel.Insert(l.ctx, &model.Notification{
+			RecipientUserId: target.Id,
+			ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
+			EventType:       "follow",
+			TargetType:      "user_account",
+			TargetId:        loginUser.Id,
+			Title:           "新的关注",
+			Content:         sql.NullString{String: loginUser.Username + " 关注了你", Valid: true},
+		}); err != nil {
+			l.Errorf("create follow notification failed: followerId=%d followingId=%d err=%v", loginUser.Id, target.Id, err)
+		}
 	}
 	return buildFollowStatus(l.ctx, l.svcCtx, loginUser, target)
 }

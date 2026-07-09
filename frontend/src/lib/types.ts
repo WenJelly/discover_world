@@ -218,6 +218,10 @@ export interface GetMediaAssetRequest {
   variantOption?: MediaVariantRequest;
 }
 
+export interface GetPostDetailRequest {
+  id: string;
+}
+
 export interface DownloadMediaAssetRequest {
   id: string;
 }
@@ -293,6 +297,25 @@ export interface ProfilePostResponse {
   updatedAt: string;
 }
 
+export interface PublicPostResponse extends ProfilePostResponse {
+  author: AccountSummary;
+}
+
+export interface PublicPostCursorPageResponse {
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor: string;
+  list: PublicPostResponse[];
+}
+
+export interface PublicPostListReq {
+  cursor?: string;
+  pageSize?: number;
+  sort?: string;
+  searchText?: string;
+  variantOption?: MediaVariantRequest;
+}
+
 export interface CreatePostRequest {
   content?: string;
   visibility?: string;
@@ -308,10 +331,47 @@ export interface UpdatePostRequest {
   imageIds?: string[];
 }
 
+export interface PinPostRequest {
+  id: string;
+}
+
+export interface UnpinPostRequest {
+  id: string;
+}
+
 export interface PostToggleResponse {
   active: boolean;
   stats: MediaAssetStats;
   likedBy?: AccountSummary[];
+}
+
+export interface CreatePostCommentRequest {
+  postId: string;
+  content: string;
+}
+
+export interface PostCommentResponse {
+  id: string;
+  postId: string;
+  userId: string;
+  author: AccountSummary;
+  content: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PostCommentCursorListRequest {
+  postId: string;
+  cursor?: string;
+  pageSize?: number;
+}
+
+export interface PostCommentCursorPageResponse {
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor: string;
+  list: PostCommentResponse[];
 }
 
 export interface ProfilePostCursorPageResponse {
@@ -319,6 +379,119 @@ export interface ProfilePostCursorPageResponse {
   hasMore: boolean;
   nextCursor: string;
   list: ProfilePostResponse[];
+}
+
+export interface ForumBoardListRequest {
+  pageSize?: number;
+}
+
+export interface ForumBoardResponse {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  status: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ForumBoardListResponse {
+  list: ForumBoardResponse[];
+}
+
+export interface ForumPostListRequest {
+  boardId?: string;
+  cursor?: string;
+  pageSize?: number;
+  variantOption?: MediaVariantRequest;
+}
+
+export interface ForumPostResponse {
+  post: PublicPostResponse;
+  board: ForumBoardResponse;
+  title: string;
+  isLocked: boolean;
+  isBoardPinned: boolean;
+  lastActivityAt: string;
+}
+
+export interface ForumPostCursorPageResponse {
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor: string;
+  list: ForumPostResponse[];
+}
+
+export interface CreateForumPostRequest {
+  boardId: string;
+  title: string;
+  content?: string;
+  location?: string;
+  imageIds?: string[];
+}
+
+export interface FollowingPostListReq {
+  cursor?: string;
+  pageSize?: number;
+  variantOption?: MediaVariantRequest;
+}
+
+export interface FollowingMediaListReq {
+  cursor?: string;
+  pageSize?: number;
+  variantOption?: MediaVariantRequest;
+}
+
+export interface NotificationResponse {
+  id: string;
+  actorUserId: string;
+  actor: AccountSummary;
+  eventType: string;
+  targetType: string;
+  targetId: string;
+  title: string;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationCursorPageResponse {
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor: string;
+  list: NotificationResponse[];
+}
+
+export interface NotificationListReq {
+  cursor?: string;
+  pageSize?: number;
+}
+
+export interface UnreadNotificationCountResponse {
+  unreadCount: number;
+}
+
+export interface MarkNotificationReadRequest {
+  id: string;
+}
+
+export interface MarkAllNotificationsReadRequest {}
+
+export interface CreateModerationReportRequest {
+  targetType: "post" | "comment_record" | string;
+  targetId: string;
+  reason: string;
+  description?: string;
+}
+
+export interface ModerationReportResponse {
+  id: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  status: string;
+  createdAt: string;
 }
 
 export interface ProfileAlbumResponse {
@@ -451,6 +624,21 @@ export interface MediaAssetListReq {
   searchText?: string;
   auditStatus?: string;
   sort?: string;
+}
+
+export interface AdminQueryMediaAssetRequest extends MediaAssetListReq {
+  createdAtFrom?: string;
+  createdAtTo?: string;
+}
+
+export interface ReviewMediaAssetRequest {
+  id: string;
+  auditStatus: "approved" | "rejected" | string;
+  reviewMessage?: string;
+}
+
+export interface AdminModeratePostRequest {
+  id: string;
 }
 
 export interface ProfilePostListReq {

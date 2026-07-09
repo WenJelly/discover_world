@@ -8,9 +8,13 @@ import (
 
 	account "discover_world/internal/handler/account"
 	admin "discover_world/internal/handler/admin"
+	feed "discover_world/internal/handler/feed"
 	follow "discover_world/internal/handler/follow"
+	forum "discover_world/internal/handler/forum"
 	homepage "discover_world/internal/handler/homepage"
 	media "discover_world/internal/handler/media"
+	moderation "discover_world/internal/handler/moderation"
+	notification "discover_world/internal/handler/notification"
 	overview "discover_world/internal/handler/overview"
 	post "discover_world/internal/handler/post"
 	profile "discover_world/internal/handler/profile"
@@ -246,6 +250,27 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodPost,
+				Path:    "/post/public/list/cursor",
+				Handler: post.GetPublicPostCursorListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/forum/board/list",
+				Handler: forum.GetForumBoardListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/forum/post/list/cursor",
+				Handler: forum.GetForumPostCursorListHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
 				Path:    "/post/comment/create",
 				Handler: post.CreatePostCommentHandler(serverCtx),
 			},
@@ -294,6 +319,46 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/post/update",
 				Handler: post.UpdatePostHandler(serverCtx),
 			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/forum/post/create",
+				Handler: forum.CreateForumPostHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/moderation/report/create",
+				Handler: moderation.CreateModerationReportHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/notification/list/cursor",
+				Handler: notification.GetNotificationCursorListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/notification/unread/count",
+				Handler: notification.GetUnreadNotificationCountHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/notification/read",
+				Handler: notification.MarkNotificationReadHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/notification/read/all",
+				Handler: notification.MarkAllNotificationsReadHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/feed/following/post/list/cursor",
+				Handler: feed.GetFollowingPostCursorListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/feed/following/media/list/cursor",
+				Handler: feed.GetFollowingMediaCursorListHandler(serverCtx),
+			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api"),
@@ -324,5 +389,45 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.AdminCheck},
+			[]rest.Route{
+				{
+					Method:  http.MethodPost,
+					Path:    "/moderation/post/hide",
+					Handler: moderation.AdminHidePostHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/moderation/post/restore",
+					Handler: moderation.AdminRestorePostHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/forum/post/lock",
+					Handler: moderation.AdminLockForumPostHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/forum/post/unlock",
+					Handler: moderation.AdminUnlockForumPostHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/forum/post/pin",
+					Handler: moderation.AdminPinForumPostHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/forum/post/unpin",
+					Handler: moderation.AdminUnpinForumPostHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/api/admin"),
 	)
 }

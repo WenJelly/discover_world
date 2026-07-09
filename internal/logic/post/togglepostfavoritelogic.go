@@ -5,10 +5,12 @@ package post
 
 import (
 	"context"
+	"database/sql"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
+	"discover_world/model"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -51,7 +53,25 @@ func (l *TogglePostFavoriteLogic) TogglePostFavorite(req *types.TogglePostFavori
 			return err
 		}
 		active = nextActive
-		return txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "favorite_count", delta)
+		if err := txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "favorite_count", delta); err != nil {
+			return err
+		}
+		if err := txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypePost, post.Id, "favorite_count", delta); err != nil {
+			return err
+		}
+		if nextActive && post.UserId != loginUser.Id {
+			if _, err := txSvc.NotificationModel.Insert(ctx, &model.Notification{
+				RecipientUserId: post.UserId,
+				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
+				EventType:       "post_favorite",
+				TargetType:      targetTypePost,
+				TargetId:        post.Id,
+				Title:           "新的收藏",
+			}); err != nil {
+				logx.WithContext(ctx).Errorf("create post favorite notification failed: postId=%d actorId=%d err=%v", post.Id, loginUser.Id, err)
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("toggle post favorite failed")

@@ -175,7 +175,7 @@ order by
   coalesce(es.`+"`comment_count`"+`, 0) desc,
   coalesce(es.`+"`view_count`"+`, 0) desc,
   p.`+"`id`"+` desc
-limit ?`, qualifiedRows(postRows, "p"))
+limit ?`, qualifiedPostRowsWithDefaultScore("p"))
 
 	args := []any{like, like, like, like, like, like, query + "%", query, normalizeSearchLimit(limit)}
 	var resp []*Post

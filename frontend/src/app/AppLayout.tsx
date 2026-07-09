@@ -9,6 +9,8 @@ import AccountDetailPage from "@/pages/AccountDetailPage";
 import UploadPage from "@/pages/UploadPage";
 import SearchPage from "@/pages/SearchPage";
 import AdminPage from "@/pages/AdminPage";
+import CommunityPage from "@/pages/CommunityPage";
+import NotificationsPage from "@/pages/NotificationsPage";
 
 export function AppLayout() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
@@ -34,6 +36,8 @@ export function AppLayout() {
   const isUploadRoute = pathname === "/upload";
   const isSearchRoute = pathname === "/search";
   const isAdminRoute = pathname === "/admin";
+  const isCommunityRoute = pathname === "/community";
+  const isNotificationsRoute = pathname === "/notifications";
 
   return (
     <>
@@ -59,6 +63,10 @@ export function AppLayout() {
           <SearchPage />
         ) : isAdminRoute ? (
           <AdminPage />
+        ) : isCommunityRoute ? (
+          <CommunityPage />
+        ) : isNotificationsRoute ? (
+          <NotificationsPage />
         ) : isDiscoverRoute || isLegacyPublicRoute ? (
           <DiscoverPage />
         ) : (

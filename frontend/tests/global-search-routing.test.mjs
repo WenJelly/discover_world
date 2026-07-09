@@ -52,6 +52,18 @@ test("navbar search hides the native clear control and keeps one custom clear bu
   assert.match(css, /appearance:\s*none/);
 });
 
+test("navbar search inputs use a gray interior", async () => {
+  const navbar = await readFile(
+    new URL("../src/components/Navbar.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(navbar, /id="navbar-search-desktop"[\s\S]*bg-slate-100/);
+  assert.match(navbar, /id="navbar-search-mobile"[\s\S]*bg-slate-100/);
+  assert.doesNotMatch(navbar, /id="navbar-search-desktop"[\s\S]{0,700}\sbg-white(\s|`)/);
+  assert.doesNotMatch(navbar, /id="navbar-search-mobile"[\s\S]{0,700}\sbg-white(\s|`)/);
+});
+
 test("app layout renders the global search page route", async () => {
   const searchPageUrl = new URL("../src/pages/SearchPage.tsx", import.meta.url);
   assert.equal(existsSync(searchPageUrl), true);

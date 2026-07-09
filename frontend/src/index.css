@@ -159,6 +159,7 @@
 }
 
 .discover-page {
+  --discover-content-edge: 40px;
   min-height: 100dvh;
   background: #f7f8fa;
   color: #525558;
@@ -188,7 +189,7 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 0 20px;
+  padding: 0 var(--discover-content-edge);
 }
 
 .discover-page .px_tabs {
@@ -233,14 +234,14 @@
 .discover-page .discover-filter-navigation {
   position: absolute;
   top: 0;
-  right: 20px;
+  right: var(--discover-content-edge);
   height: 50px;
 }
 
 .discover-page .discover_layout_navigation {
   position: absolute;
   top: 0;
-  left: 20px;
+  left: var(--discover-content-edge);
   z-index: 2;
   display: flex;
   height: 50px;
@@ -373,7 +374,7 @@
 }
 
 .discover-page .photo_grid_region {
-  padding: 20px 40px 56px;
+  padding: 20px var(--discover-content-edge) 56px;
   background: #f7f8fa;
 }
 
@@ -681,8 +682,8 @@
 }
 
 @media only screen and (max-width: 1024px) {
-  .discover-page .discover-toolbar__inner {
-    padding: 0 20px;
+  .discover-page {
+    --discover-content-edge: 20px;
   }
 
   .discover-page .discover-filter-navigation,
@@ -697,8 +698,12 @@
 }
 
 @media only screen and (max-width: 720px) {
+  .discover-page {
+    --discover-content-edge: 5px;
+  }
+
   .discover-page .photo_grid_region {
-    padding: 5px;
+    padding: 5px var(--discover-content-edge);
   }
 
   .discover-page .grid-container {
@@ -751,7 +756,7 @@
   height: 54px;
   border: 1px solid oklch(0.84 0.008 250);
   border-radius: 8px;
-  background: oklch(0.998 0.002 250);
+  background: oklch(0.94 0.006 250);
   padding: 0 92px 0 48px;
   color: oklch(0.18 0.006 250);
   font-size: 16px;

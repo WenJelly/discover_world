@@ -1,0 +1,120 @@
+// Code scaffolded by goctl. Safe to edit.
+// goctl 1.10.1
+
+package forum
+
+import (
+	"context"
+	"database/sql"
+	"time"
+
+	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/svc"
+	"discover_world/internal/types"
+	"discover_world/model"
+
+	"github.com/zeromicro/go-zero/core/logx"
+)
+
+type CreateForumPostLogic struct {
+	logx.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+func NewCreateForumPostLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CreateForumPostLogic {
+	return &CreateForumPostLogic{
+		Logger: logx.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+
+func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest) (*types.ForumPostResponse, error) {
+	if req == nil {
+		return nil, commonresponse.BadRequest("request cannot be empty")
+	}
+	loginUser, err := loadLoginUser(l.ctx, l.svcCtx)
+	if err != nil {
+		return nil, err
+	}
+	boardID, err := parseRequiredID(req.BoardId, "boardId")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := l.svcCtx.ForumBoardModel.FindOneActiveByID(l.ctx, boardID); err != nil {
+		if err == model.ErrNotFound {
+			return nil, commonresponse.NotFound("forum board not found")
+		}
+		return nil, commonresponse.InternalServerError("query forum board failed")
+	}
+	title, err := normalizeForumPostTitle(req.Title)
+	if err != nil {
+		return nil, err
+	}
+	content, err := normalizeForumPostContent(req.Content)
+	if err != nil {
+		return nil, err
+	}
+	imageIDs, err := parseForumImageIDs(req.ImageIds)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateForumPostBody(content, imageIDs); err != nil {
+		return nil, err
+	}
+	if err := validatePostImages(l.ctx, l.svcCtx, loginUser.Id, imageIDs); err != nil {
+		return nil, err
+	}
+
+	var postID uint64
+	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
+		result, err := txSvc.PostModel.Insert(ctx, &model.Post{
+			UserId:     loginUser.Id,
+			Content:    optionalString(content),
+			Visibility: forumPostVisibility,
+			Status:     forumPostStatusActive,
+			Location:   optionalString(req.Location),
+		})
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil || id <= 0 {
+			if err != nil {
+				return err
+			}
+			return sql.ErrNoRows
+		}
+		postID = uint64(id)
+		if err := txSvc.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, ownerTypePost, postID, linkRoleAttachment, imageIDs); err != nil {
+			return err
+		}
+		if _, err := txSvc.PostDiscussionModel.Insert(ctx, &model.PostDiscussion{
+			PostId:         postID,
+			BoardId:        boardID,
+			Title:          title,
+			Status:         forumPostStatusActive,
+			LastActivityAt: time.Now(),
+		}); err != nil {
+			return err
+		}
+		return txSvc.EntityStatModel.Ensure(ctx, targetTypePost, postID)
+	})
+	if err != nil {
+		return nil, commonresponse.InternalServerError("create forum post failed")
+	}
+
+	discussion, err := l.svcCtx.PostDiscussionModel.FindByPostID(l.ctx, postID)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("load forum post failed")
+	}
+	list, err := buildForumPostResponses(l.ctx, l.svcCtx, []*model.PostDiscussion{discussion}, loginUser)
+	if err != nil {
+		return nil, err
+	}
+	if len(list) == 0 {
+		return &types.ForumPostResponse{}, nil
+	}
+	return &list[0], nil
+}

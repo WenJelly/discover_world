@@ -20,13 +20,15 @@ import (
 )
 
 const (
-	maxPostContentLength = 2000
-	maxPostCommentLength = 1000
-	maxPostImageCount    = 9
-	maxPostLocationLen   = 255
-	maxPostLikedByCount  = 3
-	defaultCommentPage   = 20
-	maxCommentPage       = 50
+	maxPostContentLength  = 2000
+	maxPostCommentLength  = 1000
+	maxPostImageCount     = 9
+	maxPostLocationLen    = 255
+	maxPostLikedByCount   = 3
+	defaultCommentPage    = 20
+	maxCommentPage        = 50
+	defaultPublicPostPage = 20
+	maxPublicPostPage     = 50
 
 	postStatusActive  = "active"
 	postStatusDeleted = "deleted"
@@ -42,6 +44,11 @@ const (
 
 type postCursorPayload struct {
 	ID uint64 `json:"id"`
+}
+
+type publicPostCursorPayload struct {
+	ID    uint64  `json:"id"`
+	Score float64 `json:"score,omitempty"`
 }
 
 type postViewerState struct {
@@ -157,6 +164,26 @@ func normalizeCommentPageSize(pageSize int64) (int64, error) {
 	return pageSize, nil
 }
 
+func normalizePublicPostPageSize(pageSize int64) (int64, error) {
+	if pageSize <= 0 {
+		return defaultPublicPostPage, nil
+	}
+	if pageSize > maxPublicPostPage {
+		return 0, commonresponse.BadRequest("pageSize cannot exceed 50")
+	}
+	return pageSize, nil
+}
+
+func normalizePublicPostSort(sort string) string {
+	sort = strings.ToLower(strings.TrimSpace(sort))
+	switch sort {
+	case "hot", "rising":
+		return sort
+	default:
+		return "latest"
+	}
+}
+
 func encodeCursor(id uint64) (string, error) {
 	data, err := json.Marshal(postCursorPayload{ID: id})
 	if err != nil {
@@ -179,6 +206,33 @@ func decodeCursor(raw string) (uint64, error) {
 		return 0, commonresponse.BadRequest("cursor is invalid")
 	}
 	return payload.ID, nil
+}
+
+func encodePublicPostCursor(post *model.Post) (string, error) {
+	if post == nil || post.Id == 0 {
+		return "", nil
+	}
+	data, err := json.Marshal(publicPostCursorPayload{ID: post.Id, Score: post.Score})
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(data), nil
+}
+
+func decodePublicPostCursor(raw string) (model.PublicPostCursor, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return model.PublicPostCursor{}, nil
+	}
+	data, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return model.PublicPostCursor{}, commonresponse.BadRequest("cursor is invalid")
+	}
+	var payload publicPostCursorPayload
+	if err := json.Unmarshal(data, &payload); err != nil || payload.ID == 0 {
+		return model.PublicPostCursor{}, commonresponse.BadRequest("cursor is invalid")
+	}
+	return model.PublicPostCursor{ID: payload.ID, Score: payload.Score}, nil
 }
 
 func optionalString(value string) sql.NullString {
@@ -314,6 +368,72 @@ func buildPostResponse(ctx context.Context, svcCtx *svc.ServiceContext, post *mo
 	return &list[0], nil
 }
 
+func BuildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*model.Post, viewer *model.UserAccount) ([]types.PublicPostResponse, error) {
+	return buildPublicPostResponses(ctx, svcCtx, posts, viewer)
+}
+
+func buildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*model.Post, viewer *model.UserAccount) ([]types.PublicPostResponse, error) {
+	if len(posts) == 0 {
+		return []types.PublicPostResponse{}, nil
+	}
+
+	profilePosts, err := buildPostResponses(ctx, svcCtx, posts, viewer)
+	if err != nil {
+		return nil, err
+	}
+
+	userIDs := make([]uint64, 0, len(posts))
+	for _, post := range posts {
+		if post != nil {
+			userIDs = append(userIDs, post.UserId)
+		}
+	}
+	accounts, err := svcCtx.UserAccountModel.FindByIDs(ctx, userIDs)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query post authors failed")
+	}
+	profiles, err := svcCtx.UserProfileModel.FindByUserIDs(ctx, userIDs)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query post author profiles failed")
+	}
+	avatarURLs, err := mediaLogic.LoadAvatarURLsByOwner(ctx, svcCtx, profiles)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query post author avatars failed")
+	}
+	accountByID := make(map[uint64]*model.UserAccount, len(accounts))
+	for _, account := range accounts {
+		if account != nil {
+			accountByID[account.Id] = account
+		}
+	}
+
+	resp := make([]types.PublicPostResponse, 0, len(profilePosts))
+	for index, item := range profilePosts {
+		var author types.AccountSummary
+		if index < len(posts) && posts[index] != nil {
+			account := accountByID[posts[index].UserId]
+			author = buildAccountSummary(account, profiles[posts[index].UserId], avatarURLs[posts[index].UserId])
+		}
+		resp = append(resp, types.PublicPostResponse{
+			Id:          item.Id,
+			UserId:      item.UserId,
+			Author:      author,
+			Content:     item.Content,
+			Visibility:  item.Visibility,
+			Status:      item.Status,
+			Location:    item.Location,
+			Images:      item.Images,
+			Stats:       item.Stats,
+			LikedBy:     item.LikedBy,
+			IsLiked:     item.IsLiked,
+			IsFavorited: item.IsFavorited,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
+		})
+	}
+	return resp, nil
+}
+
 func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*model.Post, viewer *model.UserAccount) ([]types.ProfilePostResponse, error) {
 	if len(posts) == 0 {
 		return []types.ProfilePostResponse{}, nil
@@ -414,6 +534,10 @@ func loadPostLikedBySummaries(ctx context.Context, svcCtx *svc.ServiceContext, p
 	if err != nil {
 		return nil, err
 	}
+	avatarURLs, err := mediaLogic.LoadAvatarURLsByOwner(ctx, svcCtx, profiles)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query post like avatars failed")
+	}
 
 	accountsByID := make(map[uint64]*model.UserAccount, len(accounts))
 	for _, account := range accounts {
@@ -428,7 +552,7 @@ func loadPostLikedBySummaries(ctx context.Context, svcCtx *svc.ServiceContext, p
 			if account == nil {
 				continue
 			}
-			resp[postID] = append(resp[postID], buildAccountSummary(svcCtx, account, profiles[userID]))
+			resp[postID] = append(resp[postID], buildAccountSummary(account, profiles[userID], avatarURLs[userID]))
 		}
 	}
 	return resp, nil
@@ -498,7 +622,7 @@ func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, asse
 	return resp, nil
 }
 
-func buildAccountSummary(_ *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile) types.AccountSummary {
+func buildAccountSummary(account *model.UserAccount, profile *model.UserProfile, avatarURL string) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}
@@ -516,13 +640,14 @@ func buildAccountSummary(_ *svc.ServiceContext, account *model.UserAccount, prof
 		role = "user"
 	}
 	return types.AccountSummary{
-		Id:       formatID(account.Id),
-		Username: account.Username,
-		Email:    "",
-		Nickname: nickname,
-		Bio:      bio,
-		Status:   account.Status,
-		Role:     role,
+		Id:        formatID(account.Id),
+		Username:  account.Username,
+		Email:     "",
+		Nickname:  nickname,
+		AvatarUrl: avatarURL,
+		Bio:       bio,
+		Status:    account.Status,
+		Role:      role,
 	}
 }
 
@@ -544,6 +669,10 @@ func buildCommentResponses(ctx context.Context, svcCtx *svc.ServiceContext, comm
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query comment author profiles failed")
 	}
+	avatarURLs, err := mediaLogic.LoadAvatarURLsByOwner(ctx, svcCtx, profiles)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query comment author avatars failed")
+	}
 	accountByID := make(map[uint64]*model.UserAccount, len(accounts))
 	for _, account := range accounts {
 		if account != nil {
@@ -561,7 +690,7 @@ func buildCommentResponses(ctx context.Context, svcCtx *svc.ServiceContext, comm
 			Id:        formatID(comment.Id),
 			PostId:    formatID(comment.TargetId),
 			UserId:    formatID(comment.UserId),
-			Author:    buildAccountSummary(svcCtx, author, profiles[comment.UserId]),
+			Author:    buildAccountSummary(author, profiles[comment.UserId], avatarURLs[comment.UserId]),
 			Content:   comment.Content,
 			Status:    comment.Status,
 			CreatedAt: formatTime(comment.CreatedAt),
