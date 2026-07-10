@@ -19,6 +19,9 @@ const (
 	searchTypePost  = "post"
 	searchTypeAlbum = "album"
 	searchTypeUser  = "user"
+
+	postTypeDaily       = "daily"
+	postTypeTravelShare = "travel_share"
 )
 
 var defaultSearchTypes = []string{
@@ -111,6 +114,15 @@ func includesSearchType(types []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func normalizePostTypeValue(postType string) string {
+	switch strings.ToLower(strings.TrimSpace(postType)) {
+	case postTypeTravelShare:
+		return postTypeTravelShare
+	default:
+		return postTypeDaily
+	}
 }
 
 func buildAccountSummary(account *model.UserAccount, profile *model.UserProfile, avatarURL string) types.AccountSummary {

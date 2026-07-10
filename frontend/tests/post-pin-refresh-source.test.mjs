@@ -27,3 +27,17 @@ test("profile post pin changes silently refresh the current account timeline", a
   assert.match(accountSource, /void loadPosts\(true, \{ silent: true \}\)/);
   assert.match(accountSource, /onPinChanged=\{handlePostPinChanged\}/);
 });
+
+test("profile post publishing preserves server pin order and scrolls to the new post", async () => {
+  const [timelineSource, accountSource] = await Promise.all([
+    source("../src/components/post/PostTimeline.tsx"),
+    source("../src/pages/AccountDetailPage.tsx"),
+  ]);
+
+  assert.match(timelineSource, /data-post-id=\{post\.id\}/);
+  assert.match(accountSource, /const pendingPublishedPostIdRef = useRef<string \| null>\(null\)/);
+  assert.match(accountSource, /const scrollPostIntoView = useCallback\(/);
+  assert.match(accountSource, /pendingPublishedPostIdRef\.current = post\.id/);
+  assert.match(accountSource, /void loadPosts\(true, \{ silent: true \}\)/);
+  assert.doesNotMatch(accountSource, /setPosts\(\(prev\) => \[post, \.\.\.prev\]\)/);
+});

@@ -98,11 +98,14 @@ export function useInfinitePictures(
 
       const err = e instanceof ApiError ? e : new ApiError(0, "未知错误");
       loadingRef.current = false;
-      setState((s) => ({ ...s, loading: false, error: err }));
+      hasMoreRef.current = false;
+      setState((s) => ({ ...s, hasMore: false, loading: false, error: err }));
     }
   }, [category, pageSize, searchText, sort, tagsKey]);
 
   const retry = useCallback(() => {
+    hasMoreRef.current = true;
+    setState((s) => ({ ...s, hasMore: true, error: null }));
     loadMore();
   }, [loadMore]);
 

@@ -14,6 +14,12 @@ func TestPostRowsIncludesPinFields(t *testing.T) {
 	}
 }
 
+func TestPostRowsIncludesPostType(t *testing.T) {
+	if !strings.Contains(postRows, "`post_type`") {
+		t.Fatalf("postRows does not include post_type: %s", postRows)
+	}
+}
+
 func TestPostModelUnscoredQueriesSelectDefaultScore(t *testing.T) {
 	if !strings.Contains(postRowsWithDefaultScore, "0 as score") {
 		t.Fatalf("postRowsWithDefaultScore must select a default score: %s", postRowsWithDefaultScore)

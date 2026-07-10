@@ -52,6 +52,13 @@ func (l *UpdatePostLogic) UpdatePost(req *types.UpdatePostRequest) (*types.Profi
 	if err != nil {
 		return nil, err
 	}
+	postType, err := normalizePostType(req.PostType)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(req.PostType) == "" {
+		postType = normalizePostTypeValue(existing.PostType)
+	}
 	visibility, err := normalizePostVisibility(req.Visibility)
 	if err != nil {
 		return nil, err
@@ -85,6 +92,7 @@ func (l *UpdatePostLogic) UpdatePost(req *types.UpdatePostRequest) (*types.Profi
 	}
 
 	existing.Content = optionalString(content)
+	existing.PostType = postType
 	existing.Visibility = visibility
 	existing.Location = optionalString(location)
 	existing.Status = postStatusActive

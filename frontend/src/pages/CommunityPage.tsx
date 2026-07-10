@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { POST_TYPE_FILTER_OPTIONS } from "@/lib/post-type";
 import {
   adminLockForumPost,
   adminPinForumPost,
@@ -55,6 +56,7 @@ import type {
   ForumBoardResponse,
   ForumPostResponse,
   MediaAssetResponse,
+  PostTypeFilter,
   ProfilePostResponse,
   PublicPostResponse,
 } from "@/lib/types";
@@ -369,6 +371,7 @@ function ForumComposer({
 export default function CommunityPage() {
   const [activeTab, setActiveTab] = useState<CommunityTab>(getInitialTab);
   const [publicSort, setPublicSort] = useState<PublicSort>("latest");
+  const [publicPostType, setPublicPostType] = useState<PostTypeFilter>("all");
   const [publicSearchText, setPublicSearchText] = useState("");
   const [publicPosts, setPublicPosts] = useState<PublicPostResponse[]>([]);
   const [publicCursor, setPublicCursor] = useState("");
@@ -420,6 +423,7 @@ export default function CommunityPage() {
           pageSize: POST_PAGE_SIZE,
           sort: publicSort,
           searchText: publicSearchText,
+          postType: publicPostType === "all" ? undefined : publicPostType,
           variantOption: { compressType: 2 },
         });
         setPublicPosts((current) =>
@@ -437,7 +441,7 @@ export default function CommunityPage() {
         setPublicLoading(false);
       }
     },
-    [publicCursor, publicSearchText, publicSort, toast]
+    [publicCursor, publicPostType, publicSearchText, publicSort, toast]
   );
 
   const loadFollowingPosts = useCallback(
@@ -795,6 +799,32 @@ export default function CommunityPage() {
                   />
                 </div>
               </label>
+              <Select
+                value={publicPostType}
+                onValueChange={(nextValue) => {
+                  if (nextValue) {
+                    setPublicPostType(nextValue as PostTypeFilter);
+                  }
+                }}
+              >
+                <SelectTrigger
+                  className="h-10 w-full rounded-md sm:w-36"
+                  aria-label="动态类型筛选"
+                >
+                  <SelectValue placeholder="类型" />
+                </SelectTrigger>
+                <SelectContent
+                  align="start"
+                  alignItemWithTrigger={false}
+                  className="z-[70]"
+                >
+                  {POST_TYPE_FILTER_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select
                 value={publicSort}
                 onValueChange={(nextValue) => {

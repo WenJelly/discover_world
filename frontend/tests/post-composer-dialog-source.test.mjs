@@ -46,9 +46,13 @@ test("post composer entry and dialog match the fresh-news card shape", async () 
   assert.doesNotMatch(dialogSource, /maxLength=\{MAX_CONTENT\}/);
   assert.doesNotMatch(dialogSource, /tabular-nums/);
   assert.match(dialogSource, /import \{ PostVisibilityMenu \} from "\.\/PostVisibilityMenu"/);
-  assert.match(dialogSource, /data-testid="post-composer-author-row"/);
-  assert.match(dialogSource, /data-testid="post-composer-author-text"/);
-  assert.match(dialogSource, /<PostVisibilityMenu[\s\S]*value=\{visibility\}[\s\S]*onChange=\{setVisibility\}[\s\S]*ariaLabel="选择动态可见范围"/);
+	  assert.match(dialogSource, /data-testid="post-composer-author-row"/);
+	  assert.match(dialogSource, /data-testid="post-composer-author-text"/);
+	  assert.match(dialogSource, /POST_TYPE_OPTIONS/);
+	  assert.match(dialogSource, /postType,\s*setPostType/);
+	  assert.match(dialogSource, /aria-label="选择动态类型"/);
+	  assert.match(dialogSource, /postType,/);
+	  assert.match(dialogSource, /<PostVisibilityMenu[\s\S]*value=\{visibility\}[\s\S]*onChange=\{setVisibility\}[\s\S]*ariaLabel="选择动态可见范围"/);
   assert.doesNotMatch(dialogSource, /<select[\s\S]*id="post-visibility"/);
   assert.match(dialogSource, /showAddTile=\{false\}/);
   assert.match(dialogSource, /ImagePlus/);

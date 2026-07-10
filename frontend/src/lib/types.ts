@@ -1,3 +1,6 @@
+export type PostType = "daily" | "travel_share";
+export type PostTypeFilter = "all" | PostType;
+
 export interface AccountSummary {
   id: string;
   username: string;
@@ -283,6 +286,7 @@ export interface ProfilePostResponse {
   id: string;
   userId: string;
   content: string;
+  postType: PostType;
   visibility: "public" | "private" | string;
   status: string;
   location: string;
@@ -313,11 +317,13 @@ export interface PublicPostListReq {
   pageSize?: number;
   sort?: string;
   searchText?: string;
+  postType?: PostTypeFilter;
   variantOption?: MediaVariantRequest;
 }
 
 export interface CreatePostRequest {
   content?: string;
+  postType?: PostType;
   visibility?: string;
   location?: string;
   imageIds?: string[];
@@ -326,6 +332,7 @@ export interface CreatePostRequest {
 export interface UpdatePostRequest {
   id: string;
   content?: string;
+  postType?: PostType;
   visibility?: string;
   location?: string;
   imageIds?: string[];
@@ -543,6 +550,7 @@ export interface GlobalSearchPostResponse {
   userId: string;
   author: AccountSummary;
   content: string;
+  postType: PostType;
   location: string;
   stats: MediaAssetStats;
   createdAt: string;

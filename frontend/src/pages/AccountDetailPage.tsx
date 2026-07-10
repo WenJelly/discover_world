@@ -348,6 +348,7 @@ export default function AccountDetailPage() {
   const [postError, setPostError] = useState<string | null>(null);
   const [postHasMore, setPostHasMore] = useState(false);
   const postCursorRef = useRef("");
+  const pendingPublishedPostIdRef = useRef<string | null>(null);
 
   // Albums state
   const [albums, setAlbums] = useState<ProfileAlbumResponse[]>([]);
@@ -363,6 +364,16 @@ export default function AccountDetailPage() {
     () => featuredAssets.map(toImageItem),
     [featuredAssets]
   );
+
+  const scrollPostIntoView = useCallback((postId: string) => {
+    window.requestAnimationFrame(() => {
+      const target = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-post-id]")
+      ).find((element) => element.dataset.postId === postId);
+
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, []);
 
   useEffect(() => {
     const syncTargetUserId = () => {
@@ -536,6 +547,16 @@ export default function AccountDetailPage() {
     void loadPosts(true);
     void loadAlbums();
   }, [loadAlbums, loadFeatured, loadPictures, loadPosts, loadProfile]);
+
+  useEffect(() => {
+    const postId = pendingPublishedPostIdRef.current;
+    if (!postId || !posts.some((post) => post.id === postId)) {
+      return;
+    }
+
+    pendingPublishedPostIdRef.current = null;
+    scrollPostIntoView(postId);
+  }, [posts, scrollPostIntoView]);
 
   // Reload profile when user changes (e.g., avatar upload)
   useEffect(() => {
@@ -719,7 +740,9 @@ export default function AccountDetailPage() {
   };
 
   const handlePostPublished = (post: ProfilePostResponse) => {
-    setPosts((prev) => [post, ...prev]);
+    pendingPublishedPostIdRef.current = post.id;
+    setActiveTab("posts");
+    void loadPosts(true, { silent: true });
   };
 
   const handlePostDeleted = (id: string) => {

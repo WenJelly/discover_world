@@ -34,6 +34,7 @@ test("community phase 3 api wrappers call the backend endpoints", async () => {
   }
 
   assert.match(api, /normalizePublicPostPage/);
+  assert.match(api, /postType: normalizePostType\(post\.postType\)/);
   assert.match(api, /normalizeForumPostPage/);
   assert.match(api, /normalizeNotificationPage/);
 });
@@ -42,6 +43,7 @@ test("community phase 3 types describe posts forums notifications and feeds", as
   const types = await readFile(typesUrl, "utf8");
 
   for (const fragment of [
+    "PostType",
     "PublicPostResponse",
     "PublicPostCursorPageResponse",
     "PublicPostListReq",
@@ -59,4 +61,6 @@ test("community phase 3 types describe posts forums notifications and feeds", as
   ]) {
     assert.match(types, new RegExp(`interface ${fragment}|type ${fragment}`));
   }
+  assert.match(types, /postType\?: PostType/);
+  assert.match(types, /postType: PostType/);
 });

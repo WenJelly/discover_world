@@ -23,6 +23,9 @@ func TestPublicPostAPIAndTypeContract(t *testing.T) {
 		"PublicPostListRequest",
 		"PublicPostCursorPageResponse",
 		"PublicPostResponse",
+		"PostType",
+		"`json:\"postType,optional\"`",
+		"`json:\"postType\"`",
 		"ForumBoardListRequest",
 		"ForumBoardResponse",
 		"ForumPostListRequest",
@@ -51,6 +54,7 @@ func TestPublicPostLogicUsesModelAndSharedPostResponseAssembly(t *testing.T) {
 
 	for _, fragment := range []string{
 		"FindPublicBeforeCursor",
+		"req.PostType",
 		"buildPublicPostResponses",
 		"Author",
 		"decodePublicPostCursor",

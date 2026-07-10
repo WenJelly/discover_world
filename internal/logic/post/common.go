@@ -33,6 +33,9 @@ const (
 	postStatusActive  = "active"
 	postStatusDeleted = "deleted"
 
+	postTypeDaily       = "daily"
+	postTypeTravelShare = "travel_share"
+
 	postVisibilityPublic  = "public"
 	postVisibilityPrivate = "private"
 
@@ -92,6 +95,33 @@ func normalizePostVisibility(visibility string) (string, error) {
 	default:
 		return "", commonresponse.BadRequest("visibility must be public or private")
 	}
+}
+
+func normalizePostType(postType string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(postType)) {
+	case "", postTypeDaily:
+		return postTypeDaily, nil
+	case postTypeTravelShare:
+		return postTypeTravelShare, nil
+	default:
+		return "", commonresponse.BadRequest("postType must be daily or travel_share")
+	}
+}
+
+func normalizePostTypeFilter(postType string) (string, error) {
+	postType = strings.ToLower(strings.TrimSpace(postType))
+	if postType == "" || postType == "all" {
+		return "", nil
+	}
+	return normalizePostType(postType)
+}
+
+func normalizePostTypeValue(postType string) string {
+	normalized, err := normalizePostType(postType)
+	if err != nil {
+		return postTypeDaily
+	}
+	return normalized
 }
 
 func parsePostImageIDs(rawIDs []string) ([]uint64, error) {
@@ -419,6 +449,7 @@ func buildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 			UserId:      item.UserId,
 			Author:      author,
 			Content:     item.Content,
+			PostType:    item.PostType,
 			Visibility:  item.Visibility,
 			Status:      item.Status,
 			Location:    item.Location,
@@ -488,6 +519,7 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 			Id:         formatID(post.Id),
 			UserId:     formatID(post.UserId),
 			Content:    nullStringValue(post.Content),
+			PostType:   normalizePostTypeValue(post.PostType),
 			Visibility: post.Visibility,
 			Status:     post.Status,
 			Location:   nullStringValue(post.Location),

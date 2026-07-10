@@ -72,6 +72,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 		result, err := txSvc.PostModel.Insert(ctx, &model.Post{
 			UserId:     loginUser.Id,
 			Content:    optionalString(content),
+			PostType:   "daily",
 			Visibility: forumPostVisibility,
 			Status:     forumPostStatusActive,
 			Location:   optionalString(req.Location),

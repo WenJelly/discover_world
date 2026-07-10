@@ -125,7 +125,7 @@ export function PostTimeline({
 
           <ol className="space-y-3">
             {group.posts.map((post) => (
-              <li key={post.id} className="relative pl-8">
+              <li key={post.id} data-post-id={post.id} className="relative pl-8">
                 {/* Post node — small filled dot anchored to the rail, vertically
                     aligned with the card's avatar row. */}
                 <span

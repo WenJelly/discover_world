@@ -41,8 +41,12 @@ func (l *GetPublicPostCursorListLogic) GetPublicPostCursorList(req *types.Public
 	if err != nil {
 		return nil, err
 	}
+	postType, err := normalizePostTypeFilter(req.PostType)
+	if err != nil {
+		return nil, err
+	}
 
-	posts, err := l.svcCtx.PostModel.FindPublicBeforeCursor(l.ctx, cursor, sort, req.SearchText, pageSize+1)
+	posts, err := l.svcCtx.PostModel.FindPublicBeforeCursor(l.ctx, cursor, sort, req.SearchText, postType, pageSize+1)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query public posts failed")
 	}

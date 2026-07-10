@@ -48,6 +48,7 @@ import {
   getAvatarFallback,
   getMediaUrl,
 } from "@/lib/format";
+import { postTypeLabel } from "@/lib/post-type";
 import type { MediaAssetResponse, ProfilePostResponse } from "@/lib/types";
 import type { PostCommentResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -436,6 +437,7 @@ export function PostCard({
       <span>上海</span>
     </div>
   );
+  const postTypeText = postTypeLabel(post.postType);
 
   return (
     <>
@@ -469,6 +471,9 @@ export function PostCard({
             >
               {formatRelativeTime(post.createdAt)}
             </time>
+            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              {postTypeText}
+            </span>
             {pinned ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 <Pin className="size-3" />

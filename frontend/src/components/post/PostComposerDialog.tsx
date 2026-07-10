@@ -23,7 +23,8 @@ import { ApiError, createPost, uploadMediaAsset } from "@/lib/api";
 import { notifyMediaAssetUploaded } from "@/lib/media-events";
 import { useToast } from "@/hooks/use-toast";
 import { getAvatarFallback } from "@/lib/format";
-import type { ProfilePostResponse } from "@/lib/types";
+import { POST_TYPE_OPTIONS } from "@/lib/post-type";
+import type { PostType, ProfilePostResponse } from "@/lib/types";
 import {
   POST_MAX_IMAGES,
   PostImageAttach,
@@ -64,6 +65,7 @@ export function PostComposerDialog({
   const { toast } = useToast();
   const [content, setContent] = useState("");
   const [images, setImages] = useState<AttachedImage[]>([]);
+  const [postType, setPostType] = useState<PostType>("daily");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [location, setLocation] = useState("");
   const [locationOpen, setLocationOpen] = useState(false);
@@ -79,6 +81,7 @@ export function PostComposerDialog({
       setContent("");
       images.forEach(revokeImagePreview);
       setImages([]);
+      setPostType("daily");
       setVisibility("public");
       setLocation("");
       setLocationOpen(false);
@@ -164,9 +167,10 @@ export function PostComposerDialog({
         );
       }
 
-      const post = await createPost({
-        content: content.trim() || undefined,
-        visibility,
+    const post = await createPost({
+      content: content.trim() || undefined,
+      postType,
+      visibility,
         location: location.trim() || undefined,
         imageIds: uploadedImageIds,
       });
@@ -248,6 +252,35 @@ export function PostComposerDialog({
               buttonClassName="min-w-[6.75rem] shrink-0 rounded-full border border-border bg-background font-semibold text-primary hover:bg-primary/10 hover:text-primary"
               menuClassName="z-30"
             />
+          </div>
+        </div>
+
+        <div className="px-4 pb-2">
+          <div
+            className="inline-flex h-9 rounded-full border border-border bg-muted/40 p-0.5"
+            role="group"
+            aria-label="选择动态类型"
+          >
+            {POST_TYPE_OPTIONS.map((option) => {
+              const active = option.value === postType;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPostType(option.value)}
+                  disabled={submitting}
+                  aria-pressed={active}
+                  className={[
+                    "h-8 rounded-full px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60",
+                    active
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  ].join(" ")}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 

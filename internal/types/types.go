@@ -123,6 +123,7 @@ type CreatePostCommentRequest struct {
 
 type CreatePostRequest struct {
 	Content    string   `json:"content,optional"`
+	PostType   string   `json:"postType,optional"`
 	Visibility string   `json:"visibility,optional"`
 	Location   string   `json:"location,optional"`
 	ImageIds   []string `json:"imageIds,optional"`
@@ -247,6 +248,7 @@ type GlobalSearchPostResponse struct {
 	UserId    string          `json:"userId"`
 	Author    AccountSummary  `json:"author"`
 	Content   string          `json:"content"`
+	PostType  string          `json:"postType"`
 	Location  string          `json:"location"`
 	Stats     MediaAssetStats `json:"stats"`
 	CreatedAt string          `json:"createdAt"`
@@ -543,6 +545,7 @@ type PublicPostListRequest struct {
 	PageSize   int64               `json:"pageSize,optional"`
 	Sort       string              `json:"sort,optional"`
 	SearchText string              `json:"searchText,optional"`
+	PostType   string              `json:"postType,optional"`
 	Variant    MediaVariantRequest `json:"variantOption,optional"`
 }
 
@@ -551,6 +554,7 @@ type PublicPostResponse struct {
 	UserId      string               `json:"userId"`
 	Author      AccountSummary       `json:"author"`
 	Content     string               `json:"content"`
+	PostType    string               `json:"postType"`
 	Visibility  string               `json:"visibility"`
 	Status      string               `json:"status"`
 	Location    string               `json:"location"`
@@ -612,6 +616,7 @@ type ProfilePostResponse struct {
 	Id          string               `json:"id"`
 	UserId      string               `json:"userId"`
 	Content     string               `json:"content"`
+	PostType    string               `json:"postType"`
 	Visibility  string               `json:"visibility"`
 	Status      string               `json:"status"`
 	Location    string               `json:"location"`
@@ -699,6 +704,7 @@ type UpdateHomepageHeroRequest struct {
 type UpdatePostRequest struct {
 	Id         string   `json:"id"`
 	Content    string   `json:"content,optional"`
+	PostType   string   `json:"postType,optional"`
 	Visibility string   `json:"visibility,optional"`
 	Location   string   `json:"location,optional"`
 	ImageIds   []string `json:"imageIds,optional"`

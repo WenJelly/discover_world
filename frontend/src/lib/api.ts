@@ -91,6 +91,7 @@ import {
   normalizeApiErrorMessage,
   type ApiErrorContext,
 } from "./api-error";
+import { normalizePostType } from "./post-type";
 
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8888";
@@ -500,6 +501,7 @@ function normalizeMediaAssetPage<T extends MediaAssetPageResponse | MediaAssetCu
 function normalizeProfilePost(post: ProfilePostResponse): ProfilePostResponse {
   return {
     ...post,
+    postType: normalizePostType(post.postType),
     images: (post.images ?? []).map(normalizeMediaAsset),
     stats: post.stats ?? {
       viewCount: 0,
@@ -639,7 +641,10 @@ function normalizeGlobalSearchResponse(
   return {
     ...resp,
     media: (resp.media ?? []).map(normalizeMediaAsset),
-    posts: resp.posts ?? [],
+    posts: (resp.posts ?? []).map((post) => ({
+      ...post,
+      postType: normalizePostType(post.postType),
+    })),
     albums: (resp.albums ?? []).map((album) => ({
       ...album,
       cover: album.cover?.id ? normalizeMediaAsset(album.cover) : album.cover,

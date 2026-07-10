@@ -35,6 +35,8 @@ const (
 	linkRoleAlbumItem     = "album_item"
 	linkRoleFeaturedMedia = "featured"
 	defaultPostReaction   = "like"
+	postTypeDaily         = "daily"
+	postTypeTravelShare   = "travel_share"
 )
 
 type profileCursorPayload struct {
@@ -46,6 +48,15 @@ type profileCursorPayload struct {
 type postViewerState struct {
 	liked     map[uint64]bool
 	favorited map[uint64]bool
+}
+
+func normalizePostTypeValue(postType string) string {
+	switch strings.ToLower(strings.TrimSpace(postType)) {
+	case postTypeTravelShare:
+		return postTypeTravelShare
+	default:
+		return postTypeDaily
+	}
 }
 
 func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserID string) (*model.UserAccount, *model.UserAccount, bool, error) {

@@ -57,6 +57,34 @@ func TestNormalizePostVisibilityAllowsOnlyPublicAndPrivate(t *testing.T) {
 	}
 }
 
+func TestNormalizePostTypeAllowsDailyAndTravelShare(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "empty defaults daily", raw: "", want: postTypeDaily},
+		{name: "daily lowercased", raw: " DAILY ", want: postTypeDaily},
+		{name: "travel share lowercased", raw: "Travel_Share", want: postTypeTravelShare},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := normalizePostType(tt.raw)
+			if err != nil {
+				t.Fatalf("normalizePostType returned error: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("normalizePostType = %q, want %q", got, tt.want)
+			}
+		})
+	}
+
+	if _, err := normalizePostType("guide"); err == nil {
+		t.Fatal("normalizePostType accepted unsupported guide type")
+	}
+}
+
 func TestParsePostImageIDsDropsDuplicatesAndRejectsBadIDs(t *testing.T) {
 	got, err := parsePostImageIDs([]string{" 7 ", "2", "7", "", "9"})
 	if err != nil {

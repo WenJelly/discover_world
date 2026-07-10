@@ -42,6 +42,10 @@ func (l *CreatePostLogic) CreatePost(req *types.CreatePostRequest) (*types.Profi
 	if err != nil {
 		return nil, err
 	}
+	postType, err := normalizePostType(req.PostType)
+	if err != nil {
+		return nil, err
+	}
 	visibility, err := normalizePostVisibility(req.Visibility)
 	if err != nil {
 		return nil, err
@@ -66,6 +70,7 @@ func (l *CreatePostLogic) CreatePost(req *types.CreatePostRequest) (*types.Profi
 		data := &model.Post{
 			UserId:     loginUser.Id,
 			Content:    optionalString(content),
+			PostType:   postType,
 			Visibility: visibility,
 			Status:     postStatusActive,
 			Location:   optionalString(location),

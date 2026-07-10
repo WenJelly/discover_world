@@ -319,6 +319,7 @@ type (
 		Id          string               `json:"id"`
 		UserId      string               `json:"userId"`
 		Content     string               `json:"content"`
+		PostType    string               `json:"postType"`
 		Visibility  string               `json:"visibility"`
 		Status      string               `json:"status"`
 		Location    string               `json:"location"`
@@ -340,6 +341,7 @@ type (
 	}
 	CreatePostRequest {
 		Content    string   `json:"content,optional"`
+		PostType   string   `json:"postType,optional"`
 		Visibility string   `json:"visibility,optional"`
 		Location   string   `json:"location,optional"`
 		ImageIds   []string `json:"imageIds,optional"`
@@ -347,6 +349,7 @@ type (
 	UpdatePostRequest {
 		Id         string   `json:"id"`
 		Content    string   `json:"content,optional"`
+		PostType   string   `json:"postType,optional"`
 		Visibility string   `json:"visibility,optional"`
 		Location   string   `json:"location,optional"`
 		ImageIds   []string `json:"imageIds,optional"`
@@ -370,6 +373,7 @@ type (
 		UserId    string          `json:"userId"`
 		Author    AccountSummary  `json:"author"`
 		Content   string          `json:"content"`
+		PostType  string          `json:"postType"`
 		Location  string          `json:"location"`
 		Stats     MediaAssetStats `json:"stats"`
 		CreatedAt string          `json:"createdAt"`
@@ -442,6 +446,7 @@ type (
 		PageSize   int64               `json:"pageSize,optional"`
 		Sort       string              `json:"sort,optional"`
 		SearchText string              `json:"searchText,optional"`
+		PostType   string              `json:"postType,optional"`
 		Variant    MediaVariantRequest `json:"variantOption,optional"`
 	}
 	PublicPostResponse {
@@ -449,6 +454,7 @@ type (
 		UserId      string               `json:"userId"`
 		Author      AccountSummary       `json:"author"`
 		Content     string               `json:"content"`
+		PostType    string               `json:"postType"`
 		Visibility  string               `json:"visibility"`
 		Status      string               `json:"status"`
 		Location    string               `json:"location"`

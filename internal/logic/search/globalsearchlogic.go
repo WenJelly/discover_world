@@ -168,6 +168,7 @@ func buildSearchPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 			UserId:    formatID(post.UserId),
 			Author:    authors[post.UserId],
 			Content:   nullStringValue(post.Content),
+			PostType:  normalizePostTypeValue(post.PostType),
 			Location:  nullStringValue(post.Location),
 			Stats:     buildStats(stats[post.Id]),
 			CreatedAt: formatTime(post.CreatedAt),

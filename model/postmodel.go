@@ -10,7 +10,7 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
-const postRows = "`id`,`user_id`,`content`,`visibility`,`status`,`location`,`extra_json`,`is_pinned`,`pinned_at`,`created_at`,`updated_at`,`deleted_at`"
+const postRows = "`id`,`user_id`,`content`,`post_type`,`visibility`,`status`,`location`,`extra_json`,`is_pinned`,`pinned_at`,`created_at`,`updated_at`,`deleted_at`"
 const postRowsWithDefaultScore = postRows + ",0 as score"
 
 type (
@@ -18,7 +18,7 @@ type (
 		Insert(ctx context.Context, data *Post) (sql.Result, error)
 		FindOneActive(ctx context.Context, id uint64) (*Post, error)
 		FindByIDs(ctx context.Context, ids []uint64) (map[uint64]*Post, error)
-		FindPublicBeforeCursor(ctx context.Context, cursor PublicPostCursor, sort string, searchText string, limit int64) ([]*Post, error)
+		FindPublicBeforeCursor(ctx context.Context, cursor PublicPostCursor, sort string, searchText string, postType string, limit int64) ([]*Post, error)
 		FindPublicByAuthorsBeforeCursor(ctx context.Context, authorIDs []uint64, beforeID uint64, limit int64) ([]*Post, error)
 		FindByUserBeforeID(ctx context.Context, userID uint64, includePrivate bool, beforeID, limit int64) ([]*Post, error)
 		FindByUserBeforePinCursor(ctx context.Context, userID uint64, includePrivate bool, cursor PostPinCursor, limit int64) ([]*Post, error)
@@ -48,6 +48,7 @@ type (
 		Id         uint64         `db:"id"`
 		UserId     uint64         `db:"user_id"`
 		Content    sql.NullString `db:"content"`
+		PostType   string         `db:"post_type"`
 		Visibility string         `db:"visibility"`
 		Status     string         `db:"status"`
 		Location   sql.NullString `db:"location"`
@@ -73,8 +74,8 @@ func qualifiedPostRowsWithDefaultScore(alias string) string {
 }
 
 func (m *defaultPostModel) Insert(ctx context.Context, data *Post) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (`user_id`,`content`,`visibility`,`status`,`location`,`extra_json`,`is_pinned`,`pinned_at`,`deleted_at`) values (?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table)
-	return m.conn.ExecCtx(ctx, query, data.UserId, data.Content, data.Visibility, data.Status, data.Location, data.ExtraJson, data.IsPinned, data.PinnedAt, data.DeletedAt)
+	query := fmt.Sprintf("insert into %s (`user_id`,`content`,`post_type`,`visibility`,`status`,`location`,`extra_json`,`is_pinned`,`pinned_at`,`deleted_at`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table)
+	return m.conn.ExecCtx(ctx, query, data.UserId, data.Content, data.PostType, data.Visibility, data.Status, data.Location, data.ExtraJson, data.IsPinned, data.PinnedAt, data.DeletedAt)
 }
 
 func (m *defaultPostModel) FindOneActive(ctx context.Context, id uint64) (*Post, error) {
@@ -115,7 +116,7 @@ func (m *defaultPostModel) FindByIDs(ctx context.Context, ids []uint64) (map[uin
 	return resp, nil
 }
 
-func (m *defaultPostModel) FindPublicBeforeCursor(ctx context.Context, cursor PublicPostCursor, sort string, searchText string, limit int64) ([]*Post, error) {
+func (m *defaultPostModel) FindPublicBeforeCursor(ctx context.Context, cursor PublicPostCursor, sort string, searchText string, postType string, limit int64) ([]*Post, error) {
 	if limit <= 0 {
 		limit = 20
 	}
@@ -142,6 +143,11 @@ func (m *defaultPostModel) FindPublicBeforeCursor(ctx context.Context, cursor Pu
 		"ua.`deleted_at` is null",
 	}
 	args := []any{}
+	postType = strings.ToLower(strings.TrimSpace(postType))
+	if postType != "" {
+		conditions = append(conditions, "p.`post_type` = ?")
+		args = append(args, postType)
+	}
 	searchText = strings.TrimSpace(searchText)
 	if searchText != "" {
 		conditions = append(conditions, "(p.`content` like ? or p.`location` like ? or ua.`username` like ?)")
@@ -257,8 +263,8 @@ func (m *defaultPostModel) FindByUserBeforePinCursor(ctx context.Context, userID
 }
 
 func (m *defaultPostModel) Update(ctx context.Context, data *Post) error {
-	query := fmt.Sprintf("update %s set `user_id` = ?, `content` = ?, `visibility` = ?, `status` = ?, `location` = ?, `extra_json` = ?, `is_pinned` = ?, `pinned_at` = ?, `deleted_at` = ? where `id` = ?", m.table)
-	_, err := m.conn.ExecCtx(ctx, query, data.UserId, data.Content, data.Visibility, data.Status, data.Location, data.ExtraJson, data.IsPinned, data.PinnedAt, data.DeletedAt, data.Id)
+	query := fmt.Sprintf("update %s set `user_id` = ?, `content` = ?, `post_type` = ?, `visibility` = ?, `status` = ?, `location` = ?, `extra_json` = ?, `is_pinned` = ?, `pinned_at` = ?, `deleted_at` = ? where `id` = ?", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, data.UserId, data.Content, data.PostType, data.Visibility, data.Status, data.Location, data.ExtraJson, data.IsPinned, data.PinnedAt, data.DeletedAt, data.Id)
 	return err
 }
 

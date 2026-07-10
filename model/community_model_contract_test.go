@@ -19,13 +19,14 @@ func TestPublicPostModelContract(t *testing.T) {
 	source := readCommunityModelSource(t, "postmodel.go")
 
 	for _, fragment := range []string{
-		"FindPublicBeforeCursor(ctx context.Context, cursor PublicPostCursor, sort string, searchText string, limit int64)",
+		"FindPublicBeforeCursor(ctx context.Context, cursor PublicPostCursor, sort string, searchText string, postType string, limit int64)",
 		"FindByIDs(ctx context.Context, ids []uint64)",
 		"SetStatus(ctx context.Context, id uint64, status string)",
 		"PublicPostCursor",
 		"`status` = 'active'",
 		"`visibility` = 'public'",
 		"`deleted_at` is null",
+		"p.`post_type` = ?",
 		"`user_account`",
 		"ua.`status` = 'active'",
 		"postHotScoreSQL",

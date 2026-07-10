@@ -52,11 +52,12 @@ test("shadcn select component replaces native selects", async () => {
   assert.doesNotMatch(communitySource, /SelectField/);
   assert.doesNotMatch(postCardSource, /SelectField/);
   assert.match(communitySource, /aria-label="选择论坛分区"/);
+  assert.match(communitySource, /aria-label="动态类型筛选"/);
   assert.match(communitySource, /aria-label="公开动态排序"/);
   assert.match(postCardSource, /aria-label="举报原因"/);
   assert.equal(
     (communitySource.match(/alignItemWithTrigger=\{false\}/g) ?? []).length,
-    2
+    3
   );
   assert.equal(
     (postCardSource.match(/alignItemWithTrigger=\{false\}/g) ?? []).length,

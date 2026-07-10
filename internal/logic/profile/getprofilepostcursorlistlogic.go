@@ -100,6 +100,7 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 			Id:         formatID(post.Id),
 			UserId:     formatID(post.UserId),
 			Content:    nullStringValue(post.Content),
+			PostType:   normalizePostTypeValue(post.PostType),
 			Visibility: post.Visibility,
 			Status:     post.Status,
 			Location:   nullStringValue(post.Location),
