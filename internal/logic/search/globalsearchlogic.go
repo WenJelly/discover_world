@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/logic/ipgeo"
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
@@ -157,6 +158,10 @@ func buildSearchPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态统计失败")
 	}
+	ipRegions, err := ipgeo.LoadRegionsByTarget(ctx, svcCtx, ipgeo.TargetTypePost, postIDs)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询动态属地失败")
+	}
 
 	resp := make([]types.GlobalSearchPostResponse, 0, len(posts))
 	for _, post := range posts {
@@ -170,6 +175,7 @@ func buildSearchPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 			Content:   nullStringValue(post.Content),
 			PostType:  normalizePostTypeValue(post.PostType),
 			Location:  nullStringValue(post.Location),
+			IpRegion:  ipRegions[post.Id],
 			Stats:     buildStats(stats[post.Id]),
 			CreatedAt: formatTime(post.CreatedAt),
 			UpdatedAt: formatTime(post.UpdatedAt),

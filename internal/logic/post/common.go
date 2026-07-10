@@ -13,6 +13,8 @@ import (
 
 	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
+	access "discover_world/internal/logic/access"
+	"discover_world/internal/logic/ipgeo"
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
@@ -36,8 +38,9 @@ const (
 	postTypeDaily       = "daily"
 	postTypeTravelShare = "travel_share"
 
-	postVisibilityPublic  = "public"
-	postVisibilityPrivate = "private"
+	postVisibilityPublic    = "public"
+	postVisibilityFollowers = "followers"
+	postVisibilityPrivate   = "private"
 
 	targetTypePost     = "post"
 	ownerTypePost      = "post"
@@ -90,10 +93,12 @@ func normalizePostVisibility(visibility string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(visibility)) {
 	case "", postVisibilityPublic:
 		return postVisibilityPublic, nil
+	case postVisibilityFollowers:
+		return postVisibilityFollowers, nil
 	case postVisibilityPrivate:
 		return postVisibilityPrivate, nil
 	default:
-		return "", commonresponse.BadRequest("visibility must be public or private")
+		return "", commonresponse.BadRequest("visibility must be public, followers or private")
 	}
 }
 
@@ -313,7 +318,7 @@ func loadVisiblePost(ctx context.Context, svcCtx *svc.ServiceContext, postID uin
 		}
 		return nil, commonresponse.InternalServerError("query post failed")
 	}
-	if !canViewPost(post, viewer, svcCtx) {
+	if !canViewPost(ctx, post, viewer, svcCtx) {
 		return nil, commonresponse.Forbidden("no permission to view this post")
 	}
 	return post, nil
@@ -326,14 +331,15 @@ func canManagePost(post *model.Post, user *model.UserAccount, svcCtx *svc.Servic
 	return post.UserId == user.Id || svcCtx.IsAdminAccount(user)
 }
 
-func canViewPost(post *model.Post, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
+func canViewPost(ctx context.Context, post *model.Post, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
 	if post == nil || post.Status != postStatusActive || post.DeletedAt.Valid {
 		return false
 	}
-	if post.Visibility == postVisibilityPublic {
-		return true
+	level, err := access.ResolveViewerAccess(ctx, svcCtx, user, post.UserId)
+	if err != nil {
+		return false
 	}
-	return canManagePost(post, user, svcCtx)
+	return access.CanViewVisibility(post.Visibility, level)
 }
 
 func validatePostImages(ctx context.Context, svcCtx *svc.ServiceContext, ownerID uint64, imageIDs []uint64, postVisibility string) error {
@@ -361,6 +367,14 @@ func validatePostImages(ctx context.Context, svcCtx *svc.ServiceContext, ownerID
 		}
 		if postVisibility == postVisibilityPublic && (asset.Visibility != "public" || asset.AuditStatus != "approved") {
 			return commonresponse.BadRequest("public posts can only use public approved images")
+		}
+		if postVisibility == postVisibilityFollowers {
+			if asset.Visibility != postVisibilityPublic && asset.Visibility != postVisibilityFollowers {
+				return commonresponse.BadRequest("followers posts can only use public or followers images")
+			}
+			if asset.AuditStatus != "approved" {
+				return commonresponse.BadRequest("followers posts can only use approved images")
+			}
 		}
 	}
 	return nil
@@ -453,6 +467,7 @@ func buildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 			Visibility:  item.Visibility,
 			Status:      item.Status,
 			Location:    item.Location,
+			IpRegion:    item.IpRegion,
 			Images:      item.Images,
 			Stats:       item.Stats,
 			LikedBy:     item.LikedBy,
@@ -501,6 +516,10 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post liked users failed")
 	}
+	ipRegions, err := loadIPRegionsByTarget(ctx, svcCtx, postIDs)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query post ip regions failed")
+	}
 
 	resp := make([]types.ProfilePostResponse, 0, len(posts))
 	for _, post := range posts {
@@ -523,6 +542,7 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 			Visibility: post.Visibility,
 			Status:     post.Status,
 			Location:   nullStringValue(post.Location),
+			IpRegion:   ipRegions[post.Id],
 			IsPinned:   isPinned,
 			PinnedAt:   pinnedAt,
 			Images:     images,
@@ -535,6 +555,10 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 		resp = append(resp, item)
 	}
 	return resp, nil
+}
+
+func loadIPRegionsByTarget(ctx context.Context, svcCtx *svc.ServiceContext, postIDs []uint64) (map[uint64]types.IpRegionResponse, error) {
+	return ipgeo.LoadRegionsByTarget(ctx, svcCtx, ipgeo.TargetTypePost, postIDs)
 }
 
 func nonNilAccountSummaries(list []types.AccountSummary) []types.AccountSummary {

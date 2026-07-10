@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/sql/create/admin_operation_log.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/admin_role_policy.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/album.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/asset_link.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/comment_record.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/content_ip_attribution.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/favorite.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/media_asset.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/media_object.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/media_upload_session.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/moderation_report.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/notification.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/post.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/post_discussion.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/reaction.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/share_link.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/storage_bucket.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/tagging.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/user_follow.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+    <file url="file://$PROJECT_DIR$/sql/create/user_profile.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
+  </component>
+</project>

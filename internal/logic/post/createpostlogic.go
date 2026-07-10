@@ -8,6 +8,7 @@ import (
 	"database/sql"
 
 	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
@@ -87,7 +88,13 @@ func (l *CreatePostLogic) CreatePost(req *types.CreatePostRequest) (*types.Profi
 		if err := txSvc.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, ownerTypePost, postID, linkRoleAttachment, imageIDs); err != nil {
 			return err
 		}
-		return txSvc.EntityStatModel.Ensure(ctx, targetTypePost, postID)
+		if err := txSvc.EntityStatModel.Ensure(ctx, targetTypePost, postID); err != nil {
+			return err
+		}
+		if err := ipgeo.RecordContentAttribution(ctx, txSvc, ipgeo.TargetTypePost, postID, ipgeo.ActionTypeCreate, loginUser.Id); err != nil {
+			logx.WithContext(ctx).Errorf("record post ip attribution failed: postId=%d userId=%d err=%v", postID, loginUser.Id, err)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("create post failed")

@@ -12,6 +12,7 @@ import (
 
 	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
+	access "discover_world/internal/logic/access"
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
@@ -59,17 +60,17 @@ func normalizePostTypeValue(postType string) string {
 	}
 }
 
-func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserID string) (*model.UserAccount, *model.UserAccount, bool, error) {
+func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserID string) (*model.UserAccount, *model.UserAccount, access.ViewerAccessLevel, error) {
 	loginUser, err := commonauth.LoadRequiredLoginUser(ctx, svcCtx, "")
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, access.ViewerAccessPublic, err
 	}
 
 	targetID := loginUser.Id
 	if strings.TrimSpace(rawUserID) != "" {
 		targetID, err = parseRequiredID(rawUserID, "userId")
 		if err != nil {
-			return nil, nil, false, err
+			return nil, nil, access.ViewerAccessPublic, err
 		}
 	}
 
@@ -78,14 +79,17 @@ func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserI
 		target, err = svcCtx.UserAccountModel.FindOneActive(ctx, targetID)
 		if err != nil {
 			if errors.Is(err, model.ErrNotFound) {
-				return nil, nil, false, commonresponse.NotFound("账号不存在")
+				return nil, nil, access.ViewerAccessPublic, commonresponse.NotFound("账号不存在")
 			}
-			return nil, nil, false, commonresponse.InternalServerError("查询账号失败")
+			return nil, nil, access.ViewerAccessPublic, commonresponse.InternalServerError("查询账号失败")
 		}
 	}
 
-	includePrivate := target.Id == loginUser.Id || svcCtx.IsAdminAccount(loginUser)
-	return loginUser, target, includePrivate, nil
+	accessLevel, err := access.ResolveViewerAccess(ctx, svcCtx, loginUser, target.Id)
+	if err != nil {
+		return nil, nil, access.ViewerAccessPublic, commonresponse.InternalServerError("查询关注关系失败")
+	}
+	return loginUser, target, accessLevel, nil
 }
 
 func ensureProfileForAccount(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount) (*model.UserProfile, error) {

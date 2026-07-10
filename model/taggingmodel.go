@@ -15,6 +15,7 @@ type (
 	TaggingModel interface {
 		taggingModel
 		FindNamesByTargetIDs(ctx context.Context, targetType string, targetIDs []uint64) (map[uint64][]string, error)
+		MoveTaggings(ctx context.Context, sourceTagID uint64, targetTagID uint64) error
 		ReplaceTargetTags(ctx context.Context, targetType string, targetID uint64, tagIDs []uint64) error
 		withSession(session sqlx.Session) TaggingModel
 	}
@@ -29,6 +30,19 @@ func NewTaggingModel(conn sqlx.SqlConn) TaggingModel {
 	return &customTaggingModel{
 		defaultTaggingModel: newTaggingModel(conn),
 	}
+}
+
+func (m *customTaggingModel) MoveTaggings(ctx context.Context, sourceTagID uint64, targetTagID uint64) error {
+	if sourceTagID == 0 || targetTagID == 0 || sourceTagID == targetTagID {
+		return nil
+	}
+	deleteDupQuery := fmt.Sprintf("delete src from %s src where src.`tag_id` = ? and exists (select 1 from %s dst where dst.`tag_id` = ? and dst.`target_type` = src.`target_type` and dst.`target_id` = src.`target_id`)", m.table, m.table)
+	if _, err := m.conn.ExecCtx(ctx, deleteDupQuery, sourceTagID, targetTagID); err != nil {
+		return err
+	}
+	updateQuery := fmt.Sprintf("update %s set `tag_id` = ? where `tag_id` = ?", m.table)
+	_, err := m.conn.ExecCtx(ctx, updateQuery, targetTagID, sourceTagID)
+	return err
 }
 
 func (m *customTaggingModel) withSession(session sqlx.Session) TaggingModel {

@@ -29,7 +29,7 @@ func TestNormalizePostContentTrimsAndLimitsLength(t *testing.T) {
 	}
 }
 
-func TestNormalizePostVisibilityAllowsOnlyPublicAndPrivate(t *testing.T) {
+func TestNormalizePostVisibilityAllowsPublicFollowersAndPrivate(t *testing.T) {
 	tests := []struct {
 		name string
 		raw  string
@@ -37,6 +37,7 @@ func TestNormalizePostVisibilityAllowsOnlyPublicAndPrivate(t *testing.T) {
 	}{
 		{name: "empty defaults public", raw: "", want: postVisibilityPublic},
 		{name: "public lowercased", raw: " PUBLIC ", want: postVisibilityPublic},
+		{name: "followers lowercased", raw: "Followers", want: postVisibilityFollowers},
 		{name: "private lowercased", raw: "Private", want: postVisibilityPrivate},
 	}
 
@@ -52,8 +53,8 @@ func TestNormalizePostVisibilityAllowsOnlyPublicAndPrivate(t *testing.T) {
 		})
 	}
 
-	if _, err := normalizePostVisibility("followers"); err == nil {
-		t.Fatal("normalizePostVisibility accepted unsupported followers visibility")
+	if _, err := normalizePostVisibility("unlisted"); err == nil {
+		t.Fatal("normalizePostVisibility accepted unsupported unlisted visibility")
 	}
 }
 

@@ -145,6 +145,15 @@ type (
 		Status    string `json:"status"`
 		Role      string `json:"role"`
 	}
+	IpRegionResponse {
+		Country         string `json:"country"`
+		Province        string `json:"province"`
+		City            string `json:"city"`
+		District        string `json:"district"`
+		Isp             string `json:"isp"`
+		DisplayLocation string `json:"displayLocation"`
+		Provider        string `json:"provider"`
+	}
 	MediaAssetUrls {
 		Thumbnail string `json:"thumbnail"`
 		Preview   string `json:"preview"`
@@ -192,6 +201,7 @@ type (
 		Permissions      MediaAssetPermissions `json:"permissions"`
 		Stats            MediaAssetStats       `json:"stats"`
 		IsLiked          bool                  `json:"isLiked"`
+		IpRegion         IpRegionResponse      `json:"ipRegion"`
 		MetadataJson     string                `json:"metadataJson"`
 		CreatedAt        string                `json:"createdAt"`
 		UpdatedAt        string                `json:"updatedAt"`
@@ -323,6 +333,7 @@ type (
 		Visibility  string               `json:"visibility"`
 		Status      string               `json:"status"`
 		Location    string               `json:"location"`
+		IpRegion    IpRegionResponse     `json:"ipRegion"`
 		IsPinned    bool                 `json:"isPinned"`
 		PinnedAt    string               `json:"pinnedAt"`
 		Images      []MediaAssetResponse `json:"images"`
@@ -375,6 +386,7 @@ type (
 		Content   string          `json:"content"`
 		PostType  string          `json:"postType"`
 		Location  string          `json:"location"`
+		IpRegion  IpRegionResponse `json:"ipRegion"`
 		Stats     MediaAssetStats `json:"stats"`
 		CreatedAt string          `json:"createdAt"`
 		UpdatedAt string          `json:"updatedAt"`
@@ -458,6 +470,7 @@ type (
 		Visibility  string               `json:"visibility"`
 		Status      string               `json:"status"`
 		Location    string               `json:"location"`
+		IpRegion    IpRegionResponse     `json:"ipRegion"`
 		Images      []MediaAssetResponse `json:"images"`
 		Stats       MediaAssetStats      `json:"stats"`
 		LikedBy     []AccountSummary     `json:"likedBy"`
@@ -530,7 +543,159 @@ type (
 		CreatedAt  string `json:"createdAt"`
 	}
 	AdminModeratePostRequest {
+		Id       string `json:"id"`
+		Reason   string `json:"reason,optional"`
+		ReportId string `json:"reportId,optional"`
+	}
+	AdminOperationLogQueryRequest {
+		OperatorUserId string `json:"operatorUserId,optional"`
+		Action         string `json:"action,optional"`
+		TargetType     string `json:"targetType,optional"`
+		TargetId       string `json:"targetId,optional"`
+		CreatedAtFrom  string `json:"createdAtFrom,optional"`
+		CreatedAtTo    string `json:"createdAtTo,optional"`
+		PageNum        int64  `json:"pageNum,optional"`
+		PageSize       int64  `json:"pageSize,optional"`
+	}
+	AdminOperationLogDetailRequest {
 		Id string `json:"id"`
+	}
+	AdminOperationLogResponse {
+		Id             string         `json:"id"`
+		OperatorUserId string         `json:"operatorUserId"`
+		Operator       AccountSummary `json:"operator"`
+		Action         string         `json:"action"`
+		TargetType     string         `json:"targetType"`
+		TargetId       string         `json:"targetId"`
+		Reason         string         `json:"reason"`
+		BeforeJson     string         `json:"beforeJson"`
+		AfterJson      string         `json:"afterJson"`
+		MetadataJson   string         `json:"metadataJson"`
+		ClientIp       string         `json:"clientIp"`
+		CreatedAt      string         `json:"createdAt"`
+	}
+	AdminOperationLogPageResponse {
+		PageNum  int64                       `json:"pageNum"`
+		PageSize int64                       `json:"pageSize"`
+		Total    int64                       `json:"total"`
+		List     []AdminOperationLogResponse `json:"list"`
+	}
+	AdminModerationReportQueryRequest {
+		Status         string `json:"status,optional"`
+		TargetType     string `json:"targetType,optional"`
+		TargetId       string `json:"targetId,optional"`
+		ReporterUserId string `json:"reporterUserId,optional"`
+		CreatedAtFrom  string `json:"createdAtFrom,optional"`
+		CreatedAtTo    string `json:"createdAtTo,optional"`
+		PageNum        int64  `json:"pageNum,optional"`
+		PageSize       int64  `json:"pageSize,optional"`
+	}
+	AdminModerationReportDetailRequest {
+		Id string `json:"id"`
+	}
+	AdminModerationReportResolveRequest {
+		Id             string `json:"id"`
+		Resolution     string `json:"resolution"`
+		ResolutionNote string `json:"resolutionNote,optional"`
+		Action         string `json:"action,optional"`
+		TargetType     string `json:"targetType,optional"`
+		TargetId       string `json:"targetId,optional"`
+	}
+	AdminModerationReportResponse {
+		Id             string         `json:"id"`
+		ReporterUserId string         `json:"reporterUserId"`
+		Reporter       AccountSummary `json:"reporter"`
+		TargetType     string         `json:"targetType"`
+		TargetId       string         `json:"targetId"`
+		Reason         string         `json:"reason"`
+		Description    string         `json:"description"`
+		Status         string         `json:"status"`
+		HandlerUserId  string         `json:"handlerUserId"`
+		Resolution     string         `json:"resolution"`
+		ResolutionNote string         `json:"resolutionNote"`
+		CreatedAt      string         `json:"createdAt"`
+		UpdatedAt      string         `json:"updatedAt"`
+		ResolvedAt     string         `json:"resolvedAt"`
+	}
+	AdminModerationReportPageResponse {
+		PageNum  int64                           `json:"pageNum"`
+		PageSize int64                           `json:"pageSize"`
+		Total    int64                           `json:"total"`
+		List     []AdminModerationReportResponse `json:"list"`
+	}
+	AdminContentQueryRequest {
+		TargetType string `json:"targetType,optional"`
+		Status     string `json:"status,optional"`
+		UserId     string `json:"userId,optional"`
+		SearchText string `json:"searchText,optional"`
+		PageNum    int64  `json:"pageNum,optional"`
+		PageSize   int64  `json:"pageSize,optional"`
+	}
+	AdminContentResponse {
+		Id         string         `json:"id"`
+		TargetType string         `json:"targetType"`
+		Author     AccountSummary `json:"author"`
+		Title      string         `json:"title"`
+		Content    string         `json:"content"`
+		Status     string         `json:"status"`
+		CreatedAt  string         `json:"createdAt"`
+	}
+	AdminContentPageResponse {
+		PageNum  int64                  `json:"pageNum"`
+		PageSize int64                  `json:"pageSize"`
+		Total    int64                  `json:"total"`
+		List     []AdminContentResponse `json:"list"`
+	}
+	AdminTagQueryRequest {
+		Name     string `json:"name,optional"`
+		TagType  string `json:"tagType,optional"`
+		Status   int64  `json:"status,optional"`
+		PageNum  int64  `json:"pageNum,optional"`
+		PageSize int64  `json:"pageSize,optional"`
+	}
+	AdminTagUpdateRequest {
+		Id      string `json:"id"`
+		Name    string `json:"name,optional"`
+		Slug    string `json:"slug,optional"`
+		TagType string `json:"tagType,optional"`
+		Status  int64  `json:"status,optional"`
+		Reason  string `json:"reason,optional"`
+	}
+	AdminTagMergeRequest {
+		SourceTagId string `json:"sourceTagId"`
+		TargetTagId string `json:"targetTagId"`
+		Reason      string `json:"reason,optional"`
+	}
+	AdminTagResponse {
+		Id        string `json:"id"`
+		Name      string `json:"name"`
+		Slug      string `json:"slug"`
+		TagType   string `json:"tagType"`
+		Status    int64  `json:"status"`
+		CreatedAt string `json:"createdAt"`
+	}
+	AdminTagPageResponse {
+		PageNum  int64              `json:"pageNum"`
+		PageSize int64              `json:"pageSize"`
+		Total    int64              `json:"total"`
+		List     []AdminTagResponse `json:"list"`
+	}
+	AdminDashboardRequest {
+	}
+	AdminDashboardResponse {
+		PendingMediaCount int64 `json:"pendingMediaCount"`
+		OpenReportCount   int64 `json:"openReportCount"`
+		ActiveUserCount   int64 `json:"activeUserCount"`
+		PublicMediaCount  int64 `json:"publicMediaCount"`
+		PublicPostCount   int64 `json:"publicPostCount"`
+		RecentMediaCount  int64 `json:"recentMediaCount"`
+		RecentPostCount   int64 `json:"recentPostCount"`
+		RecentReportCount int64 `json:"recentReportCount"`
+	}
+	AdminFeatureContentRequest {
+		TargetType string `json:"targetType"`
+		TargetId   string `json:"targetId"`
+		Reason     string `json:"reason,optional"`
 	}
 	NotificationListRequest {
 		Cursor   string `json:"cursor,optional"`
@@ -907,6 +1072,30 @@ service DiscoverWorld {
 
 	@handler UpdateHomepageFeatured
 	post /homepage/featured/update (UpdateHomepageFeaturedRequest) returns (HomepageConfigResponse)
+
+	@handler GetAdminOperationDashboard
+	post /operation/dashboard (AdminDashboardRequest) returns (AdminDashboardResponse)
+
+	@handler GetAdminTagList
+	post /operation/tag/list (AdminTagQueryRequest) returns (AdminTagPageResponse)
+
+	@handler UpdateAdminTag
+	post /operation/tag/update (AdminTagUpdateRequest) returns (AdminTagResponse)
+
+	@handler MergeAdminTag
+	post /operation/tag/merge (AdminTagMergeRequest) returns (AdminTagResponse)
+
+	@handler FeatureAdminContent
+	post /operation/content/feature (AdminFeatureContentRequest)
+
+	@handler UnfeatureAdminContent
+	post /operation/content/unfeature (AdminFeatureContentRequest)
+
+	@handler GetAdminOperationLogList
+	post /audit/operation/list (AdminOperationLogQueryRequest) returns (AdminOperationLogPageResponse)
+
+	@handler GetAdminOperationLogDetail
+	post /audit/operation/detail (AdminOperationLogDetailRequest) returns (AdminOperationLogResponse)
 }
 
 @server (
@@ -927,6 +1116,24 @@ service DiscoverWorld {
 	middleware: AdminCheck
 )
 service DiscoverWorld {
+	@handler GetAdminModerationReportList
+	post /moderation/report/list (AdminModerationReportQueryRequest) returns (AdminModerationReportPageResponse)
+
+	@handler GetAdminModerationReportDetail
+	post /moderation/report/detail (AdminModerationReportDetailRequest) returns (AdminModerationReportResponse)
+
+	@handler ResolveAdminModerationReport
+	post /moderation/report/resolve (AdminModerationReportResolveRequest) returns (AdminModerationReportResponse)
+
+	@handler GetAdminContentList
+	post /moderation/content/list (AdminContentQueryRequest) returns (AdminContentPageResponse)
+
+	@handler AdminHideComment
+	post /moderation/comment/hide (AdminModeratePostRequest)
+
+	@handler AdminRestoreComment
+	post /moderation/comment/restore (AdminModeratePostRequest)
+
 	@handler AdminHidePost
 	post /moderation/post/hide (AdminModeratePostRequest)
 

@@ -7,6 +7,7 @@ import (
 	"context"
 
 	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 
@@ -27,6 +28,10 @@ func (l *AdminLockForumPostLogic) AdminLockForumPost(req *types.AdminModeratePos
 	if req == nil {
 		return commonresponse.BadRequest("request cannot be empty")
 	}
+	adminUser, err := adminsupport.RequireAdminCapability(l.ctx, l.svcCtx, adminsupport.CapabilityContentModerate)
+	if err != nil {
+		return err
+	}
 	postID, err := parseRequiredID(req.Id, "id")
 	if err != nil {
 		return err
@@ -34,5 +39,12 @@ func (l *AdminLockForumPostLogic) AdminLockForumPost(req *types.AdminModeratePos
 	if err := l.svcCtx.PostDiscussionModel.SetLocked(l.ctx, postID, true); err != nil {
 		return commonresponse.InternalServerError("lock forum post failed")
 	}
-	return nil
+	return adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+		OperatorUserID: adminUser.Id,
+		Action:         "forum_post.lock",
+		TargetType:     adminTargetForumPost,
+		TargetID:       postID,
+		Reason:         req.Reason,
+		Metadata:       map[string]any{"reportId": req.ReportId},
+	})
 }

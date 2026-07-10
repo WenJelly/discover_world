@@ -7,6 +7,8 @@ import (
 	"context"
 
 	commonresponse "discover_world/internal/common/response"
+	access "discover_world/internal/logic/access"
+	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 
@@ -32,7 +34,7 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 		req = &types.ProfilePostListRequest{}
 	}
 
-	loginUser, target, includePrivate, err := loadProfileTarget(l.ctx, l.svcCtx, req.UserId)
+	loginUser, target, accessLevel, err := loadProfileTarget(l.ctx, l.svcCtx, req.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +47,8 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 		return nil, err
 	}
 
-	posts, err := l.svcCtx.PostModel.FindByUserBeforePinCursor(l.ctx, target.Id, includePrivate, cursor, pageSize+1)
+	visibleValues := access.VisibleValuesForLevel(accessLevel)
+	posts, err := l.svcCtx.PostModel.FindByUserBeforePinCursor(l.ctx, target.Id, visibleValues, cursor, pageSize+1)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态失败")
 	}
@@ -83,6 +86,10 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post viewer state failed")
 	}
+	ipRegions, err := ipgeo.LoadRegionsByTarget(l.ctx, l.svcCtx, ipgeo.TargetTypePost, postIDs)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query post ip regions failed")
+	}
 
 	list := make([]types.ProfilePostResponse, 0, len(posts))
 	for _, post := range posts {
@@ -104,6 +111,7 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 			Visibility: post.Visibility,
 			Status:     post.Status,
 			Location:   nullStringValue(post.Location),
+			IpRegion:   ipRegions[post.Id],
 			IsPinned:   isPinned,
 			PinnedAt:   pinnedAt,
 			Images:     images,

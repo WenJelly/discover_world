@@ -50,7 +50,7 @@ func (l *ToggleMediaReactionLogic) ToggleMediaReaction(req *types.ToggleMediaRea
 		}
 		return nil, commonresponse.InternalServerError("query media asset failed")
 	}
-	if !canViewMediaAsset(asset, loginUser, l.svcCtx) {
+	if !canViewMediaAsset(l.ctx, asset, loginUser, l.svcCtx) {
 		return nil, commonresponse.Forbidden("no permission to view this media asset")
 	}
 

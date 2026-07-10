@@ -4,6 +4,7 @@ go 1.26
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
+	github.com/lionsoul2014/ip2region/binding/golang v0.0.0-20260709160242-cd40e3a1d532
 	github.com/zeromicro/go-zero v1.10.1
 	golang.org/x/crypto v0.50.0
 )

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -17,11 +18,19 @@ type (
 	TagModel interface {
 		tagModel
 		EnsureByName(ctx context.Context, name string) (*Tag, error)
+		FindByFilter(ctx context.Context, filter TagFilter, pageNum int64, pageSize int64) ([]*Tag, error)
+		CountByFilter(ctx context.Context, filter TagFilter) (int64, error)
 		withSession(session sqlx.Session) TagModel
 	}
 
 	customTagModel struct {
 		*defaultTagModel
+	}
+
+	TagFilter struct {
+		Name    string
+		TagType string
+		Status  int64
 	}
 )
 
@@ -65,4 +74,50 @@ func (m *customTagModel) EnsureByName(ctx context.Context, name string) (*Tag, e
 	}
 
 	return m.FindOneByName(ctx, name)
+}
+
+func (m *customTagModel) FindByFilter(ctx context.Context, filter TagFilter, pageNum int64, pageSize int64) ([]*Tag, error) {
+	whereSQL, args := buildTagWhere(filter)
+	if pageNum <= 0 {
+		pageNum = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	query := fmt.Sprintf("select %s from %s where %s order by `id` desc limit ? offset ?", tagRows, m.table, whereSQL)
+	args = append(args, pageSize, (pageNum-1)*pageSize)
+
+	var resp []*Tag
+	if err := m.conn.QueryRowsCtx(ctx, &resp, query, args...); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (m *customTagModel) CountByFilter(ctx context.Context, filter TagFilter) (int64, error) {
+	whereSQL, args := buildTagWhere(filter)
+	query := fmt.Sprintf("select count(1) from %s where %s", m.table, whereSQL)
+	var resp int64
+	if err := m.conn.QueryRowCtx(ctx, &resp, query, args...); err != nil {
+		return 0, err
+	}
+	return resp, nil
+}
+
+func buildTagWhere(filter TagFilter) (string, []any) {
+	conditions := []string{"1 = 1"}
+	args := make([]any, 0)
+	if value := strings.TrimSpace(filter.Name); value != "" {
+		conditions = append(conditions, "`name` like ?")
+		args = append(args, "%"+value+"%")
+	}
+	if value := strings.TrimSpace(filter.TagType); value != "" {
+		conditions = append(conditions, "`tag_type` = ?")
+		args = append(args, value)
+	}
+	if filter.Status == 0 || filter.Status == 1 {
+		conditions = append(conditions, "`status` = ?")
+		args = append(args, filter.Status)
+	}
+	return strings.Join(conditions, " and "), args
 }

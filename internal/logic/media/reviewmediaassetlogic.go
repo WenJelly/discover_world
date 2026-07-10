@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
@@ -38,7 +38,7 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 		return nil, commonresponse.BadRequest("请求不能为空")
 	}
 
-	adminUser, err := commonauth.LoadRequiredAdminUser(l.ctx, l.svcCtx, "")
+	adminUser, err := adminsupport.RequireAdminCapability(l.ctx, l.svcCtx, adminsupport.CapabilityMediaReview)
 	if err != nil {
 		return nil, err
 	}
@@ -64,10 +64,30 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 	}
 
 	now := time.Now()
+	before := map[string]any{
+		"id":           formatID(asset.Id),
+		"auditStatus":  asset.AuditStatus,
+		"metadataJson": nullStringValue(asset.MetadataJson),
+	}
 	asset.AuditStatus = auditStatus
 	asset.MetadataJson = mergeReviewMetadata(asset.MetadataJson, strings.TrimSpace(req.ReviewMessage), formatID(adminUser.Id), formatTime(now))
 	if err := l.svcCtx.MediaAssetModel.Update(l.ctx, asset); err != nil {
 		return nil, commonresponse.InternalServerError("审核媒体资源失败")
+	}
+	if err := adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+		OperatorUserID: adminUser.Id,
+		Action:         "media.review",
+		TargetType:     targetTypeMediaAsset,
+		TargetID:       asset.Id,
+		Reason:         req.ReviewMessage,
+		Before:         before,
+		After: map[string]any{
+			"id":           formatID(asset.Id),
+			"auditStatus":  asset.AuditStatus,
+			"metadataJson": nullStringValue(asset.MetadataJson),
+		},
+	}); err != nil {
+		return nil, err
 	}
 	if asset.OwnerUserId != adminUser.Id {
 		title := "作品审核已更新"

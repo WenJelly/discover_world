@@ -35,6 +35,35 @@ type AdminConfig struct {
 	Emails    []string `json:",optional"`
 }
 
+type IpGeoStaticRule struct {
+	CIDR            string `json:",optional"`
+	Country         string `json:",optional"`
+	Province        string `json:",optional"`
+	City            string `json:",optional"`
+	District        string `json:",optional"`
+	ISP             string `json:",optional"`
+	DisplayLocation string `json:",optional"`
+	Provider        string `json:",optional"`
+	ProviderVersion string `json:",optional"`
+}
+
+type Ip2RegionConfig struct {
+	DBPath      string `json:",optional"`
+	IPv4DBPath  string `json:",optional"`
+	IPv6DBPath  string `json:",optional"`
+	CachePolicy string `json:",optional"`
+	Searchers   int    `json:",optional"`
+}
+
+type IpGeoConfig struct {
+	Enabled        bool              `json:",optional"`
+	Provider       string            `json:",optional"`
+	HashSecret     string            `json:",optional"`
+	TrustedProxies []string          `json:",optional"`
+	Ip2Region      Ip2RegionConfig   `json:",optional"`
+	StaticRules    []IpGeoStaticRule `json:",optional"`
+}
+
 type Config struct {
 	rest.RestConf
 
@@ -51,11 +80,13 @@ type Config struct {
 	Cos CosConfig
 
 	Admin          AdminConfig
+	IpGeo          IpGeoConfig
 	StorageSecrets map[string]StorageSecretConfig `json:",optional"`
 }
 
 func (c *Config) Normalize() {
 	c.Cos.Normalize()
+	c.IpGeo.Normalize(c.Auth.AccessSecret)
 }
 
 func (c *Config) ApplyCosOverride(override CosConfig) {
@@ -124,5 +155,35 @@ func (c *CosConfig) ApplyOverride(override CosConfig) {
 	}
 	if value := strings.TrimSpace(override.Client.Bucket); value != "" {
 		c.Client.Bucket = value
+	}
+}
+
+func (c *IpGeoConfig) Normalize(defaultHashSecret string) {
+	c.Provider = strings.ToLower(strings.TrimSpace(c.Provider))
+	if c.Provider == "" {
+		c.Provider = "static"
+	}
+	if strings.TrimSpace(c.HashSecret) == "" {
+		c.HashSecret = defaultHashSecret
+	}
+	c.Ip2Region.Normalize()
+}
+
+func (c *Ip2RegionConfig) Normalize() {
+	c.DBPath = strings.TrimSpace(c.DBPath)
+	c.IPv4DBPath = strings.TrimSpace(c.IPv4DBPath)
+	c.IPv6DBPath = strings.TrimSpace(c.IPv6DBPath)
+	c.CachePolicy = strings.TrimSpace(c.CachePolicy)
+	if c.IPv4DBPath == "" {
+		c.IPv4DBPath = c.DBPath
+	}
+	if c.DBPath == "" {
+		c.DBPath = c.IPv4DBPath
+	}
+	if c.CachePolicy == "" {
+		c.CachePolicy = "vectorIndex"
+	}
+	if c.Searchers <= 0 {
+		c.Searchers = 20
 	}
 }

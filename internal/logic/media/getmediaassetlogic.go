@@ -52,7 +52,7 @@ func (l *GetMediaAssetLogic) GetMediaAsset(req *types.GetMediaAssetRequest) (res
 		}
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")
 	}
-	if !canViewMediaAsset(asset, loginUser, l.svcCtx) {
+	if !canViewMediaAsset(l.ctx, asset, loginUser, l.svcCtx) {
 		return nil, commonresponse.Forbidden("无权查看该媒体资源")
 	}
 

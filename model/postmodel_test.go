@@ -55,3 +55,20 @@ func TestPostModelUnscoredQueriesSelectDefaultScore(t *testing.T) {
 		t.Fatal("searchmodel.go should use qualifiedPostRowsWithDefaultScore for unscored Post scans")
 	}
 }
+
+func TestPostModelProfileQuerySupportsFollowersVisibility(t *testing.T) {
+	source, err := os.ReadFile("postmodel.go")
+	if err != nil {
+		t.Fatalf("read postmodel.go: %v", err)
+	}
+	text := string(source)
+	required := []string{
+		"FindByUserBeforePinCursor(ctx context.Context, userID uint64, visibleValues []string",
+		"`visibility` in (",
+	}
+	for _, item := range required {
+		if !strings.Contains(text, item) {
+			t.Fatalf("postmodel.go missing %q", item)
+		}
+	}
+}

@@ -116,6 +116,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			[]rest.Route{
 				{
 					Method:  http.MethodPost,
+					Path:    "/audit/operation/detail",
+					Handler: admin.GetAdminOperationLogDetailHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/audit/operation/list",
+					Handler: admin.GetAdminOperationLogListHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
 					Path:    "/homepage/featured/update",
 					Handler: admin.UpdateHomepageFeaturedHandler(serverCtx),
 				},
@@ -128,6 +138,36 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Method:  http.MethodPost,
 					Path:    "/media/list",
 					Handler: admin.GetAdminMediaAssetListHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/operation/content/feature",
+					Handler: admin.FeatureAdminContentHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/operation/content/unfeature",
+					Handler: admin.UnfeatureAdminContentHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/operation/dashboard",
+					Handler: admin.GetAdminOperationDashboardHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/operation/tag/list",
+					Handler: admin.GetAdminTagListHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/operation/tag/merge",
+					Handler: admin.MergeAdminTagHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/operation/tag/update",
+					Handler: admin.UpdateAdminTagHandler(serverCtx),
 				},
 			}...,
 		),
@@ -404,6 +444,36 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Method:  http.MethodPost,
 					Path:    "/moderation/post/restore",
 					Handler: moderation.AdminRestorePostHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/moderation/comment/hide",
+					Handler: moderation.AdminHideCommentHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/moderation/comment/restore",
+					Handler: moderation.AdminRestoreCommentHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/moderation/content/list",
+					Handler: moderation.GetAdminContentListHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/moderation/report/detail",
+					Handler: moderation.GetAdminModerationReportDetailHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/moderation/report/list",
+					Handler: moderation.GetAdminModerationReportListHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/moderation/report/resolve",
+					Handler: moderation.ResolveAdminModerationReportHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPost,

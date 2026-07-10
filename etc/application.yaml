@@ -5,10 +5,11 @@ MaxBytes: 33554432
 Timeout: 70000
 
 Mysql:
-  DataSource: root:root@tcp(localhost:3306)/discover_world?charset=utf8mb4&parseTime=true
+  DataSource: root:a@tcp(localhost:3306)/discover_world?charset=utf8mb4&parseTime=true
 
 CacheRedis:
   - Host: localhost:6379
+    Pass: root
 
 Auth:
   AccessSecret: "this-is-wen-jelly-jwt"
@@ -17,3 +18,15 @@ Auth:
 Admin:
   Usernames:
     - admin
+
+IpGeo:
+  Enabled: true
+  Provider: ip2region
+  HashSecret: "this-is-wen-jelly-ip-hash"
+  TrustedProxies: []
+  Ip2Region:
+    DBPath: "data/ipgeo/ip2region_v4.xdb"
+    IPv6DBPath: "data/ipgeo/ip2region_v6.xdb"
+    CachePolicy: vectorIndex
+    Searchers: 20
+  StaticRules: []

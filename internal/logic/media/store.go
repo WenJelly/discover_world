@@ -8,6 +8,7 @@ import (
 
 	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
@@ -208,6 +209,9 @@ func storeMediaAsset(ctx context.Context, svcCtx *svc.ServiceContext, tempPath, 
 		return nil, commonresponse.InternalServerError("保存媒体标签失败")
 	}
 	ensureEntityStat(ctx, svcCtx, asset.Id)
+	if err := ipgeo.RecordContentAttribution(ctx, svcCtx, ipgeo.TargetTypeMediaAsset, asset.Id, ipgeo.ActionTypeUpload, loginUser.Id); err != nil {
+		logx.WithContext(ctx).Errorf("record media upload ip attribution failed: assetId=%d userId=%d err=%v", asset.Id, loginUser.Id, err)
+	}
 
 	profile, _ := svcCtx.UserProfileModel.FindOneByUserId(ctx, loginUser.Id)
 	return buildMediaAssetResponse(ctx, svcCtx, asset, object, loginUser, profile, nil, normalizeTags(req.Tags), loginUser, types.MediaVariantRequest{})

@@ -51,3 +51,28 @@ func TestApplicationConfigAliasesDefaultStorageSecretPath(t *testing.T) {
 		t.Fatal("path alias storage SecretKey is empty")
 	}
 }
+
+func TestIpGeoNormalizeKeepsIP2RegionSettings(t *testing.T) {
+	cfg := IpGeoConfig{
+		Provider: " IP2Region ",
+		Ip2Region: Ip2RegionConfig{
+			DBPath:     " ./data/ip2region.xdb ",
+			IPv6DBPath: " ./data/ip2region_v6.xdb ",
+		},
+	}
+
+	cfg.Normalize("default-hash-secret")
+
+	if cfg.Provider != "ip2region" {
+		t.Fatalf("provider = %q", cfg.Provider)
+	}
+	if cfg.HashSecret != "default-hash-secret" {
+		t.Fatalf("hash secret = %q", cfg.HashSecret)
+	}
+	if cfg.Ip2Region.DBPath != "./data/ip2region.xdb" {
+		t.Fatalf("db path = %q", cfg.Ip2Region.DBPath)
+	}
+	if cfg.Ip2Region.IPv6DBPath != "./data/ip2region_v6.xdb" {
+		t.Fatalf("ipv6 db path = %q", cfg.Ip2Region.IPv6DBPath)
+	}
+}

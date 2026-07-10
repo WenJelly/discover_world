@@ -20,7 +20,7 @@ func TestFollowingFeedModelContract(t *testing.T) {
 		"FindPublicByAuthorsBeforeCursor(ctx context.Context, authorIDs []uint64, beforeID uint64, limit int64)",
 		"`user_id` in",
 		"`status` = 'active'",
-		"`visibility` = 'public'",
+		"`visibility` in ('public','followers')",
 		"`deleted_at` is null",
 	} {
 		if !strings.Contains(string(postSource), fragment) {
@@ -32,7 +32,7 @@ func TestFollowingFeedModelContract(t *testing.T) {
 		"FindPublicWorkByOwnersBeforeID(ctx context.Context, ownerIDs []uint64, beforeID uint64, limit int64)",
 		"`owner_user_id` in",
 		"`status` = 'active'",
-		"`visibility` = 'public'",
+		"`visibility` in ('public','followers')",
 		"`audit_status` = 'approved'",
 		"`asset_usage` = 'work'",
 		"`deleted_at` is null",

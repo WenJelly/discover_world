@@ -9,6 +9,7 @@ import (
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
@@ -100,7 +101,13 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 		}); err != nil {
 			return err
 		}
-		return txSvc.EntityStatModel.Ensure(ctx, targetTypePost, postID)
+		if err := txSvc.EntityStatModel.Ensure(ctx, targetTypePost, postID); err != nil {
+			return err
+		}
+		if err := ipgeo.RecordContentAttribution(ctx, txSvc, ipgeo.TargetTypePost, postID, ipgeo.ActionTypeCreate, loginUser.Id); err != nil {
+			logx.WithContext(ctx).Errorf("record forum post ip attribution failed: postId=%d userId=%d err=%v", postID, loginUser.Id, err)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("create forum post failed")

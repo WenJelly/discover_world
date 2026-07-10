@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"discover_world/internal/common/clientip"
 	"discover_world/internal/common/response"
 	"discover_world/internal/config"
 	"discover_world/internal/handler"
@@ -34,8 +35,10 @@ func main() {
 
 	server := rest.MustNewServer(c.RestConf, rest.WithCors())
 	defer server.Stop()
+	server.Use(clientip.Middleware(c.IpGeo.TrustedProxies))
 
 	ctx := svc.NewServiceContext(c)
+	defer ctx.Close()
 	handler.RegisterHandlers(server, ctx)
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)

@@ -153,7 +153,7 @@ func (m *customMediaAssetModel) FindPublicWorkByOwnersBeforeID(ctx context.Conte
 	conditions := []string{
 		fmt.Sprintf("`owner_user_id` in (%s)", inPlaceholders(len(ownerIDs))),
 		"`status` = 'active'",
-		"`visibility` = 'public'",
+		"`visibility` in ('public','followers')",
 		"`audit_status` = 'approved'",
 		"`asset_usage` = 'work'",
 		"`deleted_at` is null",

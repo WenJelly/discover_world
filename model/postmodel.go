@@ -20,8 +20,10 @@ type (
 		FindByIDs(ctx context.Context, ids []uint64) (map[uint64]*Post, error)
 		FindPublicBeforeCursor(ctx context.Context, cursor PublicPostCursor, sort string, searchText string, postType string, limit int64) ([]*Post, error)
 		FindPublicByAuthorsBeforeCursor(ctx context.Context, authorIDs []uint64, beforeID uint64, limit int64) ([]*Post, error)
-		FindByUserBeforeID(ctx context.Context, userID uint64, includePrivate bool, beforeID, limit int64) ([]*Post, error)
-		FindByUserBeforePinCursor(ctx context.Context, userID uint64, includePrivate bool, cursor PostPinCursor, limit int64) ([]*Post, error)
+		FindAdminByFilter(ctx context.Context, filter PostAdminFilter, pageNum int64, pageSize int64) ([]*Post, error)
+		CountAdminByFilter(ctx context.Context, filter PostAdminFilter) (int64, error)
+		FindByUserBeforeID(ctx context.Context, userID uint64, visibleValues []string, beforeID, limit int64) ([]*Post, error)
+		FindByUserBeforePinCursor(ctx context.Context, userID uint64, visibleValues []string, cursor PostPinCursor, limit int64) ([]*Post, error)
 		SetPinned(ctx context.Context, id uint64, pinned bool, pinnedAt time.Time) error
 		SetStatus(ctx context.Context, id uint64, status string) error
 		Update(ctx context.Context, data *Post) error
@@ -31,6 +33,15 @@ type (
 	PublicPostCursor struct {
 		ID    uint64
 		Score float64
+	}
+
+	PostAdminFilter struct {
+		Status        string
+		UserId        uint64
+		PostType      string
+		SearchText    string
+		CreatedAtFrom time.Time
+		CreatedAtTo   time.Time
 	}
 
 	PostPinCursor struct {
@@ -205,7 +216,7 @@ func (m *defaultPostModel) FindPublicByAuthorsBeforeCursor(ctx context.Context, 
 	conditions := []string{
 		fmt.Sprintf("`user_id` in (%s)", inPlaceholders(len(authorIDs))),
 		"`status` = 'active'",
-		"`visibility` = 'public'",
+		"`visibility` in ('public','followers')",
 		"`deleted_at` is null",
 	}
 	if beforeID > 0 {
@@ -223,19 +234,85 @@ func (m *defaultPostModel) FindPublicByAuthorsBeforeCursor(ctx context.Context, 
 	return resp, nil
 }
 
-func (m *defaultPostModel) FindByUserBeforeID(ctx context.Context, userID uint64, includePrivate bool, beforeID, limit int64) ([]*Post, error) {
-	return m.FindByUserBeforePinCursor(ctx, userID, includePrivate, PostPinCursor{ID: uint64(maxInt64(beforeID))}, limit)
+func (m *defaultPostModel) FindAdminByFilter(ctx context.Context, filter PostAdminFilter, pageNum int64, pageSize int64) ([]*Post, error) {
+	whereSQL, args := buildPostAdminWhere(filter)
+	if pageNum <= 0 {
+		pageNum = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	query := fmt.Sprintf("select %s from %s where %s order by `id` desc limit ? offset ?", postRowsWithDefaultScore, m.table, whereSQL)
+	args = append(args, pageSize, (pageNum-1)*pageSize)
+	var resp []*Post
+	if err := m.conn.QueryRowsCtx(ctx, &resp, query, args...); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
-func (m *defaultPostModel) FindByUserBeforePinCursor(ctx context.Context, userID uint64, includePrivate bool, cursor PostPinCursor, limit int64) ([]*Post, error) {
+func (m *defaultPostModel) CountAdminByFilter(ctx context.Context, filter PostAdminFilter) (int64, error) {
+	whereSQL, args := buildPostAdminWhere(filter)
+	query := fmt.Sprintf("select count(1) from %s where %s", m.table, whereSQL)
+	var resp int64
+	if err := m.conn.QueryRowCtx(ctx, &resp, query, args...); err != nil {
+		return 0, err
+	}
+	return resp, nil
+}
+
+func buildPostAdminWhere(filter PostAdminFilter) (string, []any) {
+	conditions := []string{"`status` <> 'deleted'", "`deleted_at` is null"}
+	args := make([]any, 0)
+	if status := strings.TrimSpace(filter.Status); status != "" && status != "all" {
+		conditions = append(conditions, "`status` = ?")
+		args = append(args, status)
+	}
+	if filter.UserId > 0 {
+		conditions = append(conditions, "`user_id` = ?")
+		args = append(args, filter.UserId)
+	}
+	if postType := strings.TrimSpace(filter.PostType); postType != "" && postType != "all" {
+		conditions = append(conditions, "`post_type` = ?")
+		args = append(args, postType)
+	}
+	if searchText := strings.TrimSpace(filter.SearchText); searchText != "" {
+		conditions = append(conditions, "(`content` like ? or `location` like ?)")
+		like := "%" + searchText + "%"
+		args = append(args, like, like)
+	}
+	if !filter.CreatedAtFrom.IsZero() {
+		conditions = append(conditions, "`created_at` >= ?")
+		args = append(args, filter.CreatedAtFrom)
+	}
+	if !filter.CreatedAtTo.IsZero() {
+		conditions = append(conditions, "`created_at` <= ?")
+		args = append(args, filter.CreatedAtTo)
+	}
+	return strings.Join(conditions, " and "), args
+}
+
+func (m *defaultPostModel) FindByUserBeforeID(ctx context.Context, userID uint64, visibleValues []string, beforeID, limit int64) ([]*Post, error) {
+	return m.FindByUserBeforePinCursor(ctx, userID, visibleValues, PostPinCursor{ID: uint64(maxInt64(beforeID))}, limit)
+}
+
+func (m *defaultPostModel) FindByUserBeforePinCursor(ctx context.Context, userID uint64, visibleValues []string, cursor PostPinCursor, limit int64) ([]*Post, error) {
 	if limit <= 0 {
 		limit = 20
 	}
 
 	conditions := []string{"`user_id` = ?", "`status` <> 'deleted'", "`deleted_at` is null"}
 	args := []any{userID}
-	if !includePrivate {
-		conditions = append(conditions, "`status` = 'active'", "`visibility` = 'public'")
+	visibleValues = normalizeVisibleValues(visibleValues)
+	if len(visibleValues) == 0 {
+		visibleValues = []string{"public"}
+	}
+	if !visibleValuesAllowOwnerScope(visibleValues) {
+		conditions = append(conditions, "`status` = 'active'")
+	}
+	conditions = append(conditions, fmt.Sprintf("`visibility` in (%s)", inPlaceholders(len(visibleValues))))
+	for _, visibility := range visibleValues {
+		args = append(args, visibility)
 	}
 	if cursor.ID > 0 {
 		if cursor.IsPinned && cursor.PinnedAt.Valid {
@@ -260,6 +337,31 @@ func (m *defaultPostModel) FindByUserBeforePinCursor(ctx context.Context, userID
 		return nil, err
 	}
 	return resp, nil
+}
+
+func normalizeVisibleValues(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.ToLower(strings.TrimSpace(value))
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
+}
+
+func visibleValuesAllowOwnerScope(values []string) bool {
+	seen := make(map[string]bool, len(values))
+	for _, value := range values {
+		seen[value] = true
+	}
+	return seen["public"] && seen["followers"] && seen["private"] && seen["unlisted"]
 }
 
 func (m *defaultPostModel) Update(ctx context.Context, data *Post) error {

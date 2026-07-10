@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	commonresponse "discover_world/internal/common/response"
+	access "discover_world/internal/logic/access"
+	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
@@ -27,6 +29,11 @@ func buildMediaAssetResponse(ctx context.Context, svcCtx *svc.ServiceContext, as
 	}
 	if resp != nil {
 		resp.Owner.AvatarUrl = LoadAvatarURL(ctx, svcCtx, profile)
+		ipRegions, err := loadIPRegionsByTarget(ctx, svcCtx, []uint64{asset.Id})
+		if err != nil {
+			return nil, err
+		}
+		resp.IpRegion = ipRegions[asset.Id]
 		viewerState, err := loadMediaViewerState(ctx, svcCtx, viewer, []uint64{asset.Id})
 		if err != nil {
 			return nil, err
@@ -93,7 +100,7 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 		aspectRatio = float64(width) / float64(height)
 	}
 
-	canAccessOriginal := canViewOriginal(asset, viewer, svcCtx)
+	canAccessOriginal := canViewOriginal(ctx, asset, viewer, svcCtx)
 	permissions := types.MediaAssetPermissions{
 		CanViewOriginal: canAccessOriginal,
 		CanDownload:     canAccessOriginal,
@@ -132,6 +139,7 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 		},
 		Permissions:  permissions,
 		Stats:        buildMediaStats(stat),
+		IpRegion:     types.IpRegionResponse{},
 		MetadataJson: nullStringValue(asset.MetadataJson),
 		CreatedAt:    formatTime(asset.CreatedAt),
 		UpdatedAt:    formatTime(asset.UpdatedAt),
@@ -197,6 +205,10 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 	if err != nil {
 		return nil, err
 	}
+	ipRegions, err := loadIPRegionsByTarget(ctx, svcCtx, assetIDs)
+	if err != nil {
+		return nil, err
+	}
 
 	resp := make([]types.MediaAssetResponse, 0, len(assets))
 	for _, asset := range assets {
@@ -213,10 +225,15 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 			return nil, err
 		}
 		applyMediaViewerState(item, asset.Id, viewerState)
+		item.IpRegion = ipRegions[asset.Id]
 		item.Owner.AvatarUrl = avatarURLs[asset.OwnerUserId]
 		resp = append(resp, *item)
 	}
 	return resp, nil
+}
+
+func loadIPRegionsByTarget(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64) (map[uint64]types.IpRegionResponse, error) {
+	return ipgeo.LoadRegionsByTarget(ctx, svcCtx, ipgeo.TargetTypeMediaAsset, assetIDs)
 }
 
 func loadMediaViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *model.UserAccount, assetIDs []uint64) (mediaViewerState, error) {
@@ -413,18 +430,25 @@ func canManageMediaAsset(asset *model.MediaAsset, user *model.UserAccount, svcCt
 	return asset.OwnerUserId == user.Id || svcCtx.IsAdminAccount(user)
 }
 
-func canViewMediaAsset(asset *model.MediaAsset, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
-	if asset == nil {
+func canViewMediaAsset(ctx context.Context, asset *model.MediaAsset, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
+	if asset == nil || asset.Status != "active" || asset.DeletedAt.Valid {
 		return false
 	}
-	if asset.Visibility == "public" && asset.Status == "active" && asset.AuditStatus == "approved" {
-		return true
+	level, err := access.ResolveViewerAccess(ctx, svcCtx, user, asset.OwnerUserId)
+	if err != nil {
+		return false
 	}
-	return canManageMediaAsset(asset, user, svcCtx)
+	if level == access.ViewerAccessOwner || level == access.ViewerAccessAdmin {
+		return access.CanViewVisibility(asset.Visibility, level)
+	}
+	if asset.AuditStatus != "approved" {
+		return false
+	}
+	return access.CanViewVisibility(asset.Visibility, level)
 }
 
-func canViewOriginal(asset *model.MediaAsset, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
-	return canViewMediaAsset(asset, user, svcCtx)
+func canViewOriginal(ctx context.Context, asset *model.MediaAsset, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
+	return canViewMediaAsset(ctx, asset, user, svcCtx)
 }
 
 func accountRole(account *model.UserAccount) string {

@@ -77,9 +77,30 @@ func formatID(id uint64) string {
 	return strconv.FormatUint(id, 10)
 }
 
+func formatNullableID(id sql.NullInt64) string {
+	if !id.Valid || id.Int64 <= 0 {
+		return ""
+	}
+	return strconv.FormatInt(id.Int64, 10)
+}
+
+func nullStringValue(value sql.NullString) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.String
+}
+
 func formatTime(value time.Time) string {
 	if value.IsZero() {
 		return ""
 	}
 	return value.Format("2006-01-02 15:04:05")
+}
+
+func formatNullTime(value sql.NullTime) string {
+	if !value.Valid {
+		return ""
+	}
+	return formatTime(value.Time)
 }

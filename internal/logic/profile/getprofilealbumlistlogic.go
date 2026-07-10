@@ -7,6 +7,7 @@ import (
 	"context"
 
 	commonresponse "discover_world/internal/common/response"
+	access "discover_world/internal/logic/access"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 
@@ -32,10 +33,11 @@ func (l *GetProfileAlbumListLogic) GetProfileAlbumList(req *types.ProfileAlbumLi
 		req = &types.ProfileAlbumListRequest{}
 	}
 
-	loginUser, target, includePrivate, err := loadProfileTarget(l.ctx, l.svcCtx, req.UserId)
+	loginUser, target, accessLevel, err := loadProfileTarget(l.ctx, l.svcCtx, req.UserId)
 	if err != nil {
 		return nil, err
 	}
+	includePrivate := accessLevel == access.ViewerAccessOwner || accessLevel == access.ViewerAccessAdmin
 	pageNum, pageSize, err := normalizeProfilePage(req.PageNum, req.PageSize)
 	if err != nil {
 		return nil, err
