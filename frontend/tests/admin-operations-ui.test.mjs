@@ -80,3 +80,28 @@ test("admin dashboard shows real metrics queue links and recent operations", asy
     assert.ok(!dashboard.includes(token), `dashboard must not render ${token}`);
   }
 });
+
+test("tag management supports explicit status edit and merge workflows", async () => {
+  const sidebar = await source("../src/components/admin/AdminSidebar.tsx");
+  const tags = await source(
+    "../src/components/admin/AdminTagManagementPanel.tsx"
+  );
+  for (const token of [
+    "fetchAdminTagList",
+    "updateAdminTag",
+    "mergeAdminTag",
+    "status: 1",
+    "修改原因",
+    "合并原因",
+    "源标签",
+    "目标标签",
+    "标签关联将迁移",
+    "pageSize: PAGE_SIZE",
+    "next.status !== filters.status",
+  ]) {
+    assert.ok(tags.includes(token), `tag management missing ${token}`);
+  }
+  assert.ok(sidebar.includes("运营管理"));
+  assert.ok(sidebar.includes("标签管理"));
+  assert.ok(!tags.includes("全部状态"));
+});

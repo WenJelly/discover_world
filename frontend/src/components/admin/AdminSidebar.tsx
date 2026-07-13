@@ -5,6 +5,7 @@ import {
   Images,
   LayoutDashboard,
   ShieldCheck,
+  Tags,
 } from "lucide-react";
 
 import {
@@ -46,6 +47,10 @@ const ADMIN_GROUPS = [
       { id: "reports", label: "举报工单", icon: Flag },
       { id: "moderation", label: "内容治理", icon: ShieldCheck },
     ],
+  },
+  {
+    label: "运营管理",
+    items: [{ id: "tags", label: "标签管理", icon: Tags }],
   },
 ] satisfies Array<{
   label: string;

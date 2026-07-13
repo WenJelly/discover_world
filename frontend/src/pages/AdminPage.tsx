@@ -7,6 +7,7 @@ import { AdminHomepagePanel } from "@/components/admin/AdminHomepagePanel";
 import { AdminMediaReviewPanel } from "@/components/admin/AdminMediaReviewPanel";
 import { AdminReportsPanel } from "@/components/admin/AdminReportsPanel";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminTagManagementPanel } from "@/components/admin/AdminTagManagementPanel";
 import { Button } from "@/components/ui/button";
 import {
   SidebarInset,
@@ -149,6 +150,8 @@ export default function AdminPage() {
             <AdminReportsPanel />
           ) : activeTab === "moderation" ? (
             <AdminContentModerationPanel />
+          ) : activeTab === "tags" ? (
+            <AdminTagManagementPanel />
           ) : (
             <div className="flex min-h-[24rem] items-center justify-center border-y border-border bg-background text-sm text-muted-foreground sm:rounded-xl sm:border">
               {sectionCopy.title}将在当前阶段完成
