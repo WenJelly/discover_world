@@ -1,8 +1,8 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast as sonner } from "sonner";
 import { GalleryHorizontal, Grid2X2, ImageOff, RefreshCw } from "lucide-react";
 import { DiscoverPictureCard } from "@/components/discover/DiscoverPictureCard";
 import { PhotoDetailDialog } from "@/components/photo/PhotoDetailDialog";
-import { useToast } from "@/hooks/use-toast";
 import { useInView } from "@/hooks/useInView";
 import { useInfinitePictures } from "@/hooks/useInfinitePictures";
 import {
@@ -93,7 +93,6 @@ export default function DiscoverPage() {
     Record<string, FollowStatusResponse>
   >({});
   const [followPendingUserId, setFollowPendingUserId] = useState<string | null>(null);
-  const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const frameRef = useRef<HTMLDivElement | null>(null);
   const [sentinelRef, sentinelInView] = useInView<HTMLDivElement>({
@@ -248,19 +247,14 @@ export default function DiscoverPage() {
       .then((detail) => {
         if (!cancelled) handleAssetChange(detail);
       })
-      .catch((error) => {
+      .catch(() => {
         if (cancelled) return;
-        toast({
-          title: "作品详情加载失败",
-          description: error instanceof Error ? error.message : "请稍后重试",
-          variant: "destructive",
-        });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [activePictureId, handleAssetChange, toast]);
+  }, [activePictureId, handleAssetChange]);
 
   useEffect(() => {
     if (!isAuthenticated || !activeOwnerId || hideActiveFollow) return;
@@ -295,11 +289,7 @@ export default function DiscoverPage() {
   const handleToggleFollow = useCallback(async () => {
     if (!activeOwnerId || hideActiveFollow) return;
     if (!isAuthenticated) {
-      toast({
-        title: "请先登录",
-        description: "登录后可以关注创作者",
-        variant: "default",
-      });
+      sonner.info("请先登录", { description: "登录后可以关注创作者。" });
       return;
     }
 
@@ -338,10 +328,8 @@ export default function DiscoverPage() {
         }
         return next;
       });
-      toast({
-        title: nextFollowing ? "关注失败" : "取消关注失败",
-        description: error instanceof Error ? error.message : "请稍后重试",
-        variant: "destructive",
+      sonner.error(nextFollowing ? "关注失败" : "取消关注失败", {
+        description: error instanceof Error ? error.message : "请稍后重试。",
       });
     } finally {
       setFollowPendingUserId(null);
@@ -351,7 +339,6 @@ export default function DiscoverPage() {
     activeOwnerId,
     hideActiveFollow,
     isAuthenticated,
-    toast,
   ]);
 
   const targetRowHeight = isDesktopWidth(galleryWidth) ? 350 : 132;

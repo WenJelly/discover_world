@@ -6,6 +6,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { toast as sonner } from "sonner";
 import {
   ArrowLeft,
   ArrowRight,
@@ -28,7 +29,6 @@ import {
 import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import {
   adminHidePost,
   adminLockForumPost,
@@ -96,7 +96,6 @@ function navigateTo(path: string) {
 
 export default function AdminPage() {
   const { user, isAuthenticated } = useAuth();
-  const { toast } = useToast();
   const isAdmin =
     isAuthenticated && isAdminRole(user?.role || user?.userRole);
 
@@ -162,16 +161,12 @@ export default function AdminPage() {
         variantOption: { compressType: 2 },
       });
       setPendingMedia(page.list ?? []);
-    } catch (error) {
-      toast({
-        title: "待审核作品加载失败",
-        description: getErrorMessage(error, "请稍后重试"),
-        variant: "destructive",
-      });
+    } catch {
+      return;
     } finally {
       setMediaReviewLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   const loadModerationContent = useCallback(async () => {
     setModerationLoading(true);
@@ -189,16 +184,12 @@ export default function AdminPage() {
       ]);
       setModerationPosts(posts.list ?? []);
       setModerationForumPosts(forums.list ?? []);
-    } catch (error) {
-      toast({
-        title: "治理内容加载失败",
-        description: getErrorMessage(error, "请稍后重试"),
-        variant: "destructive",
-      });
+    } catch {
+      return;
     } finally {
       setModerationLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -271,18 +262,12 @@ export default function AdminPage() {
         focalY: heroDraft.focalY,
       });
       applyConfig(next);
-      toast({
-        title: "Hero 配置已保存",
-        description: heroDraft.asset
-          ? "首页 Hero 图与展示位置已更新。"
-          : "已清除 Hero 图，首页将回退为默认展示。",
-        variant: "success",
+      sonner.success("Hero 配置已保存", {
+        description: heroDraft.asset ? "首页主视觉已更新。" : "首页主视觉已清空。",
       });
     } catch (error) {
-      toast({
-        title: "Hero 配置保存失败",
-        description: getErrorMessage(error, "请稍后重试"),
-        variant: "destructive",
+      sonner.error("Hero 配置保存失败", {
+        description: getErrorMessage(error, "请稍后重试。"),
       });
     } finally {
       setSavingHero(false);
@@ -296,16 +281,12 @@ export default function AdminPage() {
         mediaAssetIds: featuredDraft.map((a) => a.id),
       });
       applyConfig(next);
-      toast({
-        title: "精选作品流已保存",
+      sonner.success("精选作品流已保存", {
         description: `首页精选已更新，共 ${next.featured.length} 张作品。`,
-        variant: "success",
       });
     } catch (error) {
-      toast({
-        title: "精选作品流保存失败",
-        description: getErrorMessage(error, "请稍后重试"),
-        variant: "destructive",
+      sonner.error("精选作品流保存失败", {
+        description: getErrorMessage(error, "请稍后重试。"),
       });
     } finally {
       setSavingFeatured(false);
@@ -325,15 +306,10 @@ export default function AdminPage() {
       });
       setPendingMedia((current) => current.filter((item) => item.id !== asset.id));
       setMediaReviewMessage("");
-      toast({
-        title: auditStatus === "approved" ? "作品已通过" : "作品已拒绝",
-        variant: "success",
-      });
+      sonner.success(auditStatus === "approved" ? "作品已通过" : "作品已拒绝");
     } catch (error) {
-      toast({
-        title: "审核操作失败",
-        description: getErrorMessage(error, "请稍后重试"),
-        variant: "destructive",
+      sonner.error("审核操作失败", {
+        description: getErrorMessage(error, "请稍后重试。"),
       });
     } finally {
       setReviewingMediaId("");
@@ -361,12 +337,10 @@ export default function AdminPage() {
           )
         );
       }
-      toast({ title: action === "hide" ? "动态已隐藏" : "动态已恢复", variant: "success" });
+      sonner.success(action === "hide" ? "动态已隐藏" : "动态已恢复");
     } catch (error) {
-      toast({
-        title: "动态治理失败",
-        description: getErrorMessage(error, "请稍后重试"),
-        variant: "destructive",
+      sonner.error("动态治理失败", {
+        description: getErrorMessage(error, "请稍后重试。"),
       });
     } finally {
       setModeratingId("");
@@ -409,12 +383,10 @@ export default function AdminPage() {
             : entry
         )
       );
-      toast({ title: "帖子治理操作已完成", variant: "success" });
+      sonner.success("帖子治理操作已完成");
     } catch (error) {
-      toast({
-        title: "帖子治理失败",
-        description: getErrorMessage(error, "请稍后重试"),
-        variant: "destructive",
+      sonner.error("帖子治理失败", {
+        description: getErrorMessage(error, "请稍后重试。"),
       });
     } finally {
       setModeratingId("");

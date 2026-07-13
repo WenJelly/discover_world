@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast as sonner } from "sonner";
 import {
   ArrowLeft,
   Bell,
@@ -35,7 +36,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import { POST_TYPE_FILTER_OPTIONS } from "@/lib/post-type";
 import {
   adminLockForumPost,
@@ -203,7 +203,6 @@ function ForumComposer({
   isAuthenticated: boolean;
   onCreated: (post: ForumPostResponse) => void;
 }) {
-  const { toast } = useToast();
   const [boardId, setBoardId] = useState(selectedBoardId);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -227,9 +226,6 @@ function ForumComposer({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSubmit) {
-      if (!isAuthenticated) {
-        toast({ title: "请先登录", description: "登录后可以发布讨论。" });
-      }
       return;
     }
 
@@ -246,12 +242,12 @@ function ForumComposer({
       setContent("");
       images.forEach(revokeAttachedImage);
       setImages([]);
-      toast({ title: "讨论已发布", variant: "success" });
+      sonner.success("讨论已发布", {
+        description: "内容已发布到所选论坛分区。",
+      });
     } catch (error) {
-      toast({
-        title: "发布失败",
+      sonner.error("发布失败", {
         description: error instanceof Error ? error.message : "请稍后重试。",
-        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
@@ -397,7 +393,6 @@ export default function CommunityPage() {
   const [forumHasMore, setForumHasMore] = useState(false);
   const [forumLoading, setForumLoading] = useState(false);
   const { user, isAuthenticated } = useAuth();
-  const { toast } = useToast();
   const isAdmin = isAuthenticated && isAdminRole(user?.role || user?.userRole);
 
   const selectedBoard = useMemo(
@@ -431,17 +426,13 @@ export default function CommunityPage() {
         );
         setPublicCursor(page.nextCursor);
         setPublicHasMore(page.hasMore);
-      } catch (error) {
-        toast({
-          title: "动态加载失败",
-          description: error instanceof Error ? error.message : "请稍后重试。",
-          variant: "destructive",
-        });
+      } catch {
+        return;
       } finally {
         setPublicLoading(false);
       }
     },
-    [publicCursor, publicPostType, publicSearchText, publicSort, toast]
+    [publicCursor, publicPostType, publicSearchText, publicSort]
   );
 
   const loadFollowingPosts = useCallback(
@@ -459,17 +450,13 @@ export default function CommunityPage() {
         );
         setFollowingPostCursor(page.nextCursor);
         setFollowingPostHasMore(page.hasMore);
-      } catch (error) {
-        toast({
-          title: "关注动态加载失败",
-          description: error instanceof Error ? error.message : "请稍后重试。",
-          variant: "destructive",
-        });
+      } catch {
+        return;
       } finally {
         setFollowingPostLoading(false);
       }
     },
-    [followingPostCursor, isAuthenticated, toast]
+    [followingPostCursor, isAuthenticated]
   );
 
   const loadFollowingMedia = useCallback(
@@ -487,17 +474,13 @@ export default function CommunityPage() {
         );
         setFollowingMediaCursor(page.nextCursor);
         setFollowingMediaHasMore(page.hasMore);
-      } catch (error) {
-        toast({
-          title: "关注作品加载失败",
-          description: error instanceof Error ? error.message : "请稍后重试。",
-          variant: "destructive",
-        });
+      } catch {
+        return;
       } finally {
         setFollowingMediaLoading(false);
       }
     },
-    [followingMediaCursor, isAuthenticated, toast]
+    [followingMediaCursor, isAuthenticated]
   );
 
   const loadForumPosts = useCallback(
@@ -515,17 +498,13 @@ export default function CommunityPage() {
         );
         setForumCursor(page.nextCursor);
         setForumHasMore(page.hasMore);
-      } catch (error) {
-        toast({
-          title: "论坛加载失败",
-          description: error instanceof Error ? error.message : "请稍后重试。",
-          variant: "destructive",
-        });
+      } catch {
+        return;
       } finally {
         setForumLoading(false);
       }
     },
-    [forumCursor, selectedBoardId, toast]
+    [forumCursor, selectedBoardId]
   );
 
   const loadSelectedPost = useCallback(
@@ -535,18 +514,13 @@ export default function CommunityPage() {
       try {
         const detail = await fetchPostDetail({ id: postId });
         setSelectedPost(detail);
-      } catch (error) {
-        toast({
-          title: "详情加载失败",
-          description: error instanceof Error ? error.message : "请稍后重试。",
-          variant: "destructive",
-        });
+      } catch {
         setSelectedPost(null);
       } finally {
         setDetailLoading(false);
       }
     },
-    [toast]
+    []
   );
 
   const openPostDetail = (
@@ -612,14 +586,12 @@ export default function CommunityPage() {
                       : entry.isBoardPinned,
               }
             : entry
-        )
+          )
       );
-      toast({ title: "论坛治理操作已完成", variant: "success" });
+      sonner.success("论坛治理操作已完成");
     } catch (error) {
-      toast({
-        title: "论坛治理失败",
+      sonner.error("论坛治理失败", {
         description: error instanceof Error ? error.message : "请稍后重试。",
-        variant: "destructive",
       });
     }
   };
@@ -659,14 +631,8 @@ export default function CommunityPage() {
           setSelectedBoardId(resp.list[0].id);
         }
       })
-      .catch((error) => {
-        toast({
-          title: "论坛分区加载失败",
-          description: error instanceof Error ? error.message : "请稍后重试。",
-          variant: "destructive",
-        });
-      });
-  }, [selectedBoardId, toast]);
+      .catch(() => undefined);
+  }, [selectedBoardId]);
 
   useEffect(() => {
     if (activeTab === "followingPosts" && isAuthenticated && followingPosts.length === 0) {

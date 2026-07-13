@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { toast as sonner } from "sonner";
 import {
   ArrowUp,
   BadgeCheck,
@@ -64,7 +65,6 @@ import {
   PostComposerDialog,
   type PostAuthor,
 } from "@/components/post/PostComposerDialog";
-import { useToast } from "@/hooks/use-toast";
 import {
   formatCount,
   formatDate,
@@ -308,7 +308,6 @@ function AlbumManagerDialog({
 
 export default function AccountDetailPage() {
   const { user, isAuthenticated } = useAuth();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<AccountTab>("posts");
   const [targetUserId, setTargetUserId] = useState(() => readAccountTargetUserId());
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -606,15 +605,13 @@ export default function AccountDetailPage() {
       );
     } catch (error) {
       setProfile(previous);
-      toast({
-        title: nextFollowing ? "关注失败" : "取消关注失败",
-        description: errorMessage(error, "请稍后重试"),
-        variant: "destructive",
+      sonner.error(nextFollowing ? "关注失败" : "取消关注失败", {
+        description: errorMessage(error, "请稍后重试。"),
       });
     } finally {
       setFollowPending(false);
     }
-  }, [followPending, isOwnProfile, profile, toast]);
+  }, [followPending, isOwnProfile, profile]);
 
   const openFollowList = (kind: FollowListKind) => {
     setFollowListKind(kind);
@@ -676,7 +673,7 @@ export default function AccountDetailPage() {
       );
       removeDeletedImageFromState(confirmation.imageId);
       setDeleteConfirmation(null);
-      toast({ title: "图片已删除", variant: "success" });
+      sonner.success("图片已删除");
     } catch (error) {
       if (
         confirmation.mode === "standard" &&
@@ -690,10 +687,8 @@ export default function AccountDetailPage() {
         });
         return;
       }
-      toast({
-        title: "删除失败",
-        description: errorMessage(error, "请稍后重试"),
-        variant: "destructive",
+      sonner.error("删除失败", {
+        description: errorMessage(error, "请稍后重试。"),
       });
     } finally {
       setDeletingImage(false);
@@ -716,25 +711,18 @@ export default function AccountDetailPage() {
         mediaAssetIds: assets.map((asset) => asset.id),
       });
       await loadFeatured();
-      toast({ title: "精选已更新", variant: "success" });
+      sonner.success("精选已更新", {
+        description: `个人主页已展示 ${assets.length} 张精选作品。`,
+      });
     } catch (error) {
-      toast({
-        title: "精选保存失败",
-        description: errorMessage(error, "请稍后重试"),
-        variant: "destructive",
+      sonner.error("精选保存失败", {
+        description: errorMessage(error, "请稍后重试。"),
       });
       return false;
     }
   };
 
-  const handleProfileUploadComplete = (asset: MediaAssetResponse) => {
-    toast({
-      title: "作品已上传",
-      description: asset.title
-        ? `「${asset.title}」已加入你的作品，审核通过后会公开展示。`
-        : "作品已加入你的主页，审核通过后会公开展示。",
-      variant: "success",
-    });
+  const handleProfileUploadComplete = () => {
     void loadPictures(true);
     void loadProfile();
   };
