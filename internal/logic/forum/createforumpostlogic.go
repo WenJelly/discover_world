@@ -76,7 +76,6 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 			PostType:   "daily",
 			Visibility: forumPostVisibility,
 			Status:     forumPostStatusActive,
-			Location:   optionalString(req.Location),
 		})
 		if err != nil {
 			return err

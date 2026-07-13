@@ -118,13 +118,18 @@ func BuildRegionResponse(record *model.ContentIpAttribution) types.IpRegionRespo
 	if record == nil {
 		return types.IpRegionResponse{}
 	}
+	country := nullStringValue(record.Country)
+	displayLocation := nullStringValue(record.DisplayLocation)
+	if strings.EqualFold(country, "reserved") || strings.EqualFold(displayLocation, "reserved") {
+		return types.IpRegionResponse{}
+	}
 	return types.IpRegionResponse{
-		Country:         nullStringValue(record.Country),
+		Country:         country,
 		Province:        nullStringValue(record.Province),
 		City:            nullStringValue(record.City),
 		District:        nullStringValue(record.District),
 		Isp:             nullStringValue(record.Isp),
-		DisplayLocation: nullStringValue(record.DisplayLocation),
+		DisplayLocation: displayLocation,
 		Provider:        nullStringValue(record.Provider),
 	}
 }

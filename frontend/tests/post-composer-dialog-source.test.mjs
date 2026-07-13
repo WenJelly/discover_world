@@ -57,7 +57,11 @@ test("post composer entry and dialog match the fresh-news card shape", async () 
   assert.match(dialogSource, /showAddTile=\{false\}/);
   assert.match(dialogSource, /ImagePlus/);
   assert.match(dialogSource, /Hash/);
-  assert.match(dialogSource, /MapPin/);
+  assert.doesNotMatch(dialogSource, /MapPin/);
+  assert.doesNotMatch(dialogSource, /MAX_LOCATION/);
+  assert.doesNotMatch(dialogSource, /locationOpen|locationInputRef|handleLocationToolClick/);
+  assert.doesNotMatch(dialogSource, /aria-label="添加位置"|placeholder="添加位置"/);
+  assert.doesNotMatch(dialogSource, /location:\s*location\.trim\(\)/);
   assert.match(dialogSource, /AtSign/);
   assert.doesNotMatch(dialogSource, /审核通过后向所有人公开/);
 });

@@ -144,6 +144,16 @@ export interface MediaAssetPermissions {
   canDownload?: boolean;
 }
 
+export interface IpRegionResponse {
+  country: string;
+  province: string;
+  city: string;
+  district: string;
+  isp: string;
+  displayLocation: string;
+  provider: string;
+}
+
 export interface MediaAssetResponse {
   id: string;
   mediaType: string;
@@ -172,6 +182,7 @@ export interface MediaAssetResponse {
   urls: MediaAssetUrls;
   stats: MediaAssetStats;
   permissions?: MediaAssetPermissions;
+  ipRegion: IpRegionResponse;
   metadataJson: string;
   isLiked: boolean;
   createdAt: string;
@@ -290,6 +301,7 @@ export interface ProfilePostResponse {
   visibility: "public" | "private" | string;
   status: string;
   location: string;
+  ipRegion: IpRegionResponse;
   isPinned: boolean;
   pinnedAt: string;
   images: MediaAssetResponse[];
@@ -325,7 +337,6 @@ export interface CreatePostRequest {
   content?: string;
   postType?: PostType;
   visibility?: string;
-  location?: string;
   imageIds?: string[];
 }
 
@@ -334,7 +345,6 @@ export interface UpdatePostRequest {
   content?: string;
   postType?: PostType;
   visibility?: string;
-  location?: string;
   imageIds?: string[];
 }
 
@@ -434,7 +444,6 @@ export interface CreateForumPostRequest {
   boardId: string;
   title: string;
   content?: string;
-  location?: string;
   imageIds?: string[];
 }
 

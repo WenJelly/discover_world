@@ -2,11 +2,13 @@ package ipgeo
 
 import (
 	"context"
+	"database/sql"
 	"net/netip"
 	"testing"
 
 	"discover_world/internal/common/clientip"
 	commonipgeo "discover_world/internal/common/ipgeo"
+	"discover_world/model"
 )
 
 func TestBuildAttributionRecordUsesClientIPSnapshot(t *testing.T) {
@@ -37,5 +39,17 @@ func TestBuildAttributionRecordUsesClientIPSnapshot(t *testing.T) {
 	}
 	if !record.IpHash.Valid || record.IpHash.String == "8.8.8.8" {
 		t.Fatalf("ip hash should be present and redacted: %+v", record.IpHash)
+	}
+}
+
+func TestBuildRegionResponseHidesReservedSnapshots(t *testing.T) {
+	region := BuildRegionResponse(&model.ContentIpAttribution{
+		Country:         sql.NullString{String: "Reserved", Valid: true},
+		DisplayLocation: sql.NullString{String: "Reserved", Valid: true},
+		Provider:        sql.NullString{String: "ip2region", Valid: true},
+	})
+
+	if region.Country != "" || region.DisplayLocation != "" || region.Provider != "" {
+		t.Fatalf("reserved snapshot should be hidden: %+v", region)
 	}
 }

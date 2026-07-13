@@ -93,6 +93,24 @@ func TestIP2RegionResolverMapsXDBLocation(t *testing.T) {
 	}
 }
 
+func TestIP2RegionResolverTreatsReservedLocationAsUnresolved(t *testing.T) {
+	searcher := &stubIP2RegionSearcher{
+		result: "Reserved|0|0|0|0",
+	}
+	resolver := newIP2RegionResolverWithSearchers(searcher, nil)
+
+	region, ok, err := resolver.Resolve(context.Background(), netip.MustParseAddr("127.0.0.1"))
+	if err != nil {
+		t.Fatalf("resolve returned error: %v", err)
+	}
+	if ok {
+		t.Fatalf("reserved location should not resolve: %+v", region)
+	}
+	if region != (Region{}) {
+		t.Fatalf("reserved location should return an empty region: %+v", region)
+	}
+}
+
 func TestIP2RegionResolverUsesIPv6Searcher(t *testing.T) {
 	ipv4 := &stubIP2RegionSearcher{result: "中国|0|北京|北京市|联通"}
 	ipv6 := &stubIP2RegionSearcher{result: "中国|广东省|广州市|移动|CN"}

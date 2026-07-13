@@ -66,11 +66,6 @@ func (l *UpdatePostLogic) UpdatePost(req *types.UpdatePostRequest) (*types.Profi
 	if strings.TrimSpace(req.Visibility) == "" {
 		visibility = existing.Visibility
 	}
-	location, err := normalizePostLocation(req.Location)
-	if err != nil {
-		return nil, err
-	}
-
 	replaceImages := req.ImageIds != nil
 	imageIDs := []uint64(nil)
 	if replaceImages {
@@ -94,7 +89,6 @@ func (l *UpdatePostLogic) UpdatePost(req *types.UpdatePostRequest) (*types.Profi
 	existing.Content = optionalString(content)
 	existing.PostType = postType
 	existing.Visibility = visibility
-	existing.Location = optionalString(location)
 	existing.Status = postStatusActive
 
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {

@@ -132,6 +132,9 @@ func parseIP2RegionLocation(raw string) (Region, bool) {
 	if len(values) == 0 {
 		return Region{}, false
 	}
+	if strings.EqualFold(values[0], "reserved") {
+		return Region{}, false
+	}
 	region := Region{Country: values[0], Provider: "ip2region"}
 	local := values[1:]
 	if len(local) > 0 && isCountryCode(local[len(local)-1]) {

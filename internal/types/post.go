@@ -8,7 +8,6 @@ package types
 type CreatePostRequest struct {
 	Content    string   `json:"content,optional"`
 	Visibility string   `json:"visibility,optional"`
-	Location   string   `json:"location,optional"`
 	ImageIds   []string `json:"imageIds,optional"`
 }
 
@@ -16,7 +15,6 @@ type UpdatePostRequest struct {
 	Id         string   `json:"id"`
 	Content    string   `json:"content,optional"`
 	Visibility string   `json:"visibility,optional"`
-	Location   string   `json:"location,optional"`
 	ImageIds   []string `json:"imageIds,optional"`
 }
 

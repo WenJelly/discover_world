@@ -258,7 +258,6 @@ export function PostCard({
       const updated = await updatePost({
         id: post.id,
         content: post.content,
-        location: post.location,
         visibility: nextVisibility,
       });
       setVisibility(normalizePostVisibilityValue(updated.visibility));
@@ -400,17 +399,16 @@ export function PostCard({
   const footerActionClass =
     "h-8 gap-1 rounded-md px-2 text-xs font-normal text-muted-foreground";
   const footerIconActionClass = "size-8 rounded-md text-muted-foreground";
-  const ipRegion = (
+  const ipDisplayLocation = post.ipRegion?.displayLocation?.trim();
+  const ipRegion = ipDisplayLocation ? (
     <div
       className="inline-flex h-8 shrink-0 items-center gap-1 text-xs text-muted-foreground"
       data-testid="post-ip-region"
     >
       <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
-      <span>中国</span>
-      <span aria-hidden>·</span>
-      <span>上海</span>
+      <span>{ipDisplayLocation}</span>
     </div>
-  );
+  ) : null;
   const postTypeText = postTypeLabel(post.postType);
 
   return (
@@ -460,12 +458,6 @@ export function PostCard({
               </span>
             ) : null}
           </div>
-          {post.location ? (
-            <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-              <MapPin className="size-3" aria-hidden />
-              <span className="truncate">{post.location}</span>
-            </div>
-          ) : null}
         </div>
       </header>
 

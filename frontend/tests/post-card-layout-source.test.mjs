@@ -12,9 +12,14 @@ test("post card renders profile dynamic metadata and bottom action layout", asyn
   assert.match(source, /<header className="flex items-center gap-3">/);
   assert.match(
     source,
-    /data-testid="post-ip-region"[\s\S]*<MapPin className="size-3\.5 shrink-0" aria-hidden="true" \/>[\s\S]*<span>中国<\/span>/
+    /const ipDisplayLocation = post\.ipRegion\?\.displayLocation\?\.trim\(\)/
   );
-  assert.match(source, /上海/);
+  assert.match(
+    source,
+    /ipDisplayLocation \? \([\s\S]*data-testid="post-ip-region"[\s\S]*<MapPin className="size-3\.5 shrink-0" aria-hidden="true" \/>[\s\S]*\{ipDisplayLocation\}/
+  );
+  assert.doesNotMatch(source, /<span>中国<\/span>|<span>上海<\/span>/);
+  assert.doesNotMatch(source, /post\.location|location:\s*post\.location/);
   assert.doesNotMatch(source, /const likedByNames = likedBy/);
   assert.doesNotMatch(source, /点赞了/);
 

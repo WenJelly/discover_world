@@ -5,7 +5,6 @@ import {
   Hash,
   ImagePlus,
   Loader2,
-  MapPin,
   Send,
   X,
 } from "lucide-react";
@@ -32,7 +31,6 @@ import {
 } from "./PostImageAttach";
 import { PostVisibilityMenu } from "./PostVisibilityMenu";
 
-const MAX_LOCATION = 255;
 const EXIT_ANIMATION_MS = 220;
 const POST_IMAGE_INPUT_ID = "post-composer-image-input";
 
@@ -66,12 +64,9 @@ export function PostComposerDialog({
   const [images, setImages] = useState<AttachedImage[]>([]);
   const [postType, setPostType] = useState<PostType>("daily");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
-  const [location, setLocation] = useState("");
-  const [locationOpen, setLocationOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const locationInputRef = useRef<HTMLInputElement | null>(null);
 
   // Reset to a fresh state once the dialog finishes closing.
   useEffect(() => {
@@ -82,8 +77,6 @@ export function PostComposerDialog({
       setImages([]);
       setPostType("daily");
       setVisibility("public");
-      setLocation("");
-      setLocationOpen(false);
       setError("");
     }, EXIT_ANIMATION_MS);
     return () => window.clearTimeout(id);
@@ -122,11 +115,6 @@ export function PostComposerDialog({
       current?.focus();
       current?.setSelectionRange(caret, caret);
     });
-  };
-
-  const handleLocationToolClick = () => {
-    setLocationOpen(true);
-    window.requestAnimationFrame(() => locationInputRef.current?.focus());
   };
 
   const handleRemoveImage = (clientId: string) => {
@@ -168,7 +156,6 @@ export function PostComposerDialog({
         content: content.trim() || undefined,
         postType,
         visibility,
-        location: location.trim() || undefined,
         imageIds: uploadedImageIds,
       });
       sonner.success("动态已发布", {
@@ -299,37 +286,6 @@ export function PostComposerDialog({
               className={`${textAreaClassName} w-full resize-none border-0 bg-transparent px-0 py-2 text-lg leading-relaxed text-foreground outline-none placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-60`}
             />
 
-            {locationOpen || location ? (
-              <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">
-                <MapPin className="size-3.5 shrink-0" aria-hidden />
-                <input
-                  ref={locationInputRef}
-                  type="text"
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                  placeholder="添加位置"
-                  maxLength={MAX_LOCATION}
-                  disabled={submitting}
-                  aria-label="位置"
-                  className="h-5 min-w-0 flex-1 border-0 bg-transparent p-0 text-xs text-foreground outline-none placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed"
-                />
-                {location ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLocation("");
-                      setLocationOpen(false);
-                    }}
-                    disabled={submitting}
-                    className="inline-flex size-5 shrink-0 items-center justify-center rounded-full transition hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:opacity-50"
-                    aria-label="清除位置"
-                  >
-                    <X className="size-3" />
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-
             {error ? (
               <p className="mt-3 text-sm text-destructive" role="alert">
                 {error}
@@ -377,17 +333,6 @@ export function PostComposerDialog({
               title="话题"
             >
               <Hash className="size-[18px]" />
-            </button>
-            <button
-              type="button"
-              onClick={handleLocationToolClick}
-              disabled={submitting}
-              aria-pressed={locationOpen || Boolean(location)}
-              className={toolButtonClass}
-              aria-label="添加位置"
-              title="位置"
-            >
-              <MapPin className="size-[18px]" />
             </button>
             <button
               type="button"

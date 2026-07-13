@@ -30,8 +30,6 @@ interface PhotoDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 
-  /** Author region, e.g. "中国 · 四川". No backend field yet. */
-  authorLocation?: string;
   /** Whether the viewer already follows the author. */
   isFollowing?: boolean;
   followPending?: boolean;
@@ -78,7 +76,6 @@ const REFERENCE_DETAIL_DEFAULTS = {
   description:
     "清晨的第一缕阳光洒在雪山之巅，湖面如镜，倒映出山峦与云彩的静谧之美。拍摄于四川稻城亚丁景区，海拔约4200米。",
   tags: ["风光摄影", "雪山", "日出", "稻城亚丁"],
-  authorLocation: "中国 · 四川",
   isVip: true,
   createdAt: "2024-05-18 08:42:00",
   fileSize: 47_815_065,
@@ -182,7 +179,6 @@ export function PhotoDetailDialog({
   media,
   open,
   onOpenChange,
-  authorLocation = REFERENCE_DETAIL_DEFAULTS.authorLocation,
   isFollowing,
   followPending,
   hideFollow,
@@ -439,7 +435,7 @@ export function PhotoDetailDialog({
                 <div>
                   <PhotographerInfo
                     author={media.owner}
-                    location={authorLocation}
+                    location={media.ipRegion?.displayLocation}
                     isFollowing={isFollowing}
                     followPending={followPending}
                     hideFollow={hideFollow}

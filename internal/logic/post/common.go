@@ -25,7 +25,6 @@ const (
 	maxPostContentLength  = 2000
 	maxPostCommentLength  = 1000
 	maxPostImageCount     = 9
-	maxPostLocationLen    = 255
 	maxPostLikedByCount   = 3
 	defaultCommentPage    = 20
 	maxCommentPage        = 50
@@ -79,14 +78,6 @@ func normalizePostComment(content string) (string, error) {
 		return "", commonresponse.BadRequest("comment length cannot exceed 1000")
 	}
 	return content, nil
-}
-
-func normalizePostLocation(location string) (string, error) {
-	location = strings.TrimSpace(location)
-	if utf8.RuneCountInString(location) > maxPostLocationLen {
-		return "", commonresponse.BadRequest("location length cannot exceed 255")
-	}
-	return location, nil
 }
 
 func normalizePostVisibility(visibility string) (string, error) {

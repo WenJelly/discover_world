@@ -459,6 +459,20 @@ function normalizeMediaStats(
   };
 }
 
+function normalizeIPRegion(
+  region: Partial<MediaAssetResponse["ipRegion"]> | null | undefined
+): MediaAssetResponse["ipRegion"] {
+  return {
+    country: region?.country ?? "",
+    province: region?.province ?? "",
+    city: region?.city ?? "",
+    district: region?.district ?? "",
+    isp: region?.isp ?? "",
+    displayLocation: region?.displayLocation ?? "",
+    provider: region?.provider ?? "",
+  };
+}
+
 function auditStatusToLegacy(status: string): number {
   switch (status) {
     case "approved":
@@ -481,6 +495,7 @@ function normalizeMediaAsset(asset: MediaAssetResponse): MediaAssetResponse {
     urls,
     stats,
     owner,
+    ipRegion: normalizeIPRegion(asset.ipRegion),
     title: asset.title || asset.name || "未命名作品",
     description: asset.description || asset.introduction || "",
     assetUsage: asset.assetUsage || "work",
@@ -519,6 +534,7 @@ function normalizeProfilePost(post: ProfilePostResponse): ProfilePostResponse {
   return {
     ...post,
     postType: normalizePostType(post.postType),
+    ipRegion: normalizeIPRegion(post.ipRegion),
     images: (post.images ?? []).map(normalizeMediaAsset),
     stats: post.stats ?? {
       viewCount: 0,

@@ -292,7 +292,6 @@ type CreateForumPostRequest struct {
 	BoardId  string   `json:"boardId"`
 	Title    string   `json:"title"`
 	Content  string   `json:"content,optional"`
-	Location string   `json:"location,optional"`
 	ImageIds []string `json:"imageIds,optional"`
 }
 
@@ -312,7 +311,6 @@ type CreatePostRequest struct {
 	Content    string   `json:"content,optional"`
 	PostType   string   `json:"postType,optional"`
 	Visibility string   `json:"visibility,optional"`
-	Location   string   `json:"location,optional"`
 	ImageIds   []string `json:"imageIds,optional"`
 }
 
@@ -897,7 +895,6 @@ type UpdatePostRequest struct {
 	Content    string   `json:"content,optional"`
 	PostType   string   `json:"postType,optional"`
 	Visibility string   `json:"visibility,optional"`
-	Location   string   `json:"location,optional"`
 	ImageIds   []string `json:"imageIds,optional"`
 }
 

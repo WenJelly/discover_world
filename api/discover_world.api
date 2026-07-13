@@ -354,7 +354,6 @@ type (
 		Content    string   `json:"content,optional"`
 		PostType   string   `json:"postType,optional"`
 		Visibility string   `json:"visibility,optional"`
-		Location   string   `json:"location,optional"`
 		ImageIds   []string `json:"imageIds,optional"`
 	}
 	UpdatePostRequest {
@@ -362,7 +361,6 @@ type (
 		Content    string   `json:"content,optional"`
 		PostType   string   `json:"postType,optional"`
 		Visibility string   `json:"visibility,optional"`
-		Location   string   `json:"location,optional"`
 		ImageIds   []string `json:"imageIds,optional"`
 	}
 	DeletePostRequest {
@@ -522,11 +520,10 @@ type (
 		List       []ForumPostResponse `json:"list"`
 	}
 	CreateForumPostRequest {
-		BoardId    string   `json:"boardId"`
-		Title      string   `json:"title"`
-		Content    string   `json:"content,optional"`
-		Location   string   `json:"location,optional"`
-		ImageIds   []string `json:"imageIds,optional"`
+		BoardId  string   `json:"boardId"`
+		Title    string   `json:"title"`
+		Content  string   `json:"content,optional"`
+		ImageIds []string `json:"imageIds,optional"`
 	}
 	CreateModerationReportRequest {
 		TargetType  string `json:"targetType"`

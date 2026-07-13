@@ -51,10 +51,6 @@ func (l *CreatePostLogic) CreatePost(req *types.CreatePostRequest) (*types.Profi
 	if err != nil {
 		return nil, err
 	}
-	location, err := normalizePostLocation(req.Location)
-	if err != nil {
-		return nil, err
-	}
 	imageIDs, err := parsePostImageIDs(req.ImageIds)
 	if err != nil {
 		return nil, err
@@ -74,7 +70,6 @@ func (l *CreatePostLogic) CreatePost(req *types.CreatePostRequest) (*types.Profi
 			PostType:   postType,
 			Visibility: visibility,
 			Status:     postStatusActive,
-			Location:   optionalString(location),
 		}
 		result, err := txSvc.PostModel.Insert(ctx, data)
 		if err != nil {
