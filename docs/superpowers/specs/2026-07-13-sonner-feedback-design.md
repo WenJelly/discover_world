@@ -21,16 +21,16 @@
 
 ## 组件与布局
 
-`frontend/src/components/ui/sonner.tsx` 使用 shadcn 生成实现。`frontend/src/App.tsx` 将 shadcn 导出的 `Toaster` 以 `Sonner` 名称引入并挂载在 `AuthProvider` 内，确保认证过期等全局事件能够调用 Sonner API。`Toaster` 只作为第三方组件的固定导出名存在，项目入口和业务命名统一使用 `Sonner`。
+`frontend/src/components/ui/sonner.tsx` 使用 shadcn 生成实现。`frontend/src/App.tsx` 将 shadcn 导出的 `Toaster` 以 `Sonner` 名称引入并挂载在 `AuthProvider` 内，确保认证过期等全局事件能够调用 Sonner API。`Toaster` 只作为第三方组件的固定导出名存在，项目入口统一使用 `Sonner`。
 
 桌面端和移动端都使用顶部居中定位。顶部偏移量基于导航栏高度：`calc(var(--navbar-height, 4rem) + 0.75rem)`；宽度在窄屏保留页面安全边距，在桌面限制为适合阅读的最大宽度。Sonner 消息层级低于需要用户决策的 Dialog，高于普通页面内容。
 
 ## 反馈规则
 
-- 成功：使用 `toast.success`，标题直接描述已完成的业务结果，例如“登录成功”“资料已保存”“动态已发布”。
-- 失败：使用 `toast.error`，标题描述失败动作，description 优先展示后端返回的可读错误，否则使用符合当前功能的兜底文案。
-- 警告：使用 `toast.warning`，处理图片格式、大小、数量上限等可立即修正的问题。
-- 普通提示：使用 `toast.info`，处理第三方登录、忘记密码等暂未开放能力，以及需要先登录的操作。
+- 成功：使用 `sonner.success`，标题直接描述已完成的业务结果，例如“登录成功”“资料已保存”“动态已发布”。
+- 失败：使用 `sonner.error`，标题描述失败动作，description 优先展示后端返回的可读错误，否则使用符合当前功能的兜底文案。
+- 警告：使用 `sonner.warning`，处理图片格式、大小、数量上限等可立即修正的问题。
+- 普通提示：使用 `sonner.info`，处理第三方登录、忘记密码等暂未开放能力，以及需要先登录的操作。
 - 对高频的点赞、收藏等乐观更新，成功时保持安静，失败回滚时显示错误提示。
 - 页面已有明确错误区块时只更新页面状态，不再重复显示 Sonner 消息。
 
@@ -40,7 +40,7 @@
 
 ## 数据流
 
-业务组件完成异步操作后直接调用 `sonner` 库固定导出的 `toast` API。这里的 `toast.success()`、`toast.error()` 是第三方 API 名称，不作为项目组件或状态管理命名。不增加 React Context，也不把消息回调逐层传递。认证过期事件由 `AuthContext` 清理登录状态后触发全局错误提示；组件自身仍负责按钮 loading、表单错误和乐观状态回滚。
+业务组件使用 `import { toast as sonner } from "sonner"`，完成异步操作后调用 `sonner.success()`、`sonner.error()` 等方法。`toast` 仅出现在第三方导出的导入声明中，项目业务变量统一命名为 `sonner`。不增加 React Context，也不把消息回调逐层传递。认证过期事件由 `AuthContext` 清理登录状态后触发全局错误提示；组件自身仍负责按钮 loading、表单错误和乐观状态回滚。
 
 ## 测试与验证
 
