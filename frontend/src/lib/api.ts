@@ -2,12 +2,23 @@ import type {
   AccountSummary,
   AdminContentPageResponse,
   AdminContentQueryRequest,
+  AdminDashboardRequest,
+  AdminDashboardResponse,
   AdminModeratePostRequest,
   AdminModerationReportPageResponse,
   AdminModerationReportQueryRequest,
   AdminModerationReportResolveRequest,
   AdminModerationReportResponse,
+  AdminOperationLogDetailRequest,
+  AdminOperationLogPageResponse,
+  AdminOperationLogQueryRequest,
+  AdminOperationLogResponse,
   AdminQueryMediaAssetRequest,
+  AdminTagMergeRequest,
+  AdminTagPageResponse,
+  AdminTagQueryRequest,
+  AdminTagResponse,
+  AdminTagUpdateRequest,
   ApiResponse,
   CreateForumPostRequest,
   CreateModerationReportRequest,
@@ -910,6 +921,66 @@ export function fetchAdminContentList(
 ): Promise<AdminContentPageResponse> {
   return request<AdminContentPageResponse>(
     "/api/admin/moderation/content/list",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export function fetchAdminDashboard(
+  req: AdminDashboardRequest = {}
+): Promise<AdminDashboardResponse> {
+  return request<AdminDashboardResponse>(
+    "/api/admin/operation/dashboard",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export function fetchAdminTagList(
+  req: AdminTagQueryRequest
+): Promise<AdminTagPageResponse> {
+  return request<AdminTagPageResponse>(
+    "/api/admin/operation/tag/list",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export function updateAdminTag(
+  req: AdminTagUpdateRequest
+): Promise<AdminTagResponse> {
+  return request<AdminTagResponse>(
+    "/api/admin/operation/tag/update",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export function mergeAdminTag(
+  req: AdminTagMergeRequest
+): Promise<AdminTagResponse> {
+  return request<AdminTagResponse>(
+    "/api/admin/operation/tag/merge",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export function fetchAdminOperationLogList(
+  req: AdminOperationLogQueryRequest
+): Promise<AdminOperationLogPageResponse> {
+  return request<AdminOperationLogPageResponse>(
+    "/api/admin/audit/operation/list",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export function fetchAdminOperationLogDetail(
+  req: AdminOperationLogDetailRequest
+): Promise<AdminOperationLogResponse> {
+  return request<AdminOperationLogResponse>(
+    "/api/admin/audit/operation/detail",
     req,
     { requireAuth: true }
   );

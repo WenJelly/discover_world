@@ -571,6 +571,95 @@ export interface AdminContentPageResponse {
   list: AdminContentResponse[];
 }
 
+export interface AdminDashboardRequest {}
+
+export interface AdminDashboardResponse {
+  pendingMediaCount: number;
+  openReportCount: number;
+  activeUserCount: number;
+  publicMediaCount: number;
+  publicPostCount: number;
+  recentMediaCount: number;
+  recentPostCount: number;
+  recentReportCount: number;
+}
+
+export interface AdminTagQueryRequest {
+  name?: string;
+  tagType?: string;
+  status?: number;
+  pageNum?: number;
+  pageSize?: number;
+}
+
+export interface AdminTagUpdateRequest {
+  id: string;
+  name?: string;
+  slug?: string;
+  tagType?: string;
+  status?: number;
+  reason?: string;
+}
+
+export interface AdminTagMergeRequest {
+  sourceTagId: string;
+  targetTagId: string;
+  reason?: string;
+}
+
+export interface AdminTagResponse {
+  id: string;
+  name: string;
+  slug: string;
+  tagType: string;
+  status: number;
+  createdAt: string;
+}
+
+export interface AdminTagPageResponse {
+  pageNum: number;
+  pageSize: number;
+  total: number;
+  list: AdminTagResponse[];
+}
+
+export interface AdminOperationLogQueryRequest {
+  operatorUserId?: string;
+  action?: string;
+  targetType?: string;
+  targetId?: string;
+  createdAtFrom?: string;
+  createdAtTo?: string;
+  pageNum?: number;
+  pageSize?: number;
+}
+
+export interface AdminOperationLogDetailRequest {
+  id: string;
+}
+
+export interface AdminOperationLogResponse {
+  id: string;
+  operatorUserId: string;
+  operator: AccountSummary;
+  action: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  beforeJson: string;
+  afterJson: string;
+  metadataJson: string;
+  clientIp: string;
+  createdAt: string;
+}
+
+export interface AdminOperationLogPageResponse {
+  pageNum: number;
+  pageSize: number;
+  total: number;
+  list: AdminOperationLogResponse[];
+}
+
 export interface ProfileAlbumResponse {
   id: string;
   userId: string;

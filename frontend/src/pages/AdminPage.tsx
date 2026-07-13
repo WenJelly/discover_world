@@ -81,6 +81,10 @@ const ADMIN_SECTION_COPY: Record<
   AdminTab,
   { title: string; description: string }
 > = {
+  dashboard: {
+    title: "数据概览",
+    description: "查看后台待办与站点运营数据。",
+  },
   homepage: {
     title: "首页内容管理",
     description: "配置 Hero 大图与精选作品流。",
@@ -96,6 +100,14 @@ const ADMIN_SECTION_COPY: Record<
   moderation: {
     title: "内容治理",
     description: "管理动态、评论和论坛帖的公开状态。",
+  },
+  tags: {
+    title: "标签管理",
+    description: "维护标签信息、状态与合并关系。",
+  },
+  audit: {
+    title: "操作审计",
+    description: "查询管理员操作记录与变更快照。",
   },
 };
 
