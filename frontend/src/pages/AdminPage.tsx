@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Crosshair,
   EyeOff,
+  Flag,
   ImagePlus,
   LayoutGrid,
   Loader2,
@@ -27,7 +28,13 @@ import {
 } from "lucide-react";
 
 import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Button } from "@/components/ui/button";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminHidePost,
@@ -46,6 +53,11 @@ import {
   updateHomepageHero,
 } from "@/lib/api";
 import { getMediaDetailUrl, getMediaUrl } from "@/lib/format";
+import {
+  buildAdminTabHref,
+  parseAdminTab,
+  type AdminTab,
+} from "@/lib/admin-navigation";
 import type {
   ForumPostResponse,
   HomepageConfigResponse,
@@ -80,13 +92,27 @@ type HeroDraft = {
   focalY: number;
 };
 
-type AdminTab = "homepage" | "mediaReview" | "moderation";
-
-const ADMIN_TABS: Array<{ id: AdminTab; label: string }> = [
-  { id: "homepage", label: "首页配置" },
-  { id: "mediaReview", label: "媒体审核" },
-  { id: "moderation", label: "内容治理" },
-];
+const ADMIN_SECTION_COPY: Record<
+  AdminTab,
+  { title: string; description: string }
+> = {
+  homepage: {
+    title: "首页内容管理",
+    description: "配置 Hero 大图与精选作品流。",
+  },
+  "media-review": {
+    title: "媒体审核",
+    description: "处理待审核作品并记录审核结论。",
+  },
+  reports: {
+    title: "举报工单",
+    description: "查看用户举报并完成处理与内容治理。",
+  },
+  moderation: {
+    title: "内容治理",
+    description: "管理动态、评论和论坛帖的公开状态。",
+  },
+};
 
 function navigateTo(path: string) {
   window.history.pushState({}, "", path);
@@ -114,7 +140,9 @@ export default function AdminPage() {
   const [heroPickerOpen, setHeroPickerOpen] = useState(false);
   const [featuredPickerOpen, setFeaturedPickerOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [activeTab, setActiveTab] = useState<AdminTab>("homepage");
+  const [activeTab, setActiveTab] = useState<AdminTab>(() =>
+    parseAdminTab(new URLSearchParams(window.location.search).get("tab"))
+  );
   const [pendingMedia, setPendingMedia] = useState<MediaAssetResponse[]>([]);
   const [mediaReviewLoading, setMediaReviewLoading] = useState(false);
   const [mediaReviewMessage, setMediaReviewMessage] = useState("");
@@ -125,6 +153,23 @@ export default function AdminPage() {
   const [moderatingId, setModeratingId] = useState("");
 
   const heroPreviewRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const syncTabFromLocation = () => {
+      setActiveTab(
+        parseAdminTab(new URLSearchParams(window.location.search).get("tab"))
+      );
+    };
+    window.addEventListener("popstate", syncTabFromLocation);
+    return () => window.removeEventListener("popstate", syncTabFromLocation);
+  }, []);
+
+  const handleTabChange = useCallback((tab: AdminTab) => {
+    const href = buildAdminTabHref(tab);
+    window.history.pushState({}, "", href);
+    setActiveTab(tab);
+    window.scrollTo({ top: 0 });
+  }, []);
 
   const applyConfig = useCallback((next: HomepageConfigResponse) => {
     setConfig(next);
@@ -197,7 +242,7 @@ export default function AdminPage() {
   }, [isAdmin, loadConfig]);
 
   useEffect(() => {
-    if (!isAdmin || activeTab !== "mediaReview") return;
+    if (!isAdmin || activeTab !== "media-review") return;
     void loadPendingMedia();
   }, [activeTab, isAdmin, loadPendingMedia]);
 
@@ -441,42 +486,26 @@ export default function AdminPage() {
   const heroImageUrl = heroDraft.asset
     ? getMediaDetailUrl(heroDraft.asset) || getMediaUrl(heroDraft.asset)
     : "";
+  const sectionCopy = ADMIN_SECTION_COPY[activeTab];
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pb-20 sm:px-6 lg:px-8">
-        {/* Page header */}
-        <header className="max-w-3xl">
-          <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
-            管理员控制台
-          </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
-            首页内容管理
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-            配置站点首页的 Hero 大图与精选作品流，所有内容均从已公开的作品中选取。
-          </p>
+    <SidebarProvider className="min-h-[calc(100svh-var(--navbar-height,4rem))] pt-[var(--navbar-height,4rem)]">
+      <AdminSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+      <SidebarInset className="min-w-0 bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
+        <header className="sticky top-[var(--navbar-height,4rem)] z-20 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/85 sm:px-6">
+          <SidebarTrigger aria-label="切换后台侧边栏" />
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-semibold text-foreground">
+              {sectionCopy.title}
+            </h1>
+            <p className="hidden truncate text-xs text-muted-foreground sm:block">
+              {sectionCopy.description}
+            </p>
+          </div>
         </header>
 
-        <nav className="flex gap-1 border-b border-slate-200 dark:border-slate-800" aria-label="后台管理导航">
-          {ADMIN_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "h-10 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20",
-                activeTab === tab.id
-                  ? "border-slate-950 text-slate-950 dark:border-slate-100 dark:text-slate-100"
-                  : "border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-
-        {activeTab === "homepage" ? (
+        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+          {activeTab === "homepage" ? (
           loading ? (
           <div
             className="flex flex-col gap-8"
@@ -868,7 +897,7 @@ export default function AdminPage() {
             </section>
           </>
           )
-        ) : activeTab === "mediaReview" ? (
+        ) : activeTab === "media-review" ? (
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5 dark:border-slate-800">
               <div className="flex items-center gap-3">
@@ -955,6 +984,16 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </section>
+        ) : activeTab === "reports" ? (
+          <section className="border-y border-border bg-background px-5 py-14 text-center sm:rounded-xl sm:border">
+            <Flag className="mx-auto size-6 text-muted-foreground" aria-hidden="true" />
+            <h2 className="mt-4 text-base font-semibold text-foreground">
+              举报工单工作区
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+              举报列表、详情与处理表单将在下一步接入。
+            </p>
           </section>
         ) : (
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -1067,45 +1106,46 @@ export default function AdminPage() {
             </div>
           </section>
         )}
-      </div>
+        </div>
 
-      {/* Hero picker: single-select over public works. */}
-      <MediaPickerDialog
-        open={heroPickerOpen}
-        onOpenChange={setHeroPickerOpen}
-        mode="single"
-        title="选择 Hero 图"
-        description="从已公开的作品中选择一张作为首页 Hero 大图"
-        confirmLabel="使用这张图"
-        onConfirm={(assets) => {
-          const asset = assets[0];
-          if (!asset) return;
-          setHeroDraft({
-            asset,
-            focalX: DEFAULT_FOCAL.x,
-            focalY: DEFAULT_FOCAL.y,
-          });
-        }}
-      />
+        {/* Hero picker: single-select over public works. */}
+        <MediaPickerDialog
+          open={heroPickerOpen}
+          onOpenChange={setHeroPickerOpen}
+          mode="single"
+          title="选择 Hero 图"
+          description="从已公开的作品中选择一张作为首页 Hero 大图"
+          confirmLabel="使用这张图"
+          onConfirm={(assets) => {
+            const asset = assets[0];
+            if (!asset) return;
+            setHeroDraft({
+              asset,
+              focalX: DEFAULT_FOCAL.x,
+              focalY: DEFAULT_FOCAL.y,
+            });
+          }}
+        />
 
-      {/* Featured picker: append-only multi-select. */}
-      <MediaPickerDialog
-        open={featuredPickerOpen}
-        onOpenChange={setFeaturedPickerOpen}
-        mode="multiple"
-        title="添加精选作品"
-        description="从已公开的作品中选取加入首页精选图片流"
-        excludedIds={featuredIds}
-        maxCount={Math.max(0, MAX_FEATURED_COUNT - featuredDraft.length)}
-        confirmLabel="加入精选"
-        onConfirm={(assets) => {
-          setFeaturedDraft((prev) => {
-            const seen = new Set(prev.map((a) => a.id));
-            const additions = assets.filter((a) => !seen.has(a.id));
-            return [...prev, ...additions].slice(0, MAX_FEATURED_COUNT);
-          });
-        }}
-      />
-    </div>
+        {/* Featured picker: append-only multi-select. */}
+        <MediaPickerDialog
+          open={featuredPickerOpen}
+          onOpenChange={setFeaturedPickerOpen}
+          mode="multiple"
+          title="添加精选作品"
+          description="从已公开的作品中选取加入首页精选图片流"
+          excludedIds={featuredIds}
+          maxCount={Math.max(0, MAX_FEATURED_COUNT - featuredDraft.length)}
+          confirmLabel="加入精选"
+          onConfirm={(assets) => {
+            setFeaturedDraft((prev) => {
+              const seen = new Set(prev.map((a) => a.id));
+              const additions = assets.filter((a) => !seen.has(a.id));
+              return [...prev, ...additions].slice(0, MAX_FEATURED_COUNT);
+            });
+          }}
+        />
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
