@@ -11,15 +11,12 @@ import {
   ArrowLeft,
   ArrowRight,
   Crosshair,
-  EyeOff,
   ImagePlus,
   LayoutGrid,
   Loader2,
-  MessageSquare,
   Plus,
   RefreshCw,
   Replace,
-  RotateCcw,
   ShieldAlert,
   Sparkles,
   Trash2,
@@ -27,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
+import { AdminContentModerationPanel } from "@/components/admin/AdminContentModerationPanel";
 import { AdminReportsPanel } from "@/components/admin/AdminReportsPanel";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Button } from "@/components/ui/button";
@@ -37,17 +35,9 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import {
-  adminHidePost,
-  adminLockForumPost,
-  adminPinForumPost,
-  adminRestorePost,
-  adminUnlockForumPost,
-  adminUnpinForumPost,
   ApiError,
   fetchAdminMediaAssetList,
-  fetchForumPostCursorList,
   fetchHomepageConfig,
-  fetchPublicPostCursorList,
   reviewMediaAsset,
   updateHomepageFeatured,
   updateHomepageHero,
@@ -58,12 +48,7 @@ import {
   parseAdminTab,
   type AdminTab,
 } from "@/lib/admin-navigation";
-import type {
-  ForumPostResponse,
-  HomepageConfigResponse,
-  MediaAssetResponse,
-  PublicPostResponse,
-} from "@/lib/types";
+import type { HomepageConfigResponse, MediaAssetResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const MAX_FEATURED_COUNT = 20;
@@ -147,10 +132,6 @@ export default function AdminPage() {
   const [mediaReviewLoading, setMediaReviewLoading] = useState(false);
   const [mediaReviewMessage, setMediaReviewMessage] = useState("");
   const [reviewingMediaId, setReviewingMediaId] = useState("");
-  const [moderationPosts, setModerationPosts] = useState<PublicPostResponse[]>([]);
-  const [moderationForumPosts, setModerationForumPosts] = useState<ForumPostResponse[]>([]);
-  const [moderationLoading, setModerationLoading] = useState(false);
-  const [moderatingId, setModeratingId] = useState("");
 
   const heroPreviewRef = useRef<HTMLDivElement | null>(null);
 
@@ -213,29 +194,6 @@ export default function AdminPage() {
     }
   }, []);
 
-  const loadModerationContent = useCallback(async () => {
-    setModerationLoading(true);
-    try {
-      const [posts, forums] = await Promise.all([
-        fetchPublicPostCursorList({
-          pageSize: 20,
-          sort: "latest",
-          variantOption: { compressType: 2 },
-        }),
-        fetchForumPostCursorList({
-          pageSize: 20,
-          variantOption: { compressType: 2 },
-        }),
-      ]);
-      setModerationPosts(posts.list ?? []);
-      setModerationForumPosts(forums.list ?? []);
-    } catch {
-      return;
-    } finally {
-      setModerationLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (!isAdmin) return;
     loadConfig();
@@ -245,11 +203,6 @@ export default function AdminPage() {
     if (!isAdmin || activeTab !== "media-review") return;
     void loadPendingMedia();
   }, [activeTab, isAdmin, loadPendingMedia]);
-
-  useEffect(() => {
-    if (!isAdmin || activeTab !== "moderation") return;
-    void loadModerationContent();
-  }, [activeTab, isAdmin, loadModerationContent]);
 
   const heroDirty = useMemo(() => {
     if (!config) return false;
@@ -358,83 +311,6 @@ export default function AdminPage() {
       });
     } finally {
       setReviewingMediaId("");
-    }
-  };
-
-  const handleModeratePost = async (
-    post: PublicPostResponse,
-    action: "hide" | "restore"
-  ) => {
-    setModeratingId(post.id);
-    try {
-      if (action === "hide") {
-        await adminHidePost({ id: post.id });
-        setModerationPosts((current) =>
-          current.map((item) =>
-            item.id === post.id ? { ...item, status: "hidden" } : item
-          )
-        );
-      } else {
-        await adminRestorePost({ id: post.id });
-        setModerationPosts((current) =>
-          current.map((item) =>
-            item.id === post.id ? { ...item, status: "active" } : item
-          )
-        );
-      }
-      sonner.success(action === "hide" ? "动态已隐藏" : "动态已恢复");
-    } catch (error) {
-      sonner.error("动态治理失败", {
-        description: getErrorMessage(error, "请稍后重试。"),
-      });
-    } finally {
-      setModeratingId("");
-    }
-  };
-
-  const handleModerateForumPost = async (
-    item: ForumPostResponse,
-    action: "lock" | "unlock" | "pin" | "unpin"
-  ) => {
-    setModeratingId(item.post.id);
-    try {
-      if (action === "lock") {
-        await adminLockForumPost({ id: item.post.id });
-      } else if (action === "unlock") {
-        await adminUnlockForumPost({ id: item.post.id });
-      } else if (action === "pin") {
-        await adminPinForumPost({ id: item.post.id });
-      } else {
-        await adminUnpinForumPost({ id: item.post.id });
-      }
-      setModerationForumPosts((current) =>
-        current.map((entry) =>
-          entry.post.id === item.post.id
-            ? {
-                ...entry,
-                isLocked:
-                  action === "lock"
-                    ? true
-                    : action === "unlock"
-                      ? false
-                      : entry.isLocked,
-                isBoardPinned:
-                  action === "pin"
-                    ? true
-                    : action === "unpin"
-                      ? false
-                      : entry.isBoardPinned,
-              }
-            : entry
-        )
-      );
-      sonner.success("帖子治理操作已完成");
-    } catch (error) {
-      sonner.error("帖子治理失败", {
-        description: getErrorMessage(error, "请稍后重试。"),
-      });
-    } finally {
-      setModeratingId("");
     }
   };
 
@@ -988,115 +864,7 @@ export default function AdminPage() {
         ) : activeTab === "reports" ? (
           <AdminReportsPanel />
         ) : (
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <MessageSquare className="size-5" aria-hidden="true" />
-                </div>
-                <div>
-                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    内容治理
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    隐藏或恢复动态，锁定/解锁论坛帖，并管理分区置顶。
-                  </p>
-                </div>
-              </div>
-              <Button type="button" variant="outline" onClick={() => void loadModerationContent()}>
-                <RefreshCw className="size-4" aria-hidden="true" />
-                刷新
-              </Button>
-            </div>
-            <div className="grid gap-6 px-6 py-6 lg:grid-cols-2">
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  动态
-                </h3>
-                {moderationLoading ? (
-                  <div className="py-8 text-center text-sm text-slate-500">加载中...</div>
-                ) : moderationPosts.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500 dark:border-slate-700">
-                    暂无可治理动态
-                  </div>
-                ) : (
-                  moderationPosts.map((post) => (
-                    <article key={post.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-                      <p className="line-clamp-2 text-sm text-slate-800 dark:text-slate-200">
-                        {post.content || "无文字动态"}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {post.author?.nickname || post.author?.username || "未知用户"} · {post.status}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={moderatingId === post.id}
-                          onClick={() => void handleModeratePost(post, "hide")}
-                        >
-                          <EyeOff className="size-4" aria-hidden="true" />
-                          隐藏动态
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={moderatingId === post.id}
-                          onClick={() => void handleModeratePost(post, "restore")}
-                        >
-                          <RotateCcw className="size-4" aria-hidden="true" />
-                          恢复动态
-                        </Button>
-                      </div>
-                    </article>
-                  ))
-                )}
-              </div>
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  论坛帖子
-                </h3>
-                {moderationForumPosts.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500 dark:border-slate-700">
-                    暂无论坛帖子
-                  </div>
-                ) : (
-                  moderationForumPosts.map((item) => (
-                    <article key={item.post.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {item.title}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {item.board.name} · {item.isLocked ? "已锁定" : "未锁定"} · {item.isBoardPinned ? "分区置顶" : "未置顶"}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={moderatingId === item.post.id}
-                          onClick={() => void handleModerateForumPost(item, item.isLocked ? "unlock" : "lock")}
-                        >
-                          {item.isLocked ? "解锁帖子" : "锁定帖子"}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={moderatingId === item.post.id}
-                          onClick={() => void handleModerateForumPost(item, item.isBoardPinned ? "unpin" : "pin")}
-                        >
-                          {item.isBoardPinned ? "取消分区置顶" : "分区置顶"}
-                        </Button>
-                      </div>
-                    </article>
-                  ))
-                )}
-              </div>
-            </div>
-          </section>
+          <AdminContentModerationPanel />
         )}
         </div>
 

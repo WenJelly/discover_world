@@ -60,3 +60,38 @@ test("report panel supports filters detail and resolution", async () => {
     assert.ok(report.includes(token), `missing ${token}`);
   }
 });
+
+test("content moderation uses admin content API and preserves forum actions", async () => {
+  const content = await source(
+    "../src/components/admin/AdminContentModerationPanel.tsx"
+  );
+  const forum = await source(
+    "../src/components/admin/AdminForumModerationPanel.tsx"
+  );
+
+  for (const token of [
+    "fetchAdminContentList",
+    "adminHidePost",
+    "adminRestorePost",
+    "adminHideComment",
+    "adminRestoreComment",
+    "searchText",
+    "userId",
+    "治理原因",
+    "动态与评论",
+    "论坛帖子",
+  ]) {
+    assert.ok(content.includes(token), `missing ${token}`);
+  }
+
+  for (const token of [
+    "fetchForumBoardList",
+    "fetchForumPostCursorList",
+    "adminLockForumPost",
+    "adminUnlockForumPost",
+    "adminPinForumPost",
+    "adminUnpinForumPost",
+  ]) {
+    assert.ok(forum.includes(token), `missing ${token}`);
+  }
+});
