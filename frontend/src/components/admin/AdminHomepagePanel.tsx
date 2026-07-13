@@ -215,24 +215,24 @@ export function AdminHomepagePanel() {
   return (
     <>
       {loading ? (
-          <div
-            className="flex flex-col gap-8"
-            role="status"
-            aria-label="首页配置加载中"
-          >
-            <div className="h-96 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" />
-            <div className="h-72 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" />
-          </div>
-          ) : loadError ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white py-20 text-center dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {loadError}
-            </p>
-            <Button type="button" variant="outline" onClick={loadConfig}>
-              <RefreshCw className="size-4" aria-hidden="true" />
-              重新加载
-            </Button>
-          </div>
+        <div
+          className="flex flex-col gap-8"
+          role="status"
+          aria-label="首页配置加载中"
+        >
+          <div className="h-96 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" />
+          <div className="h-72 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" />
+        </div>
+      ) : loadError ? (
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white py-20 text-center dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {loadError}
+          </p>
+          <Button type="button" variant="outline" onClick={loadConfig}>
+            <RefreshCw className="size-4" aria-hidden="true" />
+            重新加载
+          </Button>
+        </div>
         ) : (
           <>
             {/* ---- Hero section ---- */}
@@ -604,45 +604,45 @@ export function AdminHomepagePanel() {
               </div>
             </section>
           </>
-          )}
-      {/* Hero picker: single-select over public works. */}
-        <MediaPickerDialog
-          open={heroPickerOpen}
-          onOpenChange={setHeroPickerOpen}
-          mode="single"
-          title="选择 Hero 图"
-          description="从已公开的作品中选择一张作为首页 Hero 大图"
-          confirmLabel="使用这张图"
-          onConfirm={(assets) => {
-            const asset = assets[0];
-            if (!asset) return;
-            setHeroDraft({
-              asset,
-              focalX: DEFAULT_FOCAL.x,
-              focalY: DEFAULT_FOCAL.y,
-            });
-          }}
-        />
+        )}
 
-        {/* Featured picker: append-only multi-select. */}
-        <MediaPickerDialog
-          open={featuredPickerOpen}
-          onOpenChange={setFeaturedPickerOpen}
-          mode="multiple"
-          title="添加精选作品"
-          description="从已公开的作品中选取加入首页精选图片流"
-          excludedIds={featuredIds}
-          maxCount={Math.max(0, MAX_FEATURED_COUNT - featuredDraft.length)}
-          confirmLabel="加入精选"
-          onConfirm={(assets) => {
-            setFeaturedDraft((prev) => {
-              const seen = new Set(prev.map((a) => a.id));
-              const additions = assets.filter((a) => !seen.has(a.id));
-              return [...prev, ...additions].slice(0, MAX_FEATURED_COUNT);
-            });
-          }}
-        />
+      {/* Hero picker: single-select over public works. */}
+      <MediaPickerDialog
+        open={heroPickerOpen}
+        onOpenChange={setHeroPickerOpen}
+        mode="single"
+        title="选择 Hero 图"
+        description="从已公开的作品中选择一张作为首页 Hero 大图"
+        confirmLabel="使用这张图"
+        onConfirm={(assets) => {
+          const asset = assets[0];
+          if (!asset) return;
+          setHeroDraft({
+            asset,
+            focalX: DEFAULT_FOCAL.x,
+            focalY: DEFAULT_FOCAL.y,
+          });
+        }}
+      />
+
+      {/* Featured picker: append-only multi-select. */}
+      <MediaPickerDialog
+        open={featuredPickerOpen}
+        onOpenChange={setFeaturedPickerOpen}
+        mode="multiple"
+        title="添加精选作品"
+        description="从已公开的作品中选取加入首页精选图片流"
+        excludedIds={featuredIds}
+        maxCount={Math.max(0, MAX_FEATURED_COUNT - featuredDraft.length)}
+        confirmLabel="加入精选"
+        onConfirm={(assets) => {
+          setFeaturedDraft((prev) => {
+            const seen = new Set(prev.map((a) => a.id));
+            const additions = assets.filter((a) => !seen.has(a.id));
+            return [...prev, ...additions].slice(0, MAX_FEATURED_COUNT);
+          });
+        }}
+      />
     </>
   );
 }
-
