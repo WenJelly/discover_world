@@ -88,6 +88,12 @@ test("post card exposes comments reporting and post pin controls", async () => {
 
 test("admin workspace has media review reports and complete content governance", async () => {
   const adminPage = await source("../src/pages/AdminPage.tsx");
+  const adminSidebar = await source(
+    "../src/components/admin/AdminSidebar.tsx"
+  );
+  const mediaReview = await source(
+    "../src/components/admin/AdminMediaReviewPanel.tsx"
+  );
   const reports = await source(
     "../src/components/admin/AdminReportsPanel.tsx"
   );
@@ -99,14 +105,22 @@ test("admin workspace has media review reports and complete content governance",
   );
 
   containsAll(adminPage, [
-    "fetchAdminMediaAssetList",
-    "reviewMediaAsset",
+    "AdminHomepagePanel",
+    "AdminMediaReviewPanel",
     "AdminReportsPanel",
     "AdminContentModerationPanel",
+  ]);
+
+  containsAll(adminSidebar, [
     "首页配置",
     "媒体审核",
     "举报工单",
     "内容治理",
+  ]);
+
+  containsAll(mediaReview, [
+    "fetchAdminMediaAssetList",
+    "reviewMediaAsset",
     "通过",
     "拒绝",
   ]);
