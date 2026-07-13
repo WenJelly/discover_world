@@ -168,8 +168,10 @@ git commit -m "test: define Sonner feedback contracts"
 
 Run from `frontend/`:
 
+当前 npm 10.9.2 不提供 `dlx` 子命令，使用等价的 npm CLI 入口：
+
 ```bash
-npm dlx shadcn@latest add sonner
+npx shadcn@latest add sonner
 ```
 
 Expected: shadcn creates `src/components/ui/sonner.tsx` and adds `sonner` to the npm dependency files. Do not overwrite unrelated customized UI primitives if the CLI unexpectedly prompts for them.

@@ -3,7 +3,6 @@ import { ImagePlus, Upload } from "lucide-react";
 import { UploadDialog } from "@/components/upload/UploadDialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import type { MediaAssetResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -83,17 +82,11 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
 
 export default function UploadPage() {
   const { isAuthenticated } = useAuth();
-  const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploaded, setUploaded] = useState<MediaAssetResponse[]>([]);
 
   const handleUploaded = (asset: MediaAssetResponse) => {
     setUploaded((prev) => [asset, ...prev]);
-    toast({
-      title: "图片上传成功",
-      description: `「${asset.title}」已提交，审核通过后向所有人公开。`,
-      variant: "success",
-    });
   };
 
   if (!isAuthenticated) {

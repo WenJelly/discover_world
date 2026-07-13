@@ -12,7 +12,7 @@ test("account media delete retries with force only after dynamic reference confi
   assert.match(source, /deleteMediaAsset\(\s*confirmation\.imageId,\s*confirmation\.mode === "force"\s*\? \{\s*force:\s*true\s*\}/);
 });
 
-test("account media delete uses in-app confirmation and toast feedback", async () => {
+test("account media delete uses in-app confirmation and Sonner feedback", async () => {
   const source = await readFile(
     new URL("../src/pages/AccountDetailPage.tsx", import.meta.url),
     "utf8"
@@ -23,5 +23,6 @@ test("account media delete uses in-app confirmation and toast feedback", async (
   assert.match(source, /setDeleteConfirmation/);
   assert.match(source, /DialogTitle[\s\S]*删除图片/);
   assert.match(source, /DialogDescription[\s\S]*此操作无法撤销/);
-  assert.match(source, /title:\s*"删除失败"/);
+  assert.match(source, /import \{ toast as sonner \} from "sonner"/);
+  assert.match(source, /sonner\.error\("删除失败"/);
 });

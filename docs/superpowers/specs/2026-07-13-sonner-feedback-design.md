@@ -6,7 +6,7 @@
 
 ## 范围
 
-- 通过 `npm dlx shadcn@latest add sonner` 安装官方组件与依赖。
+- 当前 npm 不提供 `dlx` 子命令，因此通过 npm 官方可用入口 `npx shadcn@latest add sonner` 安装组件与依赖。
 - 在应用根节点挂载一个项目级命名为 `Sonner` 的全局消息组件，不恢复旧的 `ToastProvider`、`useToast` 或自定义 Toast 状态管理。
 - 为具有明确结果的用户操作补充反馈：登录、注册、头像上传、资料保存、作品上传、动态发布与管理、评论、举报、关注、精选设置和后台审核。
 - 为图片格式、大小、数量限制以及暂未开放功能补充警告或普通提示。

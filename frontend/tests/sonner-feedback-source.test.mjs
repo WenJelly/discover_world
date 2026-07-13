@@ -21,8 +21,10 @@ test("shadcn Sonner is installed and mounted below the centered navbar", () => {
   assert.match(app, /<Sonner[\s\S]*position="top-center"/);
   assert.match(
     app,
-    /top:\s*"calc\(var\(--navbar-height, 4rem\) \+ 0\.75rem\)"/
+    /const sonnerTopOffset = "calc\(var\(--navbar-height, 4rem\) \+ 0\.75rem\)"/
   );
+  assert.match(app, /offset=\{\{ top: sonnerTopOffset \}\}/);
+  assert.match(app, /mobileOffset=\{\{ top: sonnerTopOffset,/);
   assert.doesNotMatch(app, /ToastProvider|useToast/);
 });
 
@@ -92,8 +94,10 @@ test("Sonner messages use Discover World business copy", () => {
 test("page-level loading errors are not duplicated through Sonner", () => {
   const community = read("src/pages/CommunityPage.tsx");
   const discover = read("src/pages/DiscoverPage.tsx");
+  const upload = read("src/pages/UploadPage.tsx");
 
   assert.doesNotMatch(community, /sonner\.error\("动态加载失败"/);
   assert.doesNotMatch(community, /sonner\.error\("论坛加载失败"/);
   assert.doesNotMatch(discover, /sonner\.error\("作品详情加载失败"/);
+  assert.doesNotMatch(upload, /useToast|sonner\./);
 });
