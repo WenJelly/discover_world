@@ -2,28 +2,28 @@
 
 ## 目标
 
-使用 shadcn 官方 `sonner` 组件替换当前已删除的自定义 Toast，实现与 Discover World 业务一致的响应式操作反馈。提示固定在导航栏正中下方，不遮挡右侧头像、通知和账号菜单。
+使用 shadcn 官方 `sonner` 组件替换当前已删除的自定义消息实现，为 Discover World 提供响应式全局消息反馈。消息固定在导航栏正中下方，不遮挡右侧头像、通知和账号菜单。
 
 ## 范围
 
 - 通过 `npm dlx shadcn@latest add sonner` 安装官方组件与依赖。
-- 在应用根节点挂载一个全局 `Toaster`，不恢复旧的 `ToastProvider`、`useToast` 或自定义 Toast 状态管理。
+- 在应用根节点挂载一个项目级命名为 `Sonner` 的全局消息组件，不恢复旧的 `ToastProvider`、`useToast` 或自定义 Toast 状态管理。
 - 为具有明确结果的用户操作补充反馈：登录、注册、头像上传、资料保存、作品上传、动态发布与管理、评论、举报、关注、精选设置和后台审核。
 - 为图片格式、大小、数量限制以及暂未开放功能补充警告或普通提示。
-- 保留表单字段的就地校验、上传对话框的进度/成功状态和页面级加载失败状态；这些场景不重复弹出全局 Toast。
+- 保留表单字段的就地校验、上传对话框的进度/成功状态和页面级加载失败状态；这些场景不重复弹出 Sonner 全局消息。
 
 ## 不在范围内
 
 - 不修改接口、数据库或后端业务。
 - 不改变现有 Dialog、Popover、导航栏浮层和表单布局。
-- 不对每一次页面加载失败重复弹 Toast。
-- 不恢复已经删除的旧 Toast 组件和 Hook。
+- 不对每一次页面加载失败重复弹出全局消息。
+- 不恢复已经删除的旧 Toast 组件、Provider 和 Hook，也不新增以 Toast 命名的项目级封装。
 
 ## 组件与布局
 
-`frontend/src/components/ui/sonner.tsx` 使用 shadcn 生成实现。`frontend/src/App.tsx` 在 `AuthProvider` 内挂载全局 `Toaster`，确保认证过期等全局事件能够调用 `toast`。
+`frontend/src/components/ui/sonner.tsx` 使用 shadcn 生成实现。`frontend/src/App.tsx` 将 shadcn 导出的 `Toaster` 以 `Sonner` 名称引入并挂载在 `AuthProvider` 内，确保认证过期等全局事件能够调用 Sonner API。`Toaster` 只作为第三方组件的固定导出名存在，项目入口和业务命名统一使用 `Sonner`。
 
-桌面端和移动端都使用顶部居中定位。顶部偏移量基于导航栏高度：`calc(var(--navbar-height, 4rem) + 0.75rem)`；宽度在窄屏保留页面安全边距，在桌面限制为适合阅读的最大宽度。Toast 层级低于需要用户决策的 Dialog，高于普通页面内容。
+桌面端和移动端都使用顶部居中定位。顶部偏移量基于导航栏高度：`calc(var(--navbar-height, 4rem) + 0.75rem)`；宽度在窄屏保留页面安全边距，在桌面限制为适合阅读的最大宽度。Sonner 消息层级低于需要用户决策的 Dialog，高于普通页面内容。
 
 ## 反馈规则
 
@@ -32,7 +32,7 @@
 - 警告：使用 `toast.warning`，处理图片格式、大小、数量上限等可立即修正的问题。
 - 普通提示：使用 `toast.info`，处理第三方登录、忘记密码等暂未开放能力，以及需要先登录的操作。
 - 对高频的点赞、收藏等乐观更新，成功时保持安静，失败回滚时显示错误提示。
-- 页面已有明确错误区块时只更新页面状态，不再重复 Toast。
+- 页面已有明确错误区块时只更新页面状态，不再重复显示 Sonner 消息。
 
 ## 业务文案原则
 
@@ -40,11 +40,11 @@
 
 ## 数据流
 
-业务组件完成异步操作后直接调用 `sonner` 导出的 `toast`。不增加 React Context，也不把 Toast 回调逐层传递。认证过期事件由 `AuthContext` 清理登录状态后触发全局错误提示；组件自身仍负责按钮 loading、表单错误和乐观状态回滚。
+业务组件完成异步操作后直接调用 `sonner` 库固定导出的 `toast` API。这里的 `toast.success()`、`toast.error()` 是第三方 API 名称，不作为项目组件或状态管理命名。不增加 React Context，也不把消息回调逐层传递。认证过期事件由 `AuthContext` 清理登录状态后触发全局错误提示；组件自身仍负责按钮 loading、表单错误和乐观状态回滚。
 
 ## 测试与验证
 
-- 先增加源代码契约测试，验证官方 Sonner 已挂载、位置位于导航栏正中下方、旧 Toast Provider 不再出现，并覆盖关键业务反馈文案。
+- 先增加源代码契约测试，验证官方 Sonner 已挂载、位置位于导航栏正中下方、旧 Toast Provider 不再出现、项目级组件使用 Sonner 命名，并覆盖关键业务反馈文案。
 - 先运行契约测试确认其因 Sonner 尚未接入而失败，再安装和实现功能使其通过。
 - 运行相关前端测试、完整 `npm test`、`npm run lint`、`npm run build` 和 `git diff --check`。
 - 检查最终 diff，确保只修改 Sonner 接入和业务反馈相关代码，不覆盖工作区中已有的无关改动。
@@ -54,6 +54,6 @@
 1. shadcn 官方 Sonner 组件和依赖已安装。
 2. 提示在导航栏正中下方响应式展示，不遮挡账号区域。
 3. 关键写操作均有符合业务语义的成功或失败反馈。
-4. 页面加载错误和字段校验不会产生重复 Toast。
-5. 旧自定义 Toast 文件与引用保持删除状态。
+4. 页面加载错误和字段校验不会产生重复 Sonner 消息。
+5. 旧自定义 Toast 文件与引用保持删除状态，项目级新增代码使用 Sonner 相关命名。
 6. 前端测试、Lint 和构建通过。
