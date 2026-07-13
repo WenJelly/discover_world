@@ -40,3 +40,43 @@ test("AdminPage delegates homepage and media review business logic", async () =>
     assert.ok(media.includes(token), `media review missing ${token}`);
   }
 });
+
+test("admin sidebar groups dashboard and content workspaces", async () => {
+  const sidebar = await source("../src/components/admin/AdminSidebar.tsx");
+  for (const token of [
+    "数据概览",
+    "内容管理",
+    "首页配置",
+    "媒体审核",
+    "举报工单",
+    "内容治理",
+  ]) {
+    assert.ok(sidebar.includes(token), `sidebar missing ${token}`);
+  }
+});
+
+test("admin dashboard shows real metrics queue links and recent operations", async () => {
+  const dashboard = await source(
+    "../src/components/admin/AdminDashboardPanel.tsx"
+  );
+  for (const token of [
+    "fetchAdminDashboard",
+    "fetchAdminOperationLogList",
+    "pendingMediaCount",
+    "openReportCount",
+    "activeUserCount",
+    "publicMediaCount",
+    "publicPostCount",
+    "最近操作",
+    "查看全部操作日志",
+  ]) {
+    assert.ok(dashboard.includes(token), `dashboard missing ${token}`);
+  }
+  for (const token of [
+    "recentMediaCount",
+    "recentPostCount",
+    "recentReportCount",
+  ]) {
+    assert.ok(!dashboard.includes(token), `dashboard must not render ${token}`);
+  }
+});

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ShieldAlert } from "lucide-react";
 
 import { AdminContentModerationPanel } from "@/components/admin/AdminContentModerationPanel";
+import { AdminDashboardPanel } from "@/components/admin/AdminDashboardPanel";
 import { AdminHomepagePanel } from "@/components/admin/AdminHomepagePanel";
 import { AdminMediaReviewPanel } from "@/components/admin/AdminMediaReviewPanel";
 import { AdminReportsPanel } from "@/components/admin/AdminReportsPanel";
@@ -88,6 +89,13 @@ export default function AdminPage() {
     window.scrollTo({ top: 0 });
   }, []);
 
+  const handleAuditLogOpen = useCallback((id: string) => {
+    const href = buildAdminTabHref("audit", { logId: id });
+    window.history.pushState({}, "", href);
+    setActiveTab("audit");
+    window.scrollTo({ top: 0 });
+  }, []);
+
   if (!isAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 pt-16 dark:bg-slate-950">
@@ -128,7 +136,12 @@ export default function AdminPage() {
         </header>
 
         <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-          {activeTab === "homepage" ? (
+          {activeTab === "dashboard" ? (
+            <AdminDashboardPanel
+              onNavigate={handleTabChange}
+              onOpenAuditLog={handleAuditLogOpen}
+            />
+          ) : activeTab === "homepage" ? (
             <AdminHomepagePanel />
           ) : activeTab === "media-review" ? (
             <AdminMediaReviewPanel />

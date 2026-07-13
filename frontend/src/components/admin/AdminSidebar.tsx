@@ -3,6 +3,7 @@ import {
   Flag,
   House,
   Images,
+  LayoutDashboard,
   ShieldCheck,
 } from "lucide-react";
 
@@ -30,16 +31,26 @@ type AdminSidebarProps = {
   onTabChange: (tab: AdminTab) => void;
 };
 
-const ADMIN_ITEMS: Array<{
-  id: AdminTab;
+const ADMIN_GROUPS = [
+  {
+    label: "运营概览",
+    items: [
+      { id: "dashboard", label: "数据概览", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "内容管理",
+    items: [
+      { id: "homepage", label: "首页配置", icon: House },
+      { id: "media-review", label: "媒体审核", icon: Images },
+      { id: "reports", label: "举报工单", icon: Flag },
+      { id: "moderation", label: "内容治理", icon: ShieldCheck },
+    ],
+  },
+] satisfies Array<{
   label: string;
-  icon: typeof House;
-}> = [
-  { id: "homepage", label: "首页配置", icon: House },
-  { id: "media-review", label: "媒体审核", icon: Images },
-  { id: "reports", label: "举报工单", icon: Flag },
-  { id: "moderation", label: "内容治理", icon: ShieldCheck },
-];
+  items: Array<{ id: AdminTab; label: string; icon: typeof House }>;
+}>;
 
 export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
   const { setOpenMobile } = useSidebar();
@@ -64,38 +75,40 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>管理功能</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {ADMIN_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const href = buildAdminTabHref(item.id);
-                return (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      isActive={activeTab === item.id}
-                      tooltip={item.label}
-                      render={
-                        <a
-                          href={href}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            onTabChange(item.id);
-                            setOpenMobile(false);
-                          }}
-                        />
-                      }
-                    >
-                      <Icon aria-hidden="true" />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {ADMIN_GROUPS.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const href = buildAdminTabHref(item.id);
+                  return (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton
+                        isActive={activeTab === item.id}
+                        tooltip={item.label}
+                        render={
+                          <a
+                            href={href}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              onTabChange(item.id);
+                              setOpenMobile(false);
+                            }}
+                          />
+                        }
+                      >
+                        <Icon aria-hidden="true" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-2">
