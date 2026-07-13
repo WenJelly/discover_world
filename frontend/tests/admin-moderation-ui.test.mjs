@@ -33,3 +33,30 @@ test("admin shell uses shadcn Sidebar and canonical tab links", async () => {
     assert.ok(page.includes(token), `missing ${token}`);
   }
 });
+
+test("report panel supports filters detail and resolution", async () => {
+  const report = await source("../src/components/admin/AdminReportsPanel.tsx");
+
+  for (const token of [
+    "fetchAdminModerationReportList",
+    "fetchAdminModerationReportDetail",
+    "resolveAdminModerationReport",
+    'status: "open"',
+    "reporterUserId",
+    "targetId",
+    "createdAtFrom",
+    "createdAtTo",
+    "accepted",
+    "rejected",
+    "resolved",
+    "hide_post",
+    "restore_post",
+    "hide_comment",
+    "restore_comment",
+    "lock_forum_post",
+    "unlock_forum_post",
+    "处理说明",
+  ]) {
+    assert.ok(report.includes(token), `missing ${token}`);
+  }
+});

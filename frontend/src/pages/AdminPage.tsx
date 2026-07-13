@@ -12,7 +12,6 @@ import {
   ArrowRight,
   Crosshair,
   EyeOff,
-  Flag,
   ImagePlus,
   LayoutGrid,
   Loader2,
@@ -28,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
+import { AdminReportsPanel } from "@/components/admin/AdminReportsPanel";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -986,15 +986,7 @@ export default function AdminPage() {
             </div>
           </section>
         ) : activeTab === "reports" ? (
-          <section className="border-y border-border bg-background px-5 py-14 text-center sm:rounded-xl sm:border">
-            <Flag className="mx-auto size-6 text-muted-foreground" aria-hidden="true" />
-            <h2 className="mt-4 text-base font-semibold text-foreground">
-              举报工单工作区
-            </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-              举报列表、详情与处理表单将在下一步接入。
-            </p>
-          </section>
+          <AdminReportsPanel />
         ) : (
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5 dark:border-slate-800">
