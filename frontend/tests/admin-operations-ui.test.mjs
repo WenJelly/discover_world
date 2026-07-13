@@ -105,3 +105,26 @@ test("tag management supports explicit status edit and merge workflows", async (
   assert.ok(sidebar.includes("标签管理"));
   assert.ok(!tags.includes("全部状态"));
 });
+
+test("operation audit supports filters deep links and safe JSON sections", async () => {
+  const sidebar = await source("../src/components/admin/AdminSidebar.tsx");
+  const audit = await source("../src/components/admin/AdminAuditPanel.tsx");
+  assert.ok(sidebar.includes("操作审计"));
+  for (const token of [
+    "fetchAdminOperationLogList",
+    "fetchAdminOperationLogDetail",
+    "operatorUserId",
+    "targetType",
+    "targetId",
+    "createdAtFrom",
+    "createdAtTo",
+    "formatAdminOperationJson",
+    "Before",
+    "After",
+    "Metadata",
+    "clientIp",
+    "onSelectedIdChange",
+  ]) {
+    assert.ok(audit.includes(token), `audit panel missing ${token}`);
+  }
+});

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ShieldAlert } from "lucide-react";
 
 import { AdminContentModerationPanel } from "@/components/admin/AdminContentModerationPanel";
+import { AdminAuditPanel } from "@/components/admin/AdminAuditPanel";
 import { AdminDashboardPanel } from "@/components/admin/AdminDashboardPanel";
 import { AdminHomepagePanel } from "@/components/admin/AdminHomepagePanel";
 import { AdminMediaReviewPanel } from "@/components/admin/AdminMediaReviewPanel";
@@ -17,6 +18,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import {
   buildAdminTabHref,
+  parseAdminLogId,
   parseAdminTab,
   type AdminTab,
 } from "@/lib/admin-navigation";
@@ -72,12 +74,15 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>(() =>
     parseAdminTab(new URLSearchParams(window.location.search).get("tab"))
   );
+  const [activeLogId, setActiveLogId] = useState(() =>
+    parseAdminLogId(new URLSearchParams(window.location.search).get("logId"))
+  );
 
   useEffect(() => {
     const syncTabFromLocation = () => {
-      setActiveTab(
-        parseAdminTab(new URLSearchParams(window.location.search).get("tab"))
-      );
+      const params = new URLSearchParams(window.location.search);
+      setActiveTab(parseAdminTab(params.get("tab")));
+      setActiveLogId(parseAdminLogId(params.get("logId")));
     };
     window.addEventListener("popstate", syncTabFromLocation);
     return () => window.removeEventListener("popstate", syncTabFromLocation);
@@ -87,6 +92,7 @@ export default function AdminPage() {
     const href = buildAdminTabHref(tab);
     window.history.pushState({}, "", href);
     setActiveTab(tab);
+    setActiveLogId("");
     window.scrollTo({ top: 0 });
   }, []);
 
@@ -94,7 +100,14 @@ export default function AdminPage() {
     const href = buildAdminTabHref("audit", { logId: id });
     window.history.pushState({}, "", href);
     setActiveTab("audit");
+    setActiveLogId(id);
     window.scrollTo({ top: 0 });
+  }, []);
+
+  const handleAuditLogChange = useCallback((id: string) => {
+    const href = buildAdminTabHref("audit", { logId: id });
+    window.history.replaceState({}, "", href);
+    setActiveLogId(id);
   }, []);
 
   if (!isAdmin) {
@@ -152,6 +165,11 @@ export default function AdminPage() {
             <AdminContentModerationPanel />
           ) : activeTab === "tags" ? (
             <AdminTagManagementPanel />
+          ) : activeTab === "audit" ? (
+            <AdminAuditPanel
+              selectedId={activeLogId}
+              onSelectedIdChange={handleAuditLogChange}
+            />
           ) : (
             <div className="flex min-h-[24rem] items-center justify-center border-y border-border bg-background text-sm text-muted-foreground sm:rounded-xl sm:border">
               {sectionCopy.title}将在当前阶段完成

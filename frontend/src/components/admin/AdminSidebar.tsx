@@ -4,6 +4,7 @@ import {
   House,
   Images,
   LayoutDashboard,
+  ScrollText,
   ShieldCheck,
   Tags,
 } from "lucide-react";
@@ -50,7 +51,10 @@ const ADMIN_GROUPS = [
   },
   {
     label: "运营管理",
-    items: [{ id: "tags", label: "标签管理", icon: Tags }],
+    items: [
+      { id: "tags", label: "标签管理", icon: Tags },
+      { id: "audit", label: "操作审计", icon: ScrollText },
+    ],
   },
 ] satisfies Array<{
   label: string;
