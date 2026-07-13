@@ -15,7 +15,7 @@
 **背景事实（实现者无需再查证）：**
 - `/api/media/list/cursor` 传 `ownerUserId` 时后端强制 `visibility='public' + status='active' + audit_status='approved'`（`internal/logic/media/query.go` `buildPublicMediaAssetListWhere`），与精选更新接口"必须是本人已发布图片"的校验口径一致，前端无需传额外过滤参数。
 - `MediaAssetCursorListReq`（`frontend/src/lib/types.ts:390`）已含 `ownerUserId?: string`。
-- `ToastProvider` 已挂在 `App.tsx` 根部，`AccountDetailPage` 可直接 `useToast()`。
+- 前端不再依赖全局浮层提示；保存失败由页面内状态或弹窗状态承载。
 - `isFeatured` 全前端只有两处：`account-profile.ts:96`（假数据产出）和 `types.ts:464`（类型字段），无任何消费方，可安全删除。
 - `toImageItem` 只有 `AccountDetailPage.tsx` 一个调用方（`.map(toImageItem)` 两处）+ 测试文件。
 
@@ -349,11 +349,10 @@ Expected: FAIL —— 新用例 7 个断言全部不匹配。
 - lucide 导入列表（L8-24）加 `Settings2`（按字母序插在 `RefreshCw` 与 `Sparkles` 之间）。
 - `@/lib/api` 导入（L26-34）加 `updateProfileFeaturedMedia`。
 - React 导入（L1-7）加 `type ReactNode`。
-- 新增两行导入（放在 `PostComposerDialog` 导入之后）：
+- 新增导入（放在 `PostComposerDialog` 导入之后）：
 
 ```ts
 import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
-import { useToast } from "@/hooks/use-toast";
 ```
 
 - `@/lib/types` 的类型导入（L55-60）加 `MediaAssetResponse`。
@@ -410,7 +409,6 @@ function EmptyState({
     () => featuredAssets.map(toImageItem),
     [featuredAssets]
   );
-  const { toast } = useToast();
 ```
 
 **(e) `loadFeatured`**（L231-253）：`setFeaturedImages(...)` 两处改为 `setFeaturedAssets`，pageSize 用新常量：
@@ -464,13 +462,7 @@ function EmptyState({
         mediaAssetIds: assets.map((asset) => asset.id),
       });
       await loadFeatured();
-      toast({ title: "精选已更新", variant: "success" });
-    } catch (error) {
-      toast({
-        title: "精选保存失败",
-        description: errorMessage(error, "请稍后重试"),
-        variant: "destructive",
-      });
+    } catch {
       return false;
     }
   };
@@ -599,7 +591,7 @@ git commit -m "feat: 个人主页精选 Tab 支持从自己的作品中管理精
 - [ ] **Step 2: 验证流程**
 
 1. 登录后进入个人主页 → 精选 Tab，空状态显示「去挑选作品」按钮。
-2. 打开弹窗，只看到自己的已发布作品；勾选若干张保存，toast「精选已更新」，网格刷新。
+2. 打开弹窗，只看到自己的已发布作品；勾选若干张保存，网格刷新。
 3. 重新打开弹窗，已选图片带勾选标记；取消一张后保存，网格对应减少。
 4. 取消全部勾选后保存（0 张），精选清空回到空状态。
 5. 访问他人主页精选 Tab：无任何管理按钮。

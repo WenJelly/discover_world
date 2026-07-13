@@ -56,7 +56,7 @@
 - [ ] Add an authenticated forum composer with board select, title input, and body textarea.
 - [ ] Submit through `createForumPost`.
 - [ ] On success, prepend the returned forum post into the current forum list and reset the form.
-- [ ] On failure, show existing toast error handling.
+- [ ] On failure, keep the current page state stable and surface errors through page-level handling if available.
 
 ### Task 4: Notification Navbar Entry
 

@@ -29,7 +29,7 @@ discover_world 是一个摄影发现与分享平台：用户上传作品 → 进
 1. **内容优先，UI 退让** — 照片预览是上传流的视觉中心，chrome 用中性灰退到背景。
 2. **earned familiarity** — 用标准 dialog / input / button 词汇，做到无可挑剔，而非发明新 affordance。Linear / Figma 那一级的"熟悉的精确"。
 3. **克制即品牌** — 全站中性色系统（OKLCH 零色度），强调色仅用于主行动与状态指示，不做装饰用色。
-4. **show, don't tell** — 上传前预览图、自动从文件名填标题、成功后展示资源标题而非只给一个 toast。
+4. **show, don't tell** — 上传前预览图、自动从文件名填标题、成功后展示资源标题而非只给一个短提示。
 5. **practice what you preach** — 上传 UI 的打磨程度必须等同于图库与主页，不能因为是"工具页"就降级。
 
 ## Accessibility & Inclusion
