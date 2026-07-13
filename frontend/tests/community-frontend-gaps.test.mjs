@@ -86,30 +86,60 @@ test("post card exposes comments reporting and post pin controls", async () => {
   assert.doesNotMatch(postCard, /评论功能即将上线/);
 });
 
-test("admin page has media review and content governance panels", async () => {
+test("admin workspace has media review reports and complete content governance", async () => {
   const adminPage = await source("../src/pages/AdminPage.tsx");
+  const reports = await source(
+    "../src/components/admin/AdminReportsPanel.tsx"
+  );
+  const content = await source(
+    "../src/components/admin/AdminContentModerationPanel.tsx"
+  );
+  const forum = await source(
+    "../src/components/admin/AdminForumModerationPanel.tsx"
+  );
 
   containsAll(adminPage, [
     "fetchAdminMediaAssetList",
     "reviewMediaAsset",
-    "fetchPublicPostCursorList",
-    "fetchForumPostCursorList",
+    "AdminReportsPanel",
+    "AdminContentModerationPanel",
+    "首页配置",
+    "媒体审核",
+    "举报工单",
+    "内容治理",
+    "通过",
+    "拒绝",
+  ]);
+
+  containsAll(reports, [
+    "fetchAdminModerationReportList",
+    "fetchAdminModerationReportDetail",
+    "resolveAdminModerationReport",
+    "提交处理结果",
+  ]);
+
+  containsAll(content, [
+    "fetchAdminContentList",
     "adminHidePost",
     "adminRestorePost",
+    "adminHideComment",
+    "adminRestoreComment",
+    "动态与评论",
+    "隐藏内容",
+    "恢复内容",
+  ]);
+
+  containsAll(forum, [
+    "fetchForumPostCursorList",
     "adminLockForumPost",
     "adminUnlockForumPost",
     "adminPinForumPost",
     "adminUnpinForumPost",
-    "首页配置",
-    "媒体审核",
-    "内容治理",
-    "通过",
-    "拒绝",
-    "隐藏动态",
-    "恢复动态",
     "锁定帖子",
     "分区置顶",
   ]);
+
+  assert.doesNotMatch(content, /fetchPublicPostCursorList/);
 });
 
 test("community page supports public filtering forum detail images and admin forum actions", async () => {
