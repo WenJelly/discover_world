@@ -377,6 +377,34 @@ func TestBuildPublicMediaAssetListWhereRequiresWorkUsage(t *testing.T) {
 	}
 }
 
+func TestBuildPublicMediaAssetListWhereIgnoresRequestedAuditStatus(t *testing.T) {
+	for _, requestedStatus := range []string{"pending", "rejected", "all"} {
+		t.Run(requestedStatus, func(t *testing.T) {
+			whereSQL, args, err := buildPublicMediaAssetListWhere(mediaListFilter{
+				AuditStatus: requestedStatus,
+			})
+			if err != nil {
+				t.Fatalf("buildPublicMediaAssetListWhere returned error: %v", err)
+			}
+
+			if !strings.Contains(whereSQL, "`audit_status` = ?") {
+				t.Fatalf("public media where SQL = %q, want approved audit status filter", whereSQL)
+			}
+
+			foundApprovedArg := false
+			for _, arg := range args {
+				if arg == "approved" {
+					foundApprovedArg = true
+					break
+				}
+			}
+			if !foundApprovedArg {
+				t.Fatalf("public media args = %#v, want approved audit status argument", args)
+			}
+		})
+	}
+}
+
 func TestStorageUsageCandidatesRequireAvatarBucket(t *testing.T) {
 	got := storageUsageCandidates("avatar")
 	want := []string{"avatar"}

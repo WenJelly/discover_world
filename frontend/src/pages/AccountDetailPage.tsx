@@ -427,7 +427,6 @@ export default function AccountDetailPage() {
           cursor: reset ? undefined : picturesCursorRef.current || undefined,
           pageSize: PICTURES_PAGE_SIZE,
           variantOption: { compressType: 2 },
-          auditStatus: undefined, // Load all statuses for owner
         });
         picturesCursorRef.current = resp.nextCursor || "";
         setPicturesHasMore(resp.hasMore && Boolean(resp.nextCursor));

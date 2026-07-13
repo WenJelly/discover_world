@@ -18,7 +18,6 @@ type (
 		Id            string              `json:"id,optional"`
 		Title         string              `json:"title,optional"`
 		Category      string              `json:"category,optional"`
-		AuditStatus   string              `json:"auditStatus,default=approved"`
 		Tags          []string            `json:"tags,optional"`
 		FileSize      int64               `json:"fileSize,optional"`
 		Width         int64               `json:"width,optional"`
@@ -37,7 +36,6 @@ type (
 		Id            string              `json:"id,optional"`
 		Title         string              `json:"title,optional"`
 		Category      string              `json:"category,optional"`
-		AuditStatus   string              `json:"auditStatus,default=approved"`
 		Tags          []string            `json:"tags,optional"`
 		FileSize      int64               `json:"fileSize,optional"`
 		Width         int64               `json:"width,optional"`

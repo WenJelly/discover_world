@@ -798,11 +798,11 @@ export interface MediaAssetListReq {
   category?: string;
   tags?: string[];
   searchText?: string;
-  auditStatus?: string;
   sort?: string;
 }
 
 export interface AdminQueryMediaAssetRequest extends MediaAssetListReq {
+  auditStatus?: string;
   createdAtFrom?: string;
   createdAtTo?: string;
 }

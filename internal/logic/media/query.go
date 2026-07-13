@@ -34,7 +34,6 @@ func queryRequestToFilter(req *types.QueryMediaAssetRequest) mediaListFilter {
 		Id:            req.Id,
 		Title:         req.Title,
 		Category:      req.Category,
-		AuditStatus:   req.AuditStatus,
 		Tags:          req.Tags,
 		FileSize:      req.FileSize,
 		Width:         req.Width,
@@ -56,7 +55,6 @@ func cursorRequestToFilter(req *types.CursorQueryMediaAssetRequest) mediaListFil
 		Id:            req.Id,
 		Title:         req.Title,
 		Category:      req.Category,
-		AuditStatus:   req.AuditStatus,
 		Tags:          req.Tags,
 		FileSize:      req.FileSize,
 		Width:         req.Width,
@@ -93,9 +91,7 @@ func adminRequestToFilter(req *types.AdminQueryMediaAssetRequest) mediaListFilte
 }
 
 func buildPublicMediaAssetListWhere(filter mediaListFilter) (string, []any, error) {
-	if strings.TrimSpace(filter.AuditStatus) == "" {
-		filter.AuditStatus = "approved"
-	}
+	filter.AuditStatus = "approved"
 	return buildMediaAssetListWhere(filter, true)
 }
 

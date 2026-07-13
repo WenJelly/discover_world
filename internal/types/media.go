@@ -9,7 +9,6 @@ type CursorQueryMediaAssetRequest struct {
 	Id            string              `json:"id,optional"`
 	Title         string              `json:"title,optional"`
 	Category      string              `json:"category,optional"`
-	AuditStatus   string              `json:"auditStatus,default=approved"`
 	Tags          []string            `json:"tags,optional"`
 	FileSize      int64               `json:"fileSize,optional"`
 	Width         int64               `json:"width,optional"`
@@ -90,7 +89,6 @@ type QueryMediaAssetRequest struct {
 	Id            string              `json:"id,optional"`
 	Title         string              `json:"title,optional"`
 	Category      string              `json:"category,optional"`
-	AuditStatus   string              `json:"auditStatus,default=approved"`
 	Tags          []string            `json:"tags,optional"`
 	FileSize      int64               `json:"fileSize,optional"`
 	Width         int64               `json:"width,optional"`
