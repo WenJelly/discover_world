@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast as sonner } from "sonner";
 import {
   Bookmark,
   Flag,
@@ -41,7 +42,6 @@ import {
   unpinPost,
   updatePost,
 } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
 import {
   formatCount,
   formatRelativeTime,
@@ -81,6 +81,12 @@ const REPORT_REASON_OPTIONS = [
   { value: "copyright", label: "版权问题" },
   { value: "other", label: "其他" },
 ];
+
+function getPostError(error: unknown) {
+  return error instanceof ApiError || error instanceof Error
+    ? error.message
+    : "请稍后重试。";
+}
 
 function imageGridClass(count: number) {
   if (count <= 1) return "grid-cols-1";
@@ -142,7 +148,6 @@ export function PostCard({
   onUpdated,
   onPinChanged,
 }: PostCardProps) {
-  const { toast } = useToast();
   const [stats, setStats] = useState(post.stats);
   const [liked, setLiked] = useState(Boolean(post.isLiked));
   const [favorited, setFavorited] = useState(Boolean(post.isFavorited));
@@ -206,14 +211,10 @@ export function PostCard({
       const res = await togglePostReaction(post.id, "like");
       setLiked(res.active);
       setStats(res.stats);
-    } catch (err) {
+    } catch (error) {
       setLiked(prevLiked);
       setStats(prevStats);
-      toast({
-        title: "操作失败",
-        description: err instanceof ApiError ? err.message : "请稍后重试。",
-        variant: "destructive",
-      });
+      sonner.error("点赞失败", { description: getPostError(error) });
     } finally {
       setTogglingLike(false);
     }
@@ -236,14 +237,10 @@ export function PostCard({
       const res = await togglePostFavorite(post.id);
       setFavorited(res.active);
       setStats(res.stats);
-    } catch (err) {
+    } catch (error) {
       setFavorited(prevFav);
       setStats(prevStats);
-      toast({
-        title: "操作失败",
-        description: err instanceof ApiError ? err.message : "请稍后重试。",
-        variant: "destructive",
-      });
+      sonner.error("收藏失败", { description: getPostError(error) });
     } finally {
       setTogglingFav(false);
     }
@@ -266,20 +263,16 @@ export function PostCard({
       });
       setVisibility(normalizePostVisibilityValue(updated.visibility));
       onUpdated?.(updated);
-      toast({
-        title: "可见范围已更新",
+      sonner.success("可见范围已更新", {
         description:
           nextVisibility === "private"
             ? "这条动态现在仅自己可见。"
             : "这条动态现在公开展示。",
-        variant: "success",
       });
-    } catch (err) {
+    } catch (error) {
       setVisibility(previousVisibility);
-      toast({
-        title: "修改失败",
-        description: err instanceof ApiError ? err.message : "请稍后重试。",
-        variant: "destructive",
+      sonner.error("可见范围修改失败", {
+        description: getPostError(error),
       });
     } finally {
       setUpdatingVisibility(false);
@@ -294,15 +287,11 @@ export function PostCard({
     setDeleting(true);
     try {
       await deletePost(post.id);
-      toast({ title: "动态已删除", variant: "success" });
+      sonner.success("动态已删除");
       onDeleted?.(post.id);
-    } catch (err) {
-      toast({
-        title: "删除失败",
-        description: err instanceof ApiError ? err.message : "请稍后重试。",
-        variant: "destructive",
-      });
+    } catch (error) {
       setConfirmDelete(false);
+      sonner.error("删除失败", { description: getPostError(error) });
     } finally {
       setDeleting(false);
     }
@@ -322,12 +311,8 @@ export function PostCard({
       );
       setCommentCursor(page.nextCursor);
       setCommentHasMore(page.hasMore);
-    } catch (err) {
-      toast({
-        title: "评论加载失败",
-        description: err instanceof ApiError ? err.message : "请稍后重试。",
-        variant: "destructive",
-      });
+    } catch (error) {
+      sonner.error("评论加载失败", { description: getPostError(error) });
     } finally {
       setCommentsLoading(false);
     }
@@ -354,13 +339,9 @@ export function PostCard({
         ...current,
         commentCount: current.commentCount + 1,
       }));
-      toast({ title: "评论已发布", variant: "success" });
-    } catch (err) {
-      toast({
-        title: "评论失败",
-        description: err instanceof ApiError ? err.message : "请稍后重试。",
-        variant: "destructive",
-      });
+      sonner.success("评论已发布");
+    } catch (error) {
+      sonner.error("评论发布失败", { description: getPostError(error) });
     } finally {
       setCommentSubmitting(false);
     }
@@ -382,15 +363,13 @@ export function PostCard({
         reason: reportReason,
         description: reportDescription.trim() || undefined,
       });
-      toast({ title: "举报已提交", variant: "success" });
+      sonner.success("举报已提交", {
+        description: "我们会尽快审核相关内容。",
+      });
       setReportTarget(null);
       setReportDescription("");
-    } catch (err) {
-      toast({
-        title: "举报失败",
-        description: err instanceof ApiError ? err.message : "请稍后重试。",
-        variant: "destructive",
-      });
+    } catch (error) {
+      sonner.error("举报失败", { description: getPostError(error) });
     } finally {
       setReporting(false);
     }
@@ -408,15 +387,10 @@ export function PostCard({
       if (!onPinChanged) {
         onUpdated?.(updated);
       }
-      toast({
-        title: updated.isPinned ? "动态已置顶" : "已取消置顶",
-        variant: "success",
-      });
-    } catch (err) {
-      toast({
-        title: pinned ? "取消置顶失败" : "置顶失败",
-        description: err instanceof ApiError ? err.message : "请稍后重试。",
-        variant: "destructive",
+      sonner.success(updated.isPinned ? "动态已置顶" : "已取消置顶");
+    } catch (error) {
+      sonner.error(pinned ? "取消置顶失败" : "置顶失败", {
+        description: getPostError(error),
       });
     } finally {
       setPinning(false);

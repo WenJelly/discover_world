@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { toast as sonner } from "sonner";
 import {
   Calendar,
   Globe,
@@ -12,7 +13,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { downloadMediaAsset, toggleMediaReaction } from "@/lib/api";
 import { getMediaDetailUrl } from "@/lib/format";
 import type { MediaAssetResponse, MediaAssetStats } from "@/lib/types";
@@ -191,7 +191,6 @@ export function PhotoDetailDialog({
   onAssetChange,
 }: PhotoDetailDialogProps) {
   const prefersReducedMotion = useReducedMotion();
-  const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -317,10 +316,8 @@ export function PhotoDetailDialog({
     } catch (error) {
       setLiked(!nextLiked);
       setStats(media.stats ?? null);
-      toast({
-        title: "操作失败",
-        description: error instanceof Error ? error.message : "请稍后重试",
-        variant: "destructive",
+      sonner.error("点赞失败", {
+        description: error instanceof Error ? error.message : "请稍后重试。",
       });
     } finally {
       setLikePending(false);
@@ -337,7 +334,7 @@ export function PhotoDetailDialog({
         return;
       }
       await navigator.clipboard.writeText(shareUrl);
-      toast({ title: "链接已复制", variant: "success" });
+      sonner.success("链接已复制");
     } catch {
       // User dismissed the share sheet, or clipboard was blocked — ignore.
     }
@@ -356,10 +353,8 @@ export function PhotoDetailDialog({
       });
       return res;
     } catch (error) {
-      toast({
-        title: "下载失败",
-        description: error instanceof Error ? error.message : "请稍后重试",
-        variant: "destructive",
+      sonner.error("下载失败", {
+        description: error instanceof Error ? error.message : "请稍后重试。",
       });
       throw error;
     }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toast as sonner } from "sonner";
 import {
   AtSign,
   Hash,
@@ -21,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ApiError, createPost, uploadMediaAsset } from "@/lib/api";
 import { notifyMediaAssetUploaded } from "@/lib/media-events";
-import { useToast } from "@/hooks/use-toast";
 import { getAvatarFallback } from "@/lib/format";
 import { POST_TYPE_OPTIONS } from "@/lib/post-type";
 import type { PostType, ProfilePostResponse } from "@/lib/types";
@@ -62,7 +62,6 @@ export function PostComposerDialog({
   onPublished,
   author,
 }: PostComposerDialogProps) {
-  const { toast } = useToast();
   const [content, setContent] = useState("");
   const [images, setImages] = useState<AttachedImage[]>([]);
   const [postType, setPostType] = useState<PostType>("daily");
@@ -102,10 +101,8 @@ export function PostComposerDialog({
 
   const handleImageToolClick = () => {
     if (images.length >= POST_MAX_IMAGES) {
-      toast({
-        title: "图片已达上限",
+      sonner.warning("图片已达上限", {
         description: `一条动态最多 ${POST_MAX_IMAGES} 张图片。`,
-        variant: "destructive",
       });
       return;
     }
@@ -167,20 +164,18 @@ export function PostComposerDialog({
         );
       }
 
-    const post = await createPost({
-      content: content.trim() || undefined,
-      postType,
-      visibility,
+      const post = await createPost({
+        content: content.trim() || undefined,
+        postType,
+        visibility,
         location: location.trim() || undefined,
         imageIds: uploadedImageIds,
       });
-      toast({
-        title: "动态已发布",
+      sonner.success("动态已发布", {
         description:
           visibility === "public"
-            ? "已发布为公开动态。"
-            : "已设为仅自己可见。",
-        variant: "success",
+            ? "所有人都可以看到这条动态。"
+            : "这条动态仅自己可见。",
       });
       onPublished?.(post);
       onOpenChange(false);

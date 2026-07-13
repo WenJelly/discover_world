@@ -1,9 +1,9 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { Loader2, Upload } from "lucide-react";
+import { toast as sonner } from "sonner";
 import { Button } from "@/components/ui/button";
 import { uploadMediaAsset } from "@/lib/api";
 import { notifyMediaAssetUploaded } from "@/lib/media-events";
-import { useToast } from "@/hooks/use-toast";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -21,7 +21,6 @@ export function ImageAttachButton({
   onUploaded,
   disabled,
 }: ImageAttachButtonProps) {
-  const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -31,19 +30,11 @@ export function ImageAttachButton({
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast({
-        title: "请选择图片文件",
-        description: "仅支持 JPG / PNG / GIF / WebP。",
-        variant: "destructive",
-      });
+      sonner.warning("请选择图片文件", { description: "仅支持图片格式。" });
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      toast({
-        title: "图片过大",
-        description: "单张不能超过 20MB。",
-        variant: "destructive",
-      });
+      sonner.warning("图片过大", { description: "单张图片不能超过 20MB。" });
       return;
     }
 
@@ -52,16 +43,12 @@ export function ImageAttachButton({
       const asset = await uploadMediaAsset(file, { visibility: "public" });
       notifyMediaAssetUploaded(asset);
       onUploaded(asset.id);
-      toast({
-        title: "图片已添加",
+      sonner.success("图片已添加", {
         description: asset.title ? `「${asset.title}」已上传。` : "图片已上传。",
-        variant: "success",
       });
-    } catch (err) {
-      toast({
-        title: "上传失败",
-        description: err instanceof Error ? err.message : "请稍后重试。",
-        variant: "destructive",
+    } catch (error) {
+      sonner.error("上传失败", {
+        description: error instanceof Error ? error.message : "请稍后重试。",
       });
     } finally {
       setUploading(false);

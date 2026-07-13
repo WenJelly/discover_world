@@ -1,6 +1,6 @@
 import { useId, useRef, type ChangeEvent } from "react";
 import { ImagePlus, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast as sonner } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const POST_MAX_IMAGES = 9;
@@ -48,7 +48,6 @@ export function PostImageAttach({
   showAddTile = true,
   className,
 }: PostImageAttachProps) {
-  const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const generatedInputId = useId();
   const resolvedInputId = inputId ?? generatedInputId;
@@ -60,10 +59,8 @@ export function PostImageAttach({
     if (pickedFiles.length === 0) return;
 
     if (images.length >= POST_MAX_IMAGES) {
-      toast({
-        title: "图片已达上限",
+      sonner.warning("图片已达上限", {
         description: `一条动态最多 ${POST_MAX_IMAGES} 张图片。`,
-        variant: "destructive",
       });
       return;
     }
@@ -71,27 +68,21 @@ export function PostImageAttach({
     const remaining = POST_MAX_IMAGES - images.length;
     const selectedFiles = pickedFiles.slice(0, remaining);
     if (pickedFiles.length > remaining) {
-      toast({
-        title: "已达到图片上限",
+      sonner.warning("已达到图片上限", {
         description: `本次只添加前 ${remaining} 张，一条动态最多 ${POST_MAX_IMAGES} 张图片。`,
-        variant: "destructive",
       });
     }
 
     const validFiles = selectedFiles.filter((file) => {
       if (!file.type.startsWith("image/")) {
-        toast({
-          title: "请选择图片文件",
+        sonner.warning("请选择图片文件", {
           description: `${file.name} 不是支持的图片格式。`,
-          variant: "destructive",
         });
         return false;
       }
       if (file.size > MAX_FILE_SIZE) {
-        toast({
-          title: "图片过大",
+        sonner.warning("图片过大", {
           description: `${file.name} 超过 20MB，已跳过。`,
-          variant: "destructive",
         });
         return false;
       }
