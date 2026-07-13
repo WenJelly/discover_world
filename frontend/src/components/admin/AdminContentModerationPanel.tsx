@@ -39,7 +39,10 @@ import {
   fetchAdminContentList,
 } from "@/lib/api";
 import { formatRelativeTime, getAvatarFallback } from "@/lib/format";
-import { getAdminContentKey } from "@/lib/admin-moderation";
+import {
+  getAdminContentKey,
+  updateAdminContentStatus,
+} from "@/lib/admin-moderation";
 import type { AdminContentResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -165,9 +168,7 @@ export function AdminContentModerationPanel() {
       await request({ id: selected.id, reason: reason.trim() });
       const nextStatus = restoring ? "active" : "hidden";
       setItems((current) =>
-        current.map((item) =>
-          item.id === selected.id ? { ...item, status: nextStatus } : item
-        )
+        updateAdminContentStatus(current, selectedKey, nextStatus)
       );
       setReason("");
       sonner.success(
