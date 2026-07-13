@@ -25,6 +25,8 @@ test("shadcn Sonner is installed and mounted below the centered navbar", () => {
   );
   assert.match(app, /offset=\{\{ top: sonnerTopOffset \}\}/);
   assert.match(app, /mobileOffset=\{\{ top: sonnerTopOffset,/);
+  assert.doesNotMatch(app, /\srichColors\b/);
+  assert.doesNotMatch(app, /\scloseButton\b/);
   assert.doesNotMatch(app, /ToastProvider|useToast/);
 });
 

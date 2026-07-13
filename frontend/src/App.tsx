@@ -13,8 +13,6 @@ function App() {
         position="top-center"
         offset={{ top: sonnerTopOffset }}
         mobileOffset={{ top: sonnerTopOffset, left: "1rem", right: "1rem" }}
-        richColors
-        closeButton
         duration={3600}
       />
     </AuthProvider>
