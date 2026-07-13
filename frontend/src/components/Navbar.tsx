@@ -8,6 +8,7 @@ import {
     useCallback,
 } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { toast as sonner } from "sonner";
 import {
     ArrowRight,
     Camera,
@@ -40,7 +41,6 @@ import {
     uploadAccountAvatar,
     updateUserProfile,
 } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
     { name: "首页", href: "/" },
@@ -57,14 +57,11 @@ function getAvatarFallback(userName?: string, userEmail?: string) {
     return source.slice(0, 2).toUpperCase();
 }
 
-function getUploadErrorMessage(error: unknown) {
-    if (error instanceof ApiError) {
-        return error.message;
+function getUploadErrorMessage(error: unknown, fallback: string) {
+    if (error instanceof ApiError || error instanceof Error) {
+        return error.message || fallback;
     }
-    if (error instanceof Error) {
-        return error.message;
-    }
-    return "图片上传失败,请稍后重试";
+    return fallback;
 }
 
 export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
@@ -87,7 +84,6 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
     const desktopSearchInputRef = useRef<HTMLInputElement>(null);
     const mobileSearchInputRef = useRef<HTMLInputElement>(null);
     const { user, isAuthenticated, logout, refreshUser, applyAccountDetail } = useAuth();
-    const { toast } = useToast();
     const displayName = user?.userName?.trim() || user?.userEmail || "用户";
     const avatarFallback = getAvatarFallback(user?.userName, user?.userEmail);
     // Admin console entry is only rendered for the admin role; the /admin
@@ -148,6 +144,7 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
         logout();
         setAccountMenuOpen(false);
         setIsOpen(false);
+        sonner.success("已退出登录");
     };
 
     const getSearchInput = useCallback((target: HTMLFormElement | HTMLButtonElement) => {
@@ -212,10 +209,8 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
         }
 
         if (!file.type.startsWith("image/")) {
-            toast({
-                title: "请选择图片文件",
+            sonner.warning("请选择图片文件", {
                 description: "头像必须是图片格式。",
-                variant: "destructive",
             });
             return;
         }
@@ -224,17 +219,15 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
         try {
             const detail = await uploadAccountAvatar(file);
             applyAccountDetail(detail);
-
-            toast({
-                title: "头像更新成功",
-                description: "头像已更新。",
-                variant: "success",
+            sonner.success("头像更新成功", {
+                description: "新的头像已同步到账户资料。",
             });
         } catch (error) {
-            toast({
-                title: "头像上传失败",
-                description: getUploadErrorMessage(error),
-                variant: "destructive",
+            sonner.error("头像上传失败", {
+                description: getUploadErrorMessage(
+                    error,
+                    "图片上传失败，请稍后重试。"
+                ),
             });
         } finally {
             setUploading(false);
@@ -256,16 +249,15 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
             });
             await refreshUser();
             setSettingsOpen(false);
-            toast({
-                title: "资料已保存",
+            sonner.success("资料已保存", {
                 description: "个人信息已更新。",
-                variant: "success",
             });
         } catch (error) {
-            toast({
-                title: "保存失败",
-                description: getUploadErrorMessage(error),
-                variant: "destructive",
+            sonner.error("保存失败", {
+                description: getUploadErrorMessage(
+                    error,
+                    "个人信息保存失败，请稍后重试。"
+                ),
             });
         } finally {
             setSavingSettings(false);

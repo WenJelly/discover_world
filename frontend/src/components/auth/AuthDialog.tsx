@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react"
+import { toast as sonner } from "sonner"
 import {
   Code,
   Eye,
@@ -31,7 +32,6 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/context/AuthContext"
-import { useToast } from "@/hooks/use-toast"
 import { ApiError } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -60,14 +60,9 @@ type RegisterErrors = Partial<Record<keyof RegisterFormState | "terms", string>>
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function getErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof ApiError) {
-    return error.message
+  if (error instanceof ApiError || error instanceof Error) {
+    return error.message || fallback
   }
-
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-
   return fallback
 }
 
@@ -243,7 +238,6 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   const [loading, setLoading] = useState<AuthMode | null>(null)
 
   const { login, register } = useAuth()
-  const { toast } = useToast()
 
   const dialogCopy = useMemo(
     () =>
@@ -280,21 +274,15 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
           remember: rememberMe,
         }
       )
-      toast({
-        title: "登录成功",
-        description: "已为你同步账号状态。",
-        variant: "success",
-      })
+      sonner.success("登录成功", { description: "已为你同步账号状态。" })
       setLoginForm((current) => ({
         ...current,
         password: "",
       }))
       onOpenChange(false)
     } catch (error) {
-      toast({
-        title: "登录失败",
+      sonner.error("登录失败", {
         description: getErrorMessage(error, "请检查邮箱和密码后重试。"),
-        variant: "destructive",
       })
     } finally {
       setLoading(null)
@@ -319,10 +307,8 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         userPassword: registerForm.password,
         userCheckPassword: registerForm.confirmPassword,
       })
-      toast({
-        title: "注册成功",
+      sonner.success("注册成功", {
         description: "账号已创建，请使用邮箱和密码登录。",
-        variant: "success",
       })
       setLoginForm({
         email: registerForm.email.trim(),
@@ -338,10 +324,8 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
       setRegisterErrors({})
       setMode("login")
     } catch (error) {
-      toast({
-        title: "注册失败",
+      sonner.error("注册失败", {
         description: getErrorMessage(error, "注册暂时不可用，请稍后重试。"),
-        variant: "destructive",
       })
     } finally {
       setLoading(null)
@@ -349,8 +333,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   }
 
   function handleProviderLogin(provider: "GitHub" | "Google") {
-    toast({
-      title: `${provider} 登录暂未配置`,
+    sonner.info(`${provider} 登录暂未配置`, {
       description: "请先使用邮箱和密码完成登录。",
     })
   }
@@ -463,8 +446,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                       type="button"
                       className="text-sm font-medium text-blue-600 transition hover:text-blue-500 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 dark:text-blue-400"
                       onClick={() =>
-                        toast({
-                          title: "忘记密码暂未开放",
+                        sonner.info("忘记密码暂未开放", {
                           description: "请先联系站点管理员重置账号。",
                         })
                       }

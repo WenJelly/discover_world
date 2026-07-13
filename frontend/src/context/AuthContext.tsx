@@ -7,18 +7,19 @@ import {
   useState,
   type ReactNode,
 } from "react"
+import { toast as sonner } from "sonner"
 
 import { loginUser, registerUser, fetchUserProfile } from "@/lib/api"
 import { mergeAccountDetailIntoAuthUser, toAuthUser } from "@/lib/auth-user"
 import {
   AUTH_EXPIRED_EVENT,
+  type AuthExpiredEventDetail,
   clearAuthStorage,
   getTokenExpiresAt,
   isTokenUsable,
   notifyAuthExpired,
   TOKEN_KEY,
   USER_KEY,
-  type AuthExpiredEventDetail,
 } from "@/lib/auth-session"
 import type {
   AuthUser,
@@ -27,7 +28,6 @@ import type {
   RegisterRequest,
   RegisterResponse,
 } from "@/lib/types"
-import { useToast } from "@/hooks/use-toast"
 
 type AuthContextValue = {
   user: AuthUser | null
@@ -133,7 +133,6 @@ function clearStoredAuth() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState(readStoredAuth)
-  const { toast } = useToast()
 
   const clearAuthState = useCallback(() => {
     clearStoredAuth()
@@ -203,13 +202,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function handleAuthExpired(event: Event) {
-      const detail = (event as CustomEvent<AuthExpiredEventDetail>).detail
-
       clearAuthState()
-      toast({
-        title: "登录已过期",
+      const detail = (event as CustomEvent<AuthExpiredEventDetail>).detail
+      sonner.error("登录已过期", {
         description: detail?.message ?? "请重新登录后继续操作。",
-        variant: "destructive",
       })
     }
 
@@ -218,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
     }
-  }, [clearAuthState, toast])
+  }, [clearAuthState])
 
   useEffect(() => {
     if (!auth.token) {
