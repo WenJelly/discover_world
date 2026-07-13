@@ -1,6 +1,12 @@
 import type {
   AccountSummary,
+  AdminContentPageResponse,
+  AdminContentQueryRequest,
   AdminModeratePostRequest,
+  AdminModerationReportPageResponse,
+  AdminModerationReportQueryRequest,
+  AdminModerationReportResolveRequest,
+  AdminModerationReportResponse,
   AdminQueryMediaAssetRequest,
   ApiResponse,
   CreateForumPostRequest,
@@ -869,6 +875,46 @@ export async function createModerationReport(
   );
 }
 
+export function fetchAdminModerationReportList(
+  req: AdminModerationReportQueryRequest = {}
+): Promise<AdminModerationReportPageResponse> {
+  return request<AdminModerationReportPageResponse>(
+    "/api/admin/moderation/report/list",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export function fetchAdminModerationReportDetail(
+  req: { id: string }
+): Promise<AdminModerationReportResponse> {
+  return request<AdminModerationReportResponse>(
+    "/api/admin/moderation/report/detail",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export function resolveAdminModerationReport(
+  req: AdminModerationReportResolveRequest
+): Promise<AdminModerationReportResponse> {
+  return request<AdminModerationReportResponse>(
+    "/api/admin/moderation/report/resolve",
+    req,
+    { requireAuth: true }
+  );
+}
+
+export function fetchAdminContentList(
+  req: AdminContentQueryRequest = {}
+): Promise<AdminContentPageResponse> {
+  return request<AdminContentPageResponse>(
+    "/api/admin/moderation/content/list",
+    req,
+    { requireAuth: true }
+  );
+}
+
 export async function fetchNotificationCursorList(
   req: NotificationListReq = {}
 ): Promise<NotificationCursorPageResponse> {
@@ -1090,6 +1136,22 @@ export async function adminRestorePost(
   req: AdminModeratePostRequest
 ): Promise<void> {
   return request<void>("/api/admin/moderation/post/restore", req, {
+    requireAuth: true,
+  });
+}
+
+export async function adminHideComment(
+  req: AdminModeratePostRequest
+): Promise<void> {
+  return request<void>("/api/admin/moderation/comment/hide", req, {
+    requireAuth: true,
+  });
+}
+
+export async function adminRestoreComment(
+  req: AdminModeratePostRequest
+): Promise<void> {
+  return request<void>("/api/admin/moderation/comment/restore", req, {
     requireAuth: true,
   });
 }

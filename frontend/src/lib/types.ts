@@ -501,6 +501,76 @@ export interface ModerationReportResponse {
   createdAt: string;
 }
 
+export interface AdminModerationReportQueryRequest {
+  status?: string;
+  targetType?: string;
+  targetId?: string;
+  reporterUserId?: string;
+  createdAtFrom?: string;
+  createdAtTo?: string;
+  pageNum?: number;
+  pageSize?: number;
+}
+
+export interface AdminModerationReportResolveRequest {
+  id: string;
+  resolution: "accepted" | "rejected" | "resolved";
+  resolutionNote?: string;
+  action?: string;
+  targetType?: string;
+  targetId?: string;
+}
+
+export interface AdminModerationReportResponse {
+  id: string;
+  reporterUserId: string;
+  reporter: AccountSummary;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  description: string;
+  status: string;
+  handlerUserId: string;
+  resolution: string;
+  resolutionNote: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string;
+}
+
+export interface AdminModerationReportPageResponse {
+  pageNum: number;
+  pageSize: number;
+  total: number;
+  list: AdminModerationReportResponse[];
+}
+
+export interface AdminContentQueryRequest {
+  targetType?: string;
+  status?: string;
+  userId?: string;
+  searchText?: string;
+  pageNum?: number;
+  pageSize?: number;
+}
+
+export interface AdminContentResponse {
+  id: string;
+  targetType: string;
+  author: AccountSummary;
+  title: string;
+  content: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface AdminContentPageResponse {
+  pageNum: number;
+  pageSize: number;
+  total: number;
+  list: AdminContentResponse[];
+}
+
 export interface ProfileAlbumResponse {
   id: string;
   userId: string;
@@ -647,6 +717,8 @@ export interface ReviewMediaAssetRequest {
 
 export interface AdminModeratePostRequest {
   id: string;
+  reason?: string;
+  reportId?: string;
 }
 
 export interface ProfilePostListReq {
