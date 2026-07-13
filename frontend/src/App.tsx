@@ -1,17 +1,23 @@
 
 import { AppLayout } from "@/app/AppLayout"
-import { Toaster } from "@/components/ui/toast"
+import { Toaster as Sonner } from "@/components/ui/sonner"
 import { AuthProvider } from "@/context/AuthContext"
-import { ToastProvider } from "@/hooks/use-toast"
+
+const sonnerTopOffset = "calc(var(--navbar-height, 4rem) + 0.75rem)"
 
 function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <AppLayout />
-        <Toaster />
-      </AuthProvider>
-    </ToastProvider>
+    <AuthProvider>
+      <AppLayout />
+      <Sonner
+        position="top-center"
+        offset={{ top: sonnerTopOffset }}
+        mobileOffset={{ top: sonnerTopOffset, left: "1rem", right: "1rem" }}
+        richColors
+        closeButton
+        duration={3600}
+      />
+    </AuthProvider>
   )
 }
 
