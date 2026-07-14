@@ -90,16 +90,6 @@ type (
 		AuditStatus   string `json:"auditStatus"`
 		ReviewMessage string `json:"reviewMessage,optional"`
 	}
-	MediaAssetUploadByUrlRequest {
-		Id          string   `json:"id,optional"`
-		FileUrl     string   `json:"fileUrl"`
-		Title       string   `json:"title,optional"`
-		Description string   `json:"description,optional"`
-		Category    string   `json:"category,optional"`
-		Tags        []string `json:"tags,optional"`
-		Visibility  string   `json:"visibility,optional"`
-		AssetUsage  string   `json:"assetUsage,optional"`
-	}
 	MediaAssetDirectUploadInitRequest {
 		Id            string   `json:"id,optional"`
 		FileName      string   `json:"fileName"`
@@ -265,6 +255,9 @@ type (
 		Nickname  string `json:"nickname,optional"`
 		AvatarUrl string `json:"avatarUrl,optional"`
 		Bio       string `json:"bio,optional"`
+	}
+	SetAccountAvatarRequest {
+		AssetId string `json:"assetId"`
 	}
 	AdminUpdateAccountRequest {
 		Id        string `json:"id"`
@@ -816,8 +809,8 @@ service DiscoverWorld {
 	@handler UpdateAccount
 	post /account/update (UpdateAccountRequest) returns (DetailAccountResponse)
 
-	@handler UploadAccountAvatar
-	post /account/avatar/upload returns (DetailAccountResponse)
+	@handler SetAccountAvatar
+	post /account/avatar/set (SetAccountAvatarRequest) returns (DetailAccountResponse)
 }
 
 @server (
@@ -1035,12 +1028,6 @@ service DiscoverWorld {
 
 	@handler DownloadMediaAsset
 	post /media/download (DownloadMediaAssetRequest) returns (MediaAssetDownloadResponse)
-
-	@handler UploadMediaAsset
-	post /media/upload returns (MediaAssetResponse)
-
-	@handler UploadMediaAssetByUrl
-	post /media/upload/url (MediaAssetUploadByUrlRequest) returns (MediaAssetResponse)
 
 	@handler InitDirectMediaUpload
 	post /media/upload/direct/init (MediaAssetDirectUploadInitRequest) returns (MediaAssetDirectUploadInitResponse)

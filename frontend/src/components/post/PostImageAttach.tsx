@@ -1,6 +1,10 @@
 import { useId, useRef, type ChangeEvent } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { toast as sonner } from "sonner";
+import {
+  isSupportedUploadImageFile,
+  MEDIA_UPLOAD_ACCEPT,
+} from "@/lib/media-upload";
 import { cn } from "@/lib/utils";
 
 export const POST_MAX_IMAGES = 9;
@@ -74,9 +78,9 @@ export function PostImageAttach({
     }
 
     const validFiles = selectedFiles.filter((file) => {
-      if (!file.type.startsWith("image/")) {
+      if (!isSupportedUploadImageFile(file)) {
         sonner.warning("请选择图片文件", {
-          description: `${file.name} 不是支持的图片格式。`,
+          description: `${file.name} 不是支持的 JPG、PNG 或 WebP 图片。`,
         });
         return false;
       }
@@ -194,7 +198,7 @@ export function PostImageAttach({
         id={resolvedInputId}
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={MEDIA_UPLOAD_ACCEPT}
         multiple
         disabled={disabled || reached}
         className="sr-only"

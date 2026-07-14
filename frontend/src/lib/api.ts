@@ -93,9 +93,7 @@ import type {
   UnreadNotificationCountResponse,
 } from "./types";
 import {
-  buildAccountAvatarUploadFormData,
   buildMediaAssetDirectUploadInitRequest,
-  buildMediaAssetUrlUploadRequest,
   type MediaDirectUploadImageMetadata,
   type MediaUploadMetadata,
 } from "./media-upload";
@@ -115,6 +113,12 @@ const BASE_URL =
 const REQUEST_TIMEOUT_MS = 12_000;
 const UPLOAD_REQUEST_TIMEOUT_MS = 60_000;
 const DIRECT_OBJECT_UPLOAD_TIMEOUT_MS = 5 * 60_000;
+const REMOTE_IMAGE_MAX_BYTES = 20 * 1024 * 1024;
+const REMOTE_IMAGE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
 
 export class ApiError extends Error {
   code: number;
@@ -189,85 +193,6 @@ async function request<T>(
       throw new ApiError(
         0,
         normalizeApiErrorMessage("服务响应超时", errorContext)
-      );
-    }
-
-    throw new ApiError(0, "服务暂时不可用,请稍后重试");
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-
-  let json: ApiResponse<T> | T | null = null;
-  try {
-    json = (await res.json()) as ApiResponse<T> | T;
-  } catch {
-    if (res.status === 401) {
-      const message = "登录已过期，请重新登录";
-      notifyAuthExpired(message);
-      throw new ApiError(401, message);
-    }
-
-    throw new ApiError(0, "服务暂时不可用,请稍后重试");
-  }
-
-  if (isWrappedResponse<T>(json) && (res.status === 401 || json.code === 401)) {
-    const message = json.message || "登录已过期，请重新登录";
-    notifyAuthExpired(message);
-    throw new ApiError(401, message);
-  }
-
-  if (isWrappedResponse<T>(json)) {
-    if (json.code !== 200) {
-      throw new ApiError(
-        json.code,
-        normalizeApiErrorMessage(json.message, errorContext)
-      );
-    }
-    return json.data;
-  }
-
-  if (!res.ok) {
-    throw new ApiError(res.status, "服务暂时不可用,请稍后重试");
-  }
-  return json as T;
-}
-
-async function requestFormData<T>(
-  path: string,
-  body: FormData,
-  options: RequestOptions = {}
-): Promise<T> {
-  const errorContext = options.errorContext ?? "upload";
-  const headers: Record<string, string> = {};
-  if (options.requireAuth) {
-    const token = getToken();
-    if (!token || !isTokenUsable(token)) {
-      const message = "登录已过期，请重新登录";
-      notifyAuthExpired(message);
-      throw new ApiError(401, message);
-    }
-
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  let res: Response;
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => {
-    controller.abort();
-  }, UPLOAD_REQUEST_TIMEOUT_MS);
-
-  try {
-    res = await fetch(`${BASE_URL}${path}`, {
-      method: "POST",
-      headers,
-      body,
-      signal: controller.signal,
-    });
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new ApiError(
-        0,
-        normalizeApiErrorMessage("上传超时", errorContext)
       );
     }
 
@@ -1139,23 +1064,78 @@ export async function uploadMediaAssetByUrl(
   fileUrl: string,
   metadata: MediaUploadMetadata = {}
 ): Promise<MediaAssetResponse> {
-  const resp = await request<MediaAssetResponse>(
-    "/api/media/upload/url",
-    buildMediaAssetUrlUploadRequest(fileUrl, metadata),
-    {
-      requireAuth: true,
-      timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
-      errorContext: "upload",
-    }
+  const normalizedUrl = fileUrl.trim();
+  if (!normalizedUrl) {
+    throw new ApiError(400, "图片 URL 不能为空");
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(normalizedUrl);
+  } catch {
+    throw new ApiError(400, "请输入有效的图片 URL");
+  }
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    throw new ApiError(400, "仅支持 http 或 https 图片 URL");
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(
+    () => controller.abort(),
+    UPLOAD_REQUEST_TIMEOUT_MS
   );
-  return normalizeMediaAsset(resp);
+  let response: Response;
+  try {
+    response = await fetch(normalizedUrl, { signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError(0, "读取图片 URL 超时");
+    }
+    throw new ApiError(
+      0,
+      "无法读取图片 URL，请确认图片来源允许跨域访问"
+    );
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, "读取图片 URL 失败");
+  }
+
+  const blob = await response.blob();
+  const contentType = blob.type.split(";", 1)[0].toLowerCase();
+  const fallbackExtension = REMOTE_IMAGE_EXTENSIONS[contentType];
+  if (!fallbackExtension) {
+    throw new ApiError(400, "URL 内容不是支持的 JPG、PNG 或 WebP 图片");
+  }
+  if (blob.size > REMOTE_IMAGE_MAX_BYTES) {
+    throw new ApiError(400, "URL 图片大小不能超过 20MB");
+  }
+
+  let fileName = parsedUrl.pathname.split("/").filter(Boolean).pop() ?? "";
+  try {
+    fileName = decodeURIComponent(fileName);
+  } catch {
+    // Keep the encoded path segment when it is not valid URI text.
+  }
+  if (!/\.(?:jpe?g|png|webp)$/i.test(fileName)) {
+    fileName = `remote-image.${fallbackExtension}`;
+  }
+
+  const file = new File([blob], fileName, { type: contentType });
+  return uploadMediaAsset(file, metadata);
 }
 
 export async function uploadAccountAvatar(file: File): Promise<DetailUserResponse> {
-  const resp = await requestFormData<DetailAccountResponse>(
-    "/api/account/avatar/upload",
-    buildAccountAvatarUploadFormData(file),
-    { requireAuth: true }
+  const asset = await uploadMediaAsset(file, {
+    title: "用户头像",
+    visibility: "public",
+    assetUsage: "avatar",
+  });
+  const resp = await request<DetailAccountResponse>(
+    "/api/account/avatar/set",
+    { assetId: asset.id },
+    { requireAuth: true, errorContext: "upload" }
   );
   return normalizeAccount(resp);
 }

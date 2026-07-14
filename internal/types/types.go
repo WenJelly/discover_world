@@ -566,17 +566,6 @@ type MediaAssetStats struct {
 	DownloadCount int64 `json:"downloadCount"`
 }
 
-type MediaAssetUploadByUrlRequest struct {
-	Id          string   `json:"id,optional"`
-	FileUrl     string   `json:"fileUrl"`
-	Title       string   `json:"title,optional"`
-	Description string   `json:"description,optional"`
-	Category    string   `json:"category,optional"`
-	Tags        []string `json:"tags,optional"`
-	Visibility  string   `json:"visibility,optional"`
-	AssetUsage  string   `json:"assetUsage,optional"`
-}
-
 type MediaAssetDirectUploadInitRequest struct {
 	Id            string   `json:"id,optional"`
 	FileName      string   `json:"fileName"`
@@ -853,6 +842,10 @@ type ReviewMediaAssetRequest struct {
 	Id            string `json:"id"`
 	AuditStatus   string `json:"auditStatus"`
 	ReviewMessage string `json:"reviewMessage,optional"`
+}
+
+type SetAccountAvatarRequest struct {
+	AssetId string `json:"assetId"`
 }
 
 type TogglePostFavoriteRequest struct {

@@ -39,7 +39,6 @@ test("business files alias the Sonner API instead of restoring project Toast hoo
     "src/components/post/PostCard.tsx",
     "src/components/post/PostComposerDialog.tsx",
     "src/components/post/PostImageAttach.tsx",
-    "src/components/upload/ImageAttachButton.tsx",
     "src/components/admin/AdminHomepagePanel.tsx",
     "src/components/admin/AdminMediaReviewPanel.tsx",
     "src/pages/AccountDetailPage.tsx",

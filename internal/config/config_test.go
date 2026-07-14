@@ -5,23 +5,6 @@ import (
 	"testing"
 )
 
-func TestApplicationConfigAllowsConfiguredMediaUploads(t *testing.T) {
-	c, err := Load(filepath.Join("..", "..", "etc", "application.yaml"))
-	if err != nil {
-		t.Fatalf("Load application config returned error: %v", err)
-	}
-
-	const minMediaUploadRequestBytes = int64(32 << 20)
-	if c.MaxBytes < minMediaUploadRequestBytes {
-		t.Fatalf("MaxBytes = %d, want at least %d for media uploads", c.MaxBytes, minMediaUploadRequestBytes)
-	}
-
-	const minMediaUploadRequestTimeout = int64(65_000)
-	if c.Timeout < minMediaUploadRequestTimeout {
-		t.Fatalf("Timeout = %d, want at least %d for media uploads", c.Timeout, minMediaUploadRequestTimeout)
-	}
-}
-
 func TestApplicationConfigLoadsDefaultStorageSecret(t *testing.T) {
 	c, err := Load(filepath.Join("..", "..", "etc", "application.yaml"))
 	if err != nil {

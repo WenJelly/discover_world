@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -35,22 +34,6 @@ type tiffEntry struct {
 	typ   uint16
 	count uint32
 	value []byte
-}
-
-func extractExifMetadataFromFile(filePath, format string) *mediaExifMetadata {
-	if !isJPEGFormat(format) {
-		return nil
-	}
-
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil
-	}
-	exif, err := extractExifMetadataFromJPEGBytes(data)
-	if err != nil {
-		return nil
-	}
-	return normalizeMediaExif(exif)
 }
 
 func extractExifMetadataFromImageBytes(data []byte, format string) *mediaExifMetadata {

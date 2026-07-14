@@ -6,14 +6,12 @@ package account
 import (
 	"context"
 	"database/sql"
-	"mime/multipart"
-	"strconv"
+	"errors"
 
-	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
-	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
+	"discover_world/model"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -32,24 +30,29 @@ func NewSetAccountAvatarLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 	}
 }
 
-func (l *SetAccountAvatarLogic) SetAccountAvatar(file multipart.File, header *multipart.FileHeader, authorization string) (resp *types.DetailAccountResponse, err error) {
-	loginUser, err := commonauth.LoadRequiredLoginUser(l.ctx, l.svcCtx, authorization)
+func (l *SetAccountAvatarLogic) SetAccountAvatar(req *types.SetAccountAvatarRequest) (resp *types.DetailAccountResponse, err error) {
+	if req == nil {
+		return nil, commonresponse.BadRequest("请求不能为空")
+	}
+
+	loginUser, err := loadLoginAccount(l.ctx, l.svcCtx)
 	if err != nil {
 		return nil, err
 	}
 
-	mediaResp, err := mediaLogic.StoreMultipartMediaAsset(l.ctx, l.svcCtx, file, header, mediaLogic.MediaWriteRequest{
-		Title:      loginUser.Username + " avatar",
-		Visibility: "public",
-		UsageType:  "avatar",
-		AssetUsage: "avatar",
-	}, authorization)
+	assetID, err := parseRequiredID(req.AssetId, "assetId")
 	if err != nil {
 		return nil, err
 	}
-	assetID, err := strconv.ParseUint(mediaResp.Id, 10, 64)
-	if err != nil || assetID == 0 {
-		return nil, commonresponse.InternalServerError("头像资源ID无效")
+	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, assetID)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			return nil, commonresponse.NotFound("头像资源不存在")
+		}
+		return nil, commonresponse.InternalServerError("查询头像资源失败")
+	}
+	if err := validateAvatarAssetForUser(asset, loginUser.Id); err != nil {
+		return nil, err
 	}
 
 	profile, err := ensureUserProfile(l.ctx, l.svcCtx, loginUser)
@@ -62,4 +65,23 @@ func (l *SetAccountAvatarLogic) SetAccountAvatar(file multipart.File, header *mu
 	}
 
 	return loadDetailAccountResponse(l.ctx, l.svcCtx, loginUser)
+}
+
+func validateAvatarAssetForUser(asset *model.MediaAsset, userID uint64) error {
+	if asset == nil {
+		return commonresponse.NotFound("头像资源不存在")
+	}
+	if asset.OwnerUserId != userID {
+		return commonresponse.Forbidden("无权使用该头像资源")
+	}
+	if asset.MediaType != "image" || asset.AssetUsage != "avatar" {
+		return commonresponse.BadRequest("资源不是可用头像")
+	}
+	if asset.Status != "active" || asset.DeletedAt.Valid {
+		return commonresponse.BadRequest("头像资源尚未上传完成")
+	}
+	if asset.Visibility != "public" || asset.AuditStatus != "approved" {
+		return commonresponse.BadRequest("头像资源状态不可用")
+	}
+	return nil
 }

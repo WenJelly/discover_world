@@ -68,7 +68,8 @@ func initDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, req 
 		return nil, err
 	}
 
-	target, err := loadStorageTarget(ctx, svcCtx, "media")
+	storageUsage := storageUsageForAssetUsage(normalized.AssetUsage)
+	target, err := loadStorageTarget(ctx, svcCtx, storageUsage)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func initDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, req 
 	var resp *types.MediaAssetDirectUploadInitResponse
 
 	if err := svcCtx.Transact(ctx, func(txCtx context.Context, txSvc *svc.ServiceContext) error {
-		asset, err := prepareDirectUploadAsset(txCtx, txSvc, normalized, loginUser)
+		asset, err := prepareDirectUploadAsset(txCtx, txSvc, normalized, storageUsage, loginUser)
 		if err != nil {
 			return err
 		}
@@ -360,7 +361,7 @@ func normalizeDirectUploadInitRequest(req *types.MediaAssetDirectUploadInitReque
 	}, nil
 }
 
-func prepareDirectUploadAsset(ctx context.Context, svcCtx *svc.ServiceContext, req directUploadInitRequest, loginUser *model.UserAccount) (*model.MediaAsset, error) {
+func prepareDirectUploadAsset(ctx context.Context, svcCtx *svc.ServiceContext, req directUploadInitRequest, storageUsage string, loginUser *model.UserAccount) (*model.MediaAsset, error) {
 	var existing *model.MediaAsset
 	if req.ID > 0 {
 		asset, err := svcCtx.MediaAssetModel.FindOneActive(ctx, req.ID)
@@ -377,7 +378,7 @@ func prepareDirectUploadAsset(ctx context.Context, svcCtx *svc.ServiceContext, r
 	}
 
 	metadata := mediaMetadata{
-		UsageType:     "media",
+		UsageType:     storageUsage,
 		Category:      req.Category,
 		Tags:          req.Tags,
 		DominantColor: req.DominantColor,
@@ -422,6 +423,17 @@ func prepareDirectUploadAsset(ctx context.Context, svcCtx *svc.ServiceContext, r
 		return nil, commonresponse.InternalServerError("更新媒体资源失败")
 	}
 	return existing, nil
+}
+
+func storageUsageForAssetUsage(assetUsage string) string {
+	switch normalizeAssetUsage(assetUsage) {
+	case assetUsageAvatar:
+		return "avatar"
+	case assetUsageTemp:
+		return "temp"
+	default:
+		return "media"
+	}
 }
 
 func directUploadExtraJSON(req directUploadInitRequest) sql.NullString {

@@ -775,17 +775,6 @@ export interface UpdateHomepageFeaturedRequest {
   mediaAssetIds?: string[];
 }
 
-export interface MediaAssetUploadByUrlRequest {
-  id?: string;
-  fileUrl: string;
-  title?: string;
-  description?: string;
-  category?: string;
-  tags?: string[];
-  visibility?: string;
-  assetUsage?: string;
-}
-
 export type CompressPictureType = MediaVariantRequest & {
   CutHeight?: number;
 };

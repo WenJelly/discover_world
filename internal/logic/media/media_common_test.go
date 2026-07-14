@@ -1,10 +1,8 @@
 package media
 
 import (
-	"context"
 	"database/sql"
 	"encoding/binary"
-	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -481,31 +479,6 @@ func TestApplyMediaViewerStateMarksLikedAssets(t *testing.T) {
 	applyMediaViewerState(&unliked, 20, state)
 	if unliked.IsLiked {
 		t.Fatal("applyMediaViewerState marked unrelated media asset as liked")
-	}
-}
-
-func TestMarkMediaAssetUploadFailedPersistsFailedStatusAndReturnsOriginalError(t *testing.T) {
-	asset := &model.MediaAsset{Id: 42, Status: "uploading"}
-	originalErr := errors.New("cos upload failed")
-
-	var updated *model.MediaAsset
-	got := markMediaAssetUploadFailed(context.Background(), asset, originalErr, func(ctx context.Context, data *model.MediaAsset) error {
-		copied := *data
-		updated = &copied
-		return nil
-	})
-
-	if !errors.Is(got, originalErr) {
-		t.Fatalf("markMediaAssetUploadFailed() error = %v, want original error", got)
-	}
-	if asset.Status != "failed" {
-		t.Fatalf("asset status = %q, want failed", asset.Status)
-	}
-	if updated == nil {
-		t.Fatal("update was not called")
-	}
-	if updated.Status != "failed" {
-		t.Fatalf("updated status = %q, want failed", updated.Status)
 	}
 }
 

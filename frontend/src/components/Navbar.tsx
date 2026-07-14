@@ -41,6 +41,10 @@ import {
     uploadAccountAvatar,
     updateUserProfile,
 } from "@/lib/api";
+import {
+    isSupportedUploadImageFile,
+    MEDIA_UPLOAD_ACCEPT,
+} from "@/lib/media-upload";
 
 const navItems = [
     { name: "首页", href: "/" },
@@ -208,9 +212,9 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
             return;
         }
 
-        if (!file.type.startsWith("image/")) {
+        if (!isSupportedUploadImageFile(file)) {
             sonner.warning("请选择图片文件", {
-                description: "头像必须是图片格式。",
+                description: "头像仅支持 JPG、PNG 或 WebP。",
             });
             return;
         }
@@ -700,7 +704,7 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                     <input
                         ref={avatarInputRef}
                         type="file"
-                        accept="image/*"
+                        accept={MEDIA_UPLOAD_ACCEPT}
                         className="sr-only"
                         tabIndex={-1}
                         onChange={handleAccountAvatarUpload}

@@ -45,8 +45,8 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodPost,
-				Path:    "/account/avatar/upload",
-				Handler: account.UploadAccountAvatarHandler(serverCtx),
+				Path:    "/account/avatar/set",
+				Handler: account.SetAccountAvatarHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
@@ -234,16 +234,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/media/reaction/toggle",
 				Handler: media.ToggleMediaReactionHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/media/upload",
-				Handler: media.UploadMediaAssetHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/media/upload/url",
-				Handler: media.UploadMediaAssetByUrlHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,

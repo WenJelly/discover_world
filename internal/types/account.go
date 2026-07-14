@@ -41,6 +41,10 @@ type RegisterResponse struct {
 	Id string `json:"id"`
 }
 
+type SetAccountAvatarRequest struct {
+	AssetId string `json:"assetId"`
+}
+
 type UpdateAccountRequest struct {
 	Id        string `json:"id"`
 	Username  string `json:"username,optional"`

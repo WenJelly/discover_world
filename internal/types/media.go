@@ -74,17 +74,6 @@ type MediaAssetResponse struct {
 	UpdatedAt        string                `json:"updatedAt"`
 }
 
-type MediaAssetUploadByUrlRequest struct {
-	Id          string   `json:"id,optional"`
-	FileUrl     string   `json:"fileUrl"`
-	Title       string   `json:"title,optional"`
-	Description string   `json:"description,optional"`
-	Category    string   `json:"category,optional"`
-	Tags        []string `json:"tags,optional"`
-	Visibility  string   `json:"visibility,optional"`
-	AssetUsage  string   `json:"assetUsage,optional"`
-}
-
 type QueryMediaAssetRequest struct {
 	Id            string              `json:"id,optional"`
 	Title         string              `json:"title,optional"`

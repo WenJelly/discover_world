@@ -14,7 +14,11 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { uploadMediaAsset, uploadMediaAssetByUrl } from "@/lib/api";
 import { notifyMediaAssetUploaded } from "@/lib/media-events";
-import type { MediaUploadMetadata } from "@/lib/media-upload";
+import {
+  isSupportedUploadImageFile,
+  MEDIA_UPLOAD_ACCEPT,
+  type MediaUploadMetadata,
+} from "@/lib/media-upload";
 import type { MediaAssetResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -121,8 +125,8 @@ export function UploadDialog({
 
   const selectFile = useCallback(
     (selectedFile: File) => {
-      if (!selectedFile.type.startsWith("image/")) {
-        setError("请选择图片文件（JPG / PNG / GIF / WebP）");
+      if (!isSupportedUploadImageFile(selectedFile)) {
+        setError("请选择 JPG、PNG 或 WebP 图片");
         return;
       }
       if (selectedFile.size > MAX_FILE_SIZE) {
@@ -291,7 +295,7 @@ export function UploadDialog({
             上传图片
           </DialogTitle>
           <DialogDescription>
-            支持 JPG / PNG / GIF / WebP，单张最大 20MB。上传后进入社区审核，通过后向所有人公开。
+            支持 JPG / PNG / WebP，单张最大 20MB。上传后进入社区审核，通过后向所有人公开。
           </DialogDescription>
         </DialogHeader>
 
@@ -357,7 +361,7 @@ export function UploadDialog({
                     <input
                       ref={inputRef}
                       type="file"
-                      accept="image/*"
+                      accept={MEDIA_UPLOAD_ACCEPT}
                       onChange={handleInputChange}
                       className="sr-only"
                       tabIndex={-1}
@@ -370,7 +374,7 @@ export function UploadDialog({
                         点击选择或拖拽图片到此处
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        JPG / PNG / GIF / WebP · 最大 20MB
+                        JPG / PNG / WebP · 最大 20MB
                       </p>
                     </div>
                   </div>
@@ -395,7 +399,7 @@ export function UploadDialog({
                         maxLength={MAX_URL_LENGTH}
                       />
                       <p className="text-xs text-muted-foreground">
-                        粘贴公开可访问的图片链接，支持 http / https。
+                        粘贴公开图片链接，图片来源需允许浏览器跨域读取。
                       </p>
                     </div>
                     <Button

@@ -3,42 +3,11 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
-  buildAccountAvatarUploadFormData,
   buildMediaAssetDirectUploadInitRequest,
-  buildMediaAssetUploadFormData,
-  buildMediaAssetUrlUploadRequest,
+  isSupportedUploadImageFile,
+  MEDIA_UPLOAD_ACCEPT,
 } from "../src/lib/media-upload.ts";
 import { shouldDisplayUploadedMediaAsset } from "../src/lib/media-events.ts";
-
-test("buildMediaAssetUploadFormData includes the selected file and cleaned metadata", () => {
-  const file = new File(["image"], "sunset-trip.jpg", { type: "image/jpeg" });
-
-  const formData = buildMediaAssetUploadFormData(file, {
-    title: "  ",
-    description: " Golden hour ",
-    category: " 旅行 ",
-    tags: [" 海边 ", "", "日落"],
-    visibility: "private",
-  });
-
-  assert.equal(formData.get("file"), file);
-  assert.equal(formData.get("title"), "sunset-trip");
-  assert.equal(formData.get("description"), "Golden hour");
-  assert.equal(formData.get("category"), "旅行");
-  assert.equal(formData.get("tags"), JSON.stringify(["海边", "日落"]));
-  assert.equal(formData.get("visibility"), "private");
-  assert.equal(formData.get("assetUsage"), "work");
-});
-
-test("buildMediaAssetUploadFormData sends explicit post usage for dynamic attachments", () => {
-  const file = new File(["image"], "daily.jpg", { type: "image/jpeg" });
-
-  const formData = buildMediaAssetUploadFormData(file, {
-    assetUsage: "post",
-  });
-
-  assert.equal(formData.get("assetUsage"), "post");
-});
 
 test("buildMediaAssetDirectUploadInitRequest sends file facts and cleaned metadata", () => {
   const file = new File(["image"], "mountain-view.jpeg", { type: "image/jpeg" });
@@ -74,6 +43,41 @@ test("buildMediaAssetDirectUploadInitRequest sends file facts and cleaned metada
   });
 });
 
+test("frontend file pickers only accept image formats supported by direct upload", () => {
+  assert.equal(
+    MEDIA_UPLOAD_ACCEPT,
+    ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+  );
+  assert.equal(
+    isSupportedUploadImageFile(
+      new File(["jpg"], "photo.jpg", { type: "image/jpeg" })
+    ),
+    true
+  );
+  assert.equal(
+    isSupportedUploadImageFile(
+      new File(["webp"], "photo.webp", { type: "image/webp" })
+    ),
+    true
+  );
+  assert.equal(
+    isSupportedUploadImageFile(
+      new File(["gif"], "photo.gif", { type: "image/gif" })
+    ),
+    false
+  );
+});
+
+test("URL upload UI explains browser CORS requirements", async () => {
+  const dialog = await readFile(
+    new URL("../src/components/upload/UploadDialog.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(dialog, /图片来源需允许浏览器跨域读取/);
+  assert.doesNotMatch(dialog, /JPG \/ PNG \/ GIF \/ WebP/);
+});
+
 test("media file upload remains frontend direct upload without server fallback", async () => {
   const api = await readFile(new URL("../src/lib/api.ts", import.meta.url), "utf8");
 
@@ -85,34 +89,24 @@ test("media file upload remains frontend direct upload without server fallback",
   assert.doesNotMatch(api, /return uploadMediaAssetViaServer\(file, metadata\)/);
 });
 
-test("buildAccountAvatarUploadFormData only sends the avatar file to the account endpoint", () => {
-  const file = new File(["avatar"], "avatar.png", { type: "image/png" });
+test("avatar upload uses direct object storage before binding the asset", async () => {
+  const api = await readFile(new URL("../src/lib/api.ts", import.meta.url), "utf8");
 
-  const formData = buildAccountAvatarUploadFormData(file);
-
-  assert.equal(formData.get("file"), file);
-  assert.deepEqual(Array.from(formData.keys()), ["file"]);
+  assert.match(api, /const asset = await uploadMediaAsset\(file,\s*\{[\s\S]*assetUsage:\s*"avatar"/);
+  assert.match(api, /"\/api\/account\/avatar\/set"/);
+  assert.match(api, /assetId:\s*asset\.id/);
+  assert.doesNotMatch(api, /"\/api\/account\/avatar\/upload"/);
+  assert.doesNotMatch(api, /buildAccountAvatarUploadFormData/);
 });
 
-test("buildMediaAssetUrlUploadRequest trims and validates image URL uploads", () => {
-  const request = buildMediaAssetUrlUploadRequest(" https://example.com/photos/night-city.png?size=lg ", {
-    category: " 城市 ",
-    tags: ["夜景", "  街道  "],
-  });
+test("URL import downloads in the browser and reuses direct object upload", async () => {
+  const api = await readFile(new URL("../src/lib/api.ts", import.meta.url), "utf8");
 
-  assert.deepEqual(request, {
-    fileUrl: "https://example.com/photos/night-city.png?size=lg",
-    title: "night-city",
-    category: "城市",
-    tags: ["夜景", "街道"],
-    visibility: "public",
-    assetUsage: "work",
-  });
-
-  assert.throws(
-    () => buildMediaAssetUrlUploadRequest("ftp://example.com/photo.jpg"),
-    /仅支持 http 或 https 图片 URL/
-  );
+  assert.match(api, /export async function uploadMediaAssetByUrl/);
+  assert.match(api, /await fetch\(normalizedUrl/);
+  assert.match(api, /return uploadMediaAsset\(file, metadata\)/);
+  assert.doesNotMatch(api, /"\/api\/media\/upload\/url"/);
+  assert.doesNotMatch(api, /buildMediaAssetUrlUploadRequest/);
 });
 
 test("shouldDisplayUploadedMediaAsset matches public gallery visibility rules", () => {

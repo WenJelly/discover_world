@@ -13,9 +13,7 @@ import (
 )
 
 const (
-	MaxMultipartMemory   = 32 << 20
-	MaxFileUploadSize    = 30 << 20
-	UploadRequestTimeout = 60 * time.Second
+	MaxFileUploadSize = 30 << 20
 
 	defaultMediaPageNum        = 1
 	defaultMediaPageSize       = 10
@@ -23,7 +21,6 @@ const (
 	defaultMediaCursorPageSize = 30
 	maxMediaCursorPageSize     = 60
 
-	maxURLUploadSize          = 10 << 20
 	compressedImageThreshold  = 2 << 20
 	mediumCompressedThreshold = 5 << 20
 	largeCompressedThreshold  = 10 << 20
