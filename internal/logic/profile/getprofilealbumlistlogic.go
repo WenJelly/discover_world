@@ -6,8 +6,8 @@ package profile
 import (
 	"context"
 
+	access "discover_world/internal/common/access"
 	commonresponse "discover_world/internal/common/response"
-	access "discover_world/internal/logic/access"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 

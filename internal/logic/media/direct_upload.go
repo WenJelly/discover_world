@@ -14,8 +14,8 @@ import (
 	"time"
 
 	commonauth "discover_world/internal/common/auth"
+	"discover_world/internal/common/ipgeo"
 	commonresponse "discover_world/internal/common/response"
-	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -323,7 +323,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 		}
 		ensureEntityStat(txCtx, txSvc, loaded.Id)
 		refreshMediaRanking(txCtx, txSvc, loaded.Id)
-		if err := ipgeo.RecordContentAttribution(txCtx, txSvc, ipgeo.TargetTypeMediaAsset, loaded.Id, ipgeo.ActionTypeDirectUploadComplete, loginUser.Id); err != nil {
+		if err := ipgeo.RecordContentAttribution(txCtx, txSvc.Config.IpGeo.Enabled, txSvc.IpGeoResolver, txSvc.Config.IpGeo.HashSecret, txSvc.Models.Moderation.ContentIpAttribution, ipgeo.TargetTypeMediaAsset, loaded.Id, ipgeo.ActionTypeDirectUploadComplete, loginUser.Id); err != nil {
 			logx.WithContext(txCtx).Errorf("record direct media upload ip attribution failed: assetId=%d userId=%d err=%v", loaded.Id, loginUser.Id, err)
 		}
 

@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"discover_world/internal/common/ipgeo"
 	commonresponse "discover_world/internal/common/response"
-	"discover_world/internal/logic/ipgeo"
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
@@ -173,7 +173,7 @@ func buildSearchPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态统计失败")
 	}
-	ipRegions, err := ipgeo.LoadRegionsByTarget(ctx, svcCtx, ipgeo.TargetTypePost, postIDs)
+	ipRegions, err := ipgeo.LoadRegionsByTarget(ctx, svcCtx.Models.Moderation.ContentIpAttribution, ipgeo.TargetTypePost, postIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态属地失败")
 	}

@@ -17,10 +17,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	access "discover_world/internal/common/access"
 	commonauth "discover_world/internal/common/auth"
+	"discover_world/internal/common/ipgeo"
 	commonresponse "discover_world/internal/common/response"
-	access "discover_world/internal/logic/access"
-	"discover_world/internal/logic/ipgeo"
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
@@ -554,7 +554,7 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 }
 
 func loadIPRegionsByTarget(ctx context.Context, svcCtx *svc.ServiceContext, postIDs []uint64) (map[uint64]types.IpRegionResponse, error) {
-	return ipgeo.LoadRegionsByTarget(ctx, svcCtx, ipgeo.TargetTypePost, postIDs)
+	return ipgeo.LoadRegionsByTarget(ctx, svcCtx.Models.Moderation.ContentIpAttribution, ipgeo.TargetTypePost, postIDs)
 }
 
 func nonNilAccountSummaries(list []types.AccountSummary) []types.AccountSummary {

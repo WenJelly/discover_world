@@ -11,9 +11,9 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 
+	access "discover_world/internal/common/access"
+	"discover_world/internal/common/ipgeo"
 	commonresponse "discover_world/internal/common/response"
-	access "discover_world/internal/logic/access"
-	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 )
@@ -244,7 +244,7 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func loadIPRegionsByTarget(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64) (map[uint64]types.IpRegionResponse, error) {
-	return ipgeo.LoadRegionsByTarget(ctx, svcCtx, ipgeo.TargetTypeMediaAsset, assetIDs)
+	return ipgeo.LoadRegionsByTarget(ctx, svcCtx.Models.Moderation.ContentIpAttribution, ipgeo.TargetTypeMediaAsset, assetIDs)
 }
 
 func loadMediaViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *accountmodel.UserAccount, assetIDs []uint64) (mediaViewerState, error) {

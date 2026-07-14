@@ -3,8 +3,8 @@ package moderation
 import (
 	"context"
 
+	"discover_world/internal/common/adminsupport"
 	commonresponse "discover_world/internal/common/response"
-	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 

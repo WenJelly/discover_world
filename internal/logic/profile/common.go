@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
+	access "discover_world/internal/common/access"
 	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
-	access "discover_world/internal/logic/access"
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"

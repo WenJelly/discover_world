@@ -10,8 +10,8 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"time"
 
+	"discover_world/internal/common/ipgeo"
 	commonresponse "discover_world/internal/common/response"
-	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -103,7 +103,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 		if err := txSvc.Models.Statistics.EntityStat.Ensure(ctx, targetTypePost, postID); err != nil {
 			return err
 		}
-		if err := ipgeo.RecordContentAttribution(ctx, txSvc, ipgeo.TargetTypePost, postID, ipgeo.ActionTypeCreate, loginUser.Id); err != nil {
+		if err := ipgeo.RecordContentAttribution(ctx, txSvc.Config.IpGeo.Enabled, txSvc.IpGeoResolver, txSvc.Config.IpGeo.HashSecret, txSvc.Models.Moderation.ContentIpAttribution, ipgeo.TargetTypePost, postID, ipgeo.ActionTypeCreate, loginUser.Id); err != nil {
 			logx.WithContext(ctx).Errorf("record forum post ip attribution failed: postId=%d userId=%d err=%v", postID, loginUser.Id, err)
 		}
 		return nil

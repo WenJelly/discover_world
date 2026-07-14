@@ -3,14 +3,12 @@ package ipgeo
 import (
 	"context"
 	"database/sql"
-	moderationmodel "discover_world/model/moderation"
 	"strings"
 	"time"
 
 	"discover_world/internal/common/clientip"
-	commonipgeo "discover_world/internal/common/ipgeo"
-	"discover_world/internal/svc"
 	"discover_world/internal/types"
+	moderationmodel "discover_world/model/moderation"
 )
 
 const (
@@ -22,7 +20,7 @@ const (
 	ActionTypeDirectUploadComplete = "direct_upload_complete"
 )
 
-func BuildAttributionRecord(ctx context.Context, resolver commonipgeo.Resolver, hashSecret string, targetType string, targetID uint64, actionType string, userID uint64) (*moderationmodel.ContentIpAttribution, bool, error) {
+func BuildAttributionRecord(ctx context.Context, resolver Resolver, hashSecret string, targetType string, targetID uint64, actionType string, userID uint64) (*moderationmodel.ContentIpAttribution, bool, error) {
 	targetType = strings.TrimSpace(targetType)
 	actionType = strings.TrimSpace(actionType)
 	if targetType == "" || targetID == 0 || actionType == "" || userID == 0 {
@@ -34,7 +32,7 @@ func BuildAttributionRecord(ctx context.Context, resolver commonipgeo.Resolver, 
 		return nil, false, nil
 	}
 
-	var region commonipgeo.Region
+	var region Region
 	resolved := false
 	if resolver != nil {
 		var err error
@@ -49,7 +47,7 @@ func BuildAttributionRecord(ctx context.Context, resolver commonipgeo.Resolver, 
 		TargetId:   targetID,
 		ActionType: actionType,
 		UserId:     userID,
-		IpHash:     optionalString(commonipgeo.HashIP(addr, hashSecret)),
+		IpHash:     optionalString(HashIP(addr, hashSecret)),
 		IpVersion: sql.NullInt64{
 			Int64: ipVersion(addr),
 			Valid: addr.IsValid(),
@@ -69,35 +67,35 @@ func BuildAttributionRecord(ctx context.Context, resolver commonipgeo.Resolver, 
 	return record, true, nil
 }
 
-func RecordContentAttribution(ctx context.Context, svcCtx *svc.ServiceContext, targetType string, targetID uint64, actionType string, userID uint64) error {
-	if svcCtx == nil || !svcCtx.Config.IpGeo.Enabled || svcCtx.Models.Moderation.ContentIpAttribution == nil {
+func RecordContentAttribution(ctx context.Context, enabled bool, resolver Resolver, hashSecret string, store moderationmodel.ContentIpAttributionModel, targetType string, targetID uint64, actionType string, userID uint64) error {
+	if !enabled || store == nil {
 		return nil
 	}
-	record, ok, err := BuildAttributionRecord(ctx, svcCtx.IpGeoResolver, svcCtx.Config.IpGeo.HashSecret, targetType, targetID, actionType, userID)
+	record, ok, err := BuildAttributionRecord(ctx, resolver, hashSecret, targetType, targetID, actionType, userID)
 	if err != nil || !ok {
 		return err
 	}
-	return svcCtx.Models.Moderation.ContentIpAttribution.Upsert(ctx, record)
+	return store.Upsert(ctx, record)
 }
 
-func LoadRegionsByTarget(ctx context.Context, svcCtx *svc.ServiceContext, targetType string, targetIDs []uint64) (map[uint64]types.IpRegionResponse, error) {
+func LoadRegionsByTarget(ctx context.Context, store moderationmodel.ContentIpAttributionModel, targetType string, targetIDs []uint64) (map[uint64]types.IpRegionResponse, error) {
 	resp := make(map[uint64]types.IpRegionResponse)
-	if svcCtx == nil || svcCtx.Models.Moderation.ContentIpAttribution == nil || len(targetIDs) == 0 {
+	if store == nil || len(targetIDs) == 0 {
 		return resp, nil
 	}
-	records, err := svcCtx.Models.Moderation.ContentIpAttribution.FindByTargets(ctx, targetType, targetIDs, ActionTypeCreate)
+	records, err := store.FindByTargets(ctx, targetType, targetIDs, ActionTypeCreate)
 	if err != nil {
 		return nil, err
 	}
 	if targetType == TargetTypeMediaAsset {
-		uploadRecords, err := svcCtx.Models.Moderation.ContentIpAttribution.FindByTargets(ctx, targetType, targetIDs, ActionTypeUpload)
+		uploadRecords, err := store.FindByTargets(ctx, targetType, targetIDs, ActionTypeUpload)
 		if err != nil {
 			return nil, err
 		}
 		for id, record := range uploadRecords {
 			records[id] = record
 		}
-		directRecords, err := svcCtx.Models.Moderation.ContentIpAttribution.FindByTargets(ctx, targetType, targetIDs, ActionTypeDirectUploadComplete)
+		directRecords, err := store.FindByTargets(ctx, targetType, targetIDs, ActionTypeDirectUploadComplete)
 		if err != nil {
 			return nil, err
 		}

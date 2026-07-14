@@ -6,9 +6,9 @@ package profile
 import (
 	"context"
 
+	access "discover_world/internal/common/access"
+	"discover_world/internal/common/ipgeo"
 	commonresponse "discover_world/internal/common/response"
-	access "discover_world/internal/logic/access"
-	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 
@@ -86,7 +86,7 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post viewer state failed")
 	}
-	ipRegions, err := ipgeo.LoadRegionsByTarget(l.ctx, l.svcCtx, ipgeo.TargetTypePost, postIDs)
+	ipRegions, err := ipgeo.LoadRegionsByTarget(l.ctx, l.svcCtx.Models.Moderation.ContentIpAttribution, ipgeo.TargetTypePost, postIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post ip regions failed")
 	}

@@ -1,8 +1,13 @@
 package architecture_test
 
 import (
+	"go/parser"
+	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -62,5 +67,42 @@ func TestModelsAreOrganizedByBusinessModule(t *testing.T) {
 	}
 	if len(rootFiles) != 0 {
 		t.Errorf("root model package still contains Go files: %v", rootFiles)
+	}
+}
+
+func TestCommonPackagesDoNotDependOnLogic(t *testing.T) {
+	root := repositoryRoot(t)
+	for _, name := range []string{"access", "adminsupport", "ipgeo"} {
+		path := filepath.Join(root, "internal", "common", name)
+		if info, err := os.Stat(path); err != nil || !info.IsDir() {
+			t.Errorf("required common package %s is missing", name)
+		}
+	}
+
+	commonRoot := filepath.Join(root, "internal", "common")
+	err := filepath.WalkDir(commonRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || filepath.Ext(path) != ".go" {
+			return nil
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
+		if err != nil {
+			return err
+		}
+		for _, spec := range file.Imports {
+			importPath, err := strconv.Unquote(spec.Path.Value)
+			if err != nil {
+				return err
+			}
+			if strings.HasPrefix(importPath, "discover_world/internal/logic/") {
+				t.Errorf("common package %s imports business logic %s", path, importPath)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("scan common packages: %v", err)
 	}
 }

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
+	"discover_world/internal/common/adminsupport"
 	commonresponse "discover_world/internal/common/response"
-	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
