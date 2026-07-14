@@ -6,8 +6,8 @@ package admin
 import (
 	"context"
 
-	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/logic/adminsupport"
 	homepageLogic "discover_world/internal/logic/homepage"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
@@ -34,7 +34,8 @@ func (l *UpdateHomepageFeaturedLogic) UpdateHomepageFeatured(req *types.UpdateHo
 		req = &types.UpdateHomepageFeaturedRequest{}
 	}
 
-	if _, err = commonauth.LoadRequiredAdminUser(l.ctx, l.svcCtx, ""); err != nil {
+	adminUser, err := adminsupport.RequireAdminCapability(l.ctx, l.svcCtx, adminsupport.CapabilityOperationManage)
+	if err != nil {
 		return nil, err
 	}
 
@@ -57,10 +58,25 @@ func (l *UpdateHomepageFeaturedLogic) UpdateHomepageFeatured(req *types.UpdateHo
 		}
 	}
 
-	if err := l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		return txSvcCtx.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, homepageLogic.OwnerTypeSite, homepageLogic.OwnerIDSite, homepageLogic.LinkRoleHomepageFeatured, ids)
+	existing, err := l.svcCtx.AssetLinkModel.FindActiveAssetIDsByOwner(l.ctx, homepageLogic.OwnerTypeSite, homepageLogic.OwnerIDSite, homepageLogic.LinkRoleHomepageFeatured, homepageLogic.MaxHomepageFeaturedCount)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询首页精选失败")
+	}
+
+	if err := adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+		OperatorUserID: adminUser.Id,
+		Action:         "homepage.featured.update",
+		TargetType:     "homepage",
+		TargetID:       homepageLogic.OwnerIDSite,
+		Before:         map[string]any{"featuredIds": existing},
+		After:          map[string]any{"featuredIds": ids},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, homepageLogic.OwnerTypeSite, homepageLogic.OwnerIDSite, homepageLogic.LinkRoleHomepageFeatured, ids); err != nil {
+			return commonresponse.InternalServerError("保存首页精选失败")
+		}
+		return nil
 	}); err != nil {
-		return nil, commonresponse.InternalServerError("保存首页精选失败")
+		return nil, err
 	}
 
 	return homepageLogic.BuildHomepageConfigResponse(l.ctx, l.svcCtx, types.MediaVariantRequest{CompressType: 2})

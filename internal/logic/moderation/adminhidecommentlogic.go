@@ -33,15 +33,17 @@ func (l *AdminHideCommentLogic) AdminHideComment(req *types.AdminModeratePostReq
 	if err != nil {
 		return err
 	}
-	if err := l.svcCtx.CommentRecordModel.SetStatus(l.ctx, commentID, "hidden"); err != nil {
-		return commonresponse.InternalServerError("hide comment failed")
-	}
-	return adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	return adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "comment.hide",
 		TargetType:     adminTargetComment,
 		TargetID:       commentID,
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.CommentRecordModel.SetStatus(ctx, commentID, "hidden"); err != nil {
+			return commonresponse.InternalServerError("hide comment failed")
+		}
+		return nil
 	})
 }

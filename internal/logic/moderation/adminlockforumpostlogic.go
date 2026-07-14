@@ -36,15 +36,17 @@ func (l *AdminLockForumPostLogic) AdminLockForumPost(req *types.AdminModeratePos
 	if err != nil {
 		return err
 	}
-	if err := l.svcCtx.PostDiscussionModel.SetLocked(l.ctx, postID, true); err != nil {
-		return commonresponse.InternalServerError("lock forum post failed")
-	}
-	return adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	return adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "forum_post.lock",
 		TargetType:     adminTargetForumPost,
 		TargetID:       postID,
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.PostDiscussionModel.SetLocked(ctx, postID, true); err != nil {
+			return commonresponse.InternalServerError("lock forum post failed")
+		}
+		return nil
 	})
 }

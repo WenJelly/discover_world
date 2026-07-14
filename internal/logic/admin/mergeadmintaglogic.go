@@ -57,15 +57,9 @@ func (l *MergeAdminTagLogic) MergeAdminTag(req *types.AdminTagMergeRequest) (*ty
 		return nil, commonresponse.InternalServerError("查询目标标签失败")
 	}
 	before := map[string]any{"source": buildAdminTagResponse(source), "target": buildAdminTagResponse(target)}
-	if err := l.svcCtx.TaggingModel.MoveTaggings(l.ctx, sourceID, targetID); err != nil {
-		return nil, commonresponse.InternalServerError("迁移标签关联失败")
-	}
 	source.Status = 0
-	if err := l.svcCtx.TagModel.Update(l.ctx, source); err != nil {
-		return nil, commonresponse.InternalServerError("禁用源标签失败")
-	}
 	resp := buildAdminTagResponse(target)
-	if err := adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	if err := adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "tag.merge",
 		TargetType:     adminTargetTag,
@@ -73,6 +67,14 @@ func (l *MergeAdminTagLogic) MergeAdminTag(req *types.AdminTagMergeRequest) (*ty
 		Reason:         req.Reason,
 		Before:         before,
 		After:          map[string]any{"source": buildAdminTagResponse(source), "target": resp},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.TaggingModel.MoveTaggings(ctx, sourceID, targetID); err != nil {
+			return commonresponse.InternalServerError("迁移标签关联失败")
+		}
+		if err := txSvcCtx.TagModel.Update(ctx, source); err != nil {
+			return commonresponse.InternalServerError("禁用源标签失败")
+		}
+		return nil
 	}); err != nil {
 		return nil, err
 	}

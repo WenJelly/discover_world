@@ -32,6 +32,7 @@ type ServiceContext struct {
 	MediaUploadSessionModel   model.MediaUploadSessionModel
 	EntityStatModel           model.EntityStatModel
 	EntityStatHourlyModel     model.EntityStatHourlyModel
+	EntityRankingModel        model.EntityRankingModel
 	TagModel                  model.TagModel
 	TaggingModel              model.TaggingModel
 	AssetLinkModel            model.AssetLinkModel
@@ -71,6 +72,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		MediaUploadSessionModel:   model.NewMediaUploadSessionModel(conn),
 		EntityStatModel:           model.NewEntityStatModel(conn),
 		EntityStatHourlyModel:     model.NewEntityStatHourlyModel(conn),
+		EntityRankingModel:        model.NewEntityRankingModel(conn),
 		TagModel:                  model.NewTagModel(conn),
 		TaggingModel:              model.NewTaggingModel(conn),
 		AssetLinkModel:            model.NewAssetLinkModel(conn),
@@ -131,6 +133,7 @@ func (s *ServiceContext) withSession(session sqlx.Session) *ServiceContext {
 		MediaUploadSessionModel:   model.NewMediaUploadSessionModel(conn),
 		EntityStatModel:           model.NewEntityStatModel(conn),
 		EntityStatHourlyModel:     model.NewEntityStatHourlyModel(conn),
+		EntityRankingModel:        model.NewEntityRankingModel(conn),
 		TagModel:                  model.NewTagModel(conn),
 		TaggingModel:              model.NewTaggingModel(conn),
 		AssetLinkModel:            model.NewAssetLinkModel(conn),

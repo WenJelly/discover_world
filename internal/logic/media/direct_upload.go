@@ -282,6 +282,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 			return commonresponse.InternalServerError("保存媒体标签失败")
 		}
 		ensureEntityStat(txCtx, txSvc, loaded.Id)
+		refreshMediaRanking(txCtx, txSvc, loaded.Id)
 		if err := ipgeo.RecordContentAttribution(txCtx, txSvc, ipgeo.TargetTypeMediaAsset, loaded.Id, ipgeo.ActionTypeDirectUploadComplete, loginUser.Id); err != nil {
 			logx.WithContext(txCtx).Errorf("record direct media upload ip attribution failed: assetId=%d userId=%d err=%v", loaded.Id, loginUser.Id, err)
 		}

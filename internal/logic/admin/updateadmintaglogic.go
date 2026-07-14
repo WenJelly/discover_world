@@ -57,11 +57,8 @@ func (l *UpdateAdminTagLogic) UpdateAdminTag(req *types.AdminTagUpdateRequest) (
 	if req.Status == 0 || req.Status == 1 {
 		tag.Status = req.Status
 	}
-	if err := l.svcCtx.TagModel.Update(l.ctx, tag); err != nil {
-		return nil, commonresponse.InternalServerError("更新标签失败")
-	}
 	after := buildAdminTagResponse(tag)
-	if err := adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	if err := adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "tag.update",
 		TargetType:     adminTargetTag,
@@ -69,6 +66,11 @@ func (l *UpdateAdminTagLogic) UpdateAdminTag(req *types.AdminTagUpdateRequest) (
 		Reason:         req.Reason,
 		Before:         before,
 		After:          after,
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.TagModel.Update(ctx, tag); err != nil {
+			return commonresponse.InternalServerError("更新标签失败")
+		}
+		return nil
 	}); err != nil {
 		return nil, err
 	}

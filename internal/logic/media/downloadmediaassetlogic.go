@@ -90,6 +90,7 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 			logx.WithContext(l.ctx).Errorf("record media hourly download stat failed: assetId=%d err=%v", asset.Id, err)
 		}
 	}
+	refreshMediaRanking(l.ctx, l.svcCtx, asset.Id)
 
 	stat, err := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypeMediaAsset, asset.Id)
 	if err != nil && !errors.Is(err, model.ErrNotFound) {

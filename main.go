@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -12,8 +13,10 @@ import (
 	"discover_world/internal/common/response"
 	"discover_world/internal/config"
 	"discover_world/internal/handler"
+	"discover_world/internal/ranking"
 	"discover_world/internal/svc"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
@@ -30,6 +33,12 @@ func main() {
 
 	httpx.SetErrorHandler(func(err error) (int, interface{}) {
 		statusCode, body := response.ErrorBody(err)
+		if statusCode >= 500 {
+			logx.Errorw("http request failed",
+				logx.Field("statusCode", statusCode),
+				logx.Field("error", err),
+			)
+		}
 		return statusCode, body
 	})
 
@@ -39,6 +48,16 @@ func main() {
 
 	ctx := svc.NewServiceContext(c)
 	defer ctx.Close()
+	cancelRankingRefresh, rankingRefreshDone := ranking.StartMediaRankingRefresher(
+		context.Background(),
+		ctx.EntityRankingModel,
+		c.Ranking.RefreshIntervalSeconds,
+		c.Ranking.BatchSize,
+	)
+	defer func() {
+		cancelRankingRefresh()
+		<-rankingRefreshDone
+	}()
 	handler.RegisterHandlers(server, ctx)
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)

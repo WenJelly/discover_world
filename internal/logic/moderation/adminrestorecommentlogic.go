@@ -33,15 +33,17 @@ func (l *AdminRestoreCommentLogic) AdminRestoreComment(req *types.AdminModerateP
 	if err != nil {
 		return err
 	}
-	if err := l.svcCtx.CommentRecordModel.SetStatus(l.ctx, commentID, "active"); err != nil {
-		return commonresponse.InternalServerError("restore comment failed")
-	}
-	return adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	return adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "comment.restore",
 		TargetType:     adminTargetComment,
 		TargetID:       commentID,
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.CommentRecordModel.SetStatus(ctx, commentID, "active"); err != nil {
+			return commonresponse.InternalServerError("restore comment failed")
+		}
+		return nil
 	})
 }

@@ -59,35 +59,38 @@ func (l *ResolveAdminModerationReportLogic) ResolveAdminModerationReport(req *ty
 	if targetID == 0 {
 		targetID = report.TargetId
 	}
-	if err := applyModerationAction(l.ctx, l.svcCtx, req.Action, targetType, targetID); err != nil {
-		return nil, err
-	}
-	if err := l.svcCtx.ModerationReportModel.Resolve(l.ctx, model.ResolveModerationReportRequest{
-		Id:             reportID,
-		HandlerUserId:  adminUser.Id,
-		Status:         status,
-		Resolution:     resolution,
-		ResolutionNote: optionalSQLString(req.ResolutionNote),
-		ResolvedAt:     time.Now(),
-	}); err != nil {
-		return nil, commonresponse.InternalServerError("处理举报失败")
-	}
-	updated, err := l.svcCtx.ModerationReportModel.FindOne(l.ctx, reportID)
-	if err != nil {
-		return nil, commonresponse.InternalServerError("查询举报处理结果失败")
-	}
-	if err := adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	after := &types.AdminModerationReportResponse{}
+	if err := adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         adminActionReportResolve,
 		TargetType:     adminTargetReport,
 		TargetID:       reportID,
 		Reason:         req.ResolutionNote,
 		Before:         buildAdminModerationReportResponse(report),
-		After:          buildAdminModerationReportResponse(updated),
+		After:          after,
 		Metadata:       map[string]any{"action": req.Action, "targetType": targetType, "targetId": formatID(targetID)},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := applyModerationAction(ctx, txSvcCtx, req.Action, targetType, targetID); err != nil {
+			return err
+		}
+		if err := txSvcCtx.ModerationReportModel.Resolve(ctx, model.ResolveModerationReportRequest{
+			Id:             reportID,
+			HandlerUserId:  adminUser.Id,
+			Status:         status,
+			Resolution:     resolution,
+			ResolutionNote: optionalSQLString(req.ResolutionNote),
+			ResolvedAt:     time.Now(),
+		}); err != nil {
+			return commonresponse.InternalServerError("处理举报失败")
+		}
+		updated, err := txSvcCtx.ModerationReportModel.FindOne(ctx, reportID)
+		if err != nil {
+			return commonresponse.InternalServerError("查询举报处理结果失败")
+		}
+		*after = buildAdminModerationReportResponse(updated)
+		return nil
 	}); err != nil {
 		return nil, err
 	}
-	resp := buildAdminModerationReportResponse(updated)
-	return &resp, nil
+	return after, nil
 }

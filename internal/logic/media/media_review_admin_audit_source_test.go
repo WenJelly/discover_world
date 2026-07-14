@@ -15,7 +15,7 @@ func TestReviewMediaAssetWritesAdminAudit(t *testing.T) {
 	for _, fragment := range []string{
 		"adminsupport.RequireAdminCapability",
 		"adminsupport.CapabilityMediaReview",
-		"adminsupport.RecordOperation",
+		"adminsupport.TransactOperation",
 		"adminsupport.OperationLogInput",
 		"media.review",
 	} {

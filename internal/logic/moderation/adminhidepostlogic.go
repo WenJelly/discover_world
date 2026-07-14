@@ -36,15 +36,17 @@ func (l *AdminHidePostLogic) AdminHidePost(req *types.AdminModeratePostRequest) 
 	if err != nil {
 		return err
 	}
-	if err := l.svcCtx.PostModel.SetStatus(l.ctx, postID, "hidden"); err != nil {
-		return commonresponse.InternalServerError("hide post failed")
-	}
-	return adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	return adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "post.hide",
 		TargetType:     adminTargetPost,
 		TargetID:       postID,
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.PostModel.SetStatus(ctx, postID, "hidden"); err != nil {
+			return commonresponse.InternalServerError("hide post failed")
+		}
+		return nil
 	})
 }

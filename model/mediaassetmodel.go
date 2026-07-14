@@ -259,9 +259,10 @@ func (m *customMediaAssetModel) FindByWhereBeforeCreatedAt(ctx context.Context, 
 
 func (m *customMediaAssetModel) FindByWhereBeforeHotScore(ctx context.Context, whereSQL string, beforeScore float64, beforeID uint64, limit int64, args ...any) ([]*MediaAsset, error) {
 	whereSQL, args = appendHotCursorWhere(whereSQL, beforeScore, beforeID, args)
-	whereSQL = normalizeWhereSQL(whereSQL)
-	hotScoreSQL := mediaHotScoreSQL()
-	query := fmt.Sprintf("select %s from %s %s order by %s desc, `id` desc limit ?", mediaAssetRows, m.table, whereSQL, hotScoreSQL)
+	query, err := mediaRankingListSQL("hot_score", whereSQL)
+	if err != nil {
+		return nil, err
+	}
 
 	queryArgs := append(append([]any{}, args...), limit)
 	var resp []*MediaAsset
@@ -272,7 +273,7 @@ func (m *customMediaAssetModel) FindByWhereBeforeHotScore(ctx context.Context, w
 }
 
 func (m *customMediaAssetModel) FindHotScoreByID(ctx context.Context, id uint64) (float64, error) {
-	query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", mediaHotScoreSQL(), m.table)
+	query := "select `hot_score` from `entity_ranking` where `target_type` = 'media_asset' and `target_id` = ? limit 1"
 	var resp float64
 	if err := m.conn.QueryRowCtx(ctx, &resp, query, id); err != nil {
 		return 0, err
@@ -282,9 +283,10 @@ func (m *customMediaAssetModel) FindHotScoreByID(ctx context.Context, id uint64)
 
 func (m *customMediaAssetModel) FindByWhereBeforeRisingScore(ctx context.Context, whereSQL string, beforeScore float64, beforeID uint64, limit int64, args ...any) ([]*MediaAsset, error) {
 	whereSQL, args = appendRisingCursorWhere(whereSQL, beforeScore, beforeID, args)
-	whereSQL = normalizeWhereSQL(whereSQL)
-	risingScoreSQL := mediaRisingScoreSQL()
-	query := fmt.Sprintf("select %s from %s %s order by %s desc, `id` desc limit ?", mediaAssetRows, m.table, whereSQL, risingScoreSQL)
+	query, err := mediaRankingListSQL("rising_score", whereSQL)
+	if err != nil {
+		return nil, err
+	}
 
 	queryArgs := append(append([]any{}, args...), limit)
 	var resp []*MediaAsset
@@ -295,7 +297,7 @@ func (m *customMediaAssetModel) FindByWhereBeforeRisingScore(ctx context.Context
 }
 
 func (m *customMediaAssetModel) FindRisingScoreByID(ctx context.Context, id uint64) (float64, error) {
-	query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", mediaRisingScoreSQL(), m.table)
+	query := "select `rising_score` from `entity_ranking` where `target_type` = 'media_asset' and `target_id` = ? limit 1"
 	var resp float64
 	if err := m.conn.QueryRowCtx(ctx, &resp, query, id); err != nil {
 		return 0, err
@@ -316,39 +318,12 @@ func (m *customMediaAssetModel) CountStatsByOwner(ctx context.Context, ownerUser
 	return &resp, nil
 }
 
-func mediaStatCounterSQL(counter string) string {
-	return fmt.Sprintf("coalesce((select es.`%s` from `entity_stat` es where es.`target_type` = 'media_asset' and es.`target_id` = `media_asset`.`id` limit 1), 0)", counter)
-}
-
-func mediaHotScoreSQL() string {
-	view := mediaStatCounterSQL("view_count")
-	reaction := mediaStatCounterSQL("reaction_count")
-	favorite := mediaStatCounterSQL("favorite_count")
-	comment := mediaStatCounterSQL("comment_count")
-	share := mediaStatCounterSQL("share_count")
-	download := mediaStatCounterSQL("download_count")
-
-	return fmt.Sprintf("(((ln(1 + %s) * 1) + (%s * 4) + (%s * 8) + (%s * 3) + (%s * 6) + (%s * 4) + 2) / pow(greatest(1, timestampdiff(hour, `created_at`, now())) + 24, 0.85))", view, reaction, favorite, comment, share, download)
-}
-
-func mediaRisingScoreSQL() string {
-	recent := mediaHourlyWindowScoreSQL("now() - interval 24 hour", "now()")
-	previous := mediaHourlyWindowScoreSQL("now() - interval 48 hour", "now() - interval 24 hour")
-
-	return fmt.Sprintf("((ln(1 + (%[1]s)) * (1 + least(2, greatest(0, ((%[1]s) - (%[2]s)) / ((%[2]s) + 5)))) * (1 - exp(-(%[1]s) / 8))) / pow(greatest(1, timestampdiff(hour, `created_at`, now())) + 12, 0.15))", recent, previous)
-}
-
-func mediaHourlyWindowScoreSQL(fromExpr, toExpr string) string {
-	return fmt.Sprintf("(select coalesce(sum((ln(1 + esh.`view_count`) * 1) + (esh.`reaction_count` * 4) + (esh.`favorite_count` * 8) + (esh.`comment_count` * 3) + (esh.`share_count` * 6) + (esh.`download_count` * 4)), 0) from `entity_stat_hourly` esh where esh.`target_type` = 'media_asset' and esh.`target_id` = `media_asset`.`id` and esh.`bucket_hour` >= %s and esh.`bucket_hour` < %s)", fromExpr, toExpr)
-}
-
 func appendHotCursorWhere(whereSQL string, beforeScore float64, beforeID uint64, args []any) (string, []any) {
 	if beforeID == 0 {
 		return whereSQL, args
 	}
 
-	hotScoreSQL := mediaHotScoreSQL()
-	condition := fmt.Sprintf("(%s < ? or (abs(%s - ?) < 0.000001 and `id` < ?))", hotScoreSQL, hotScoreSQL)
+	condition := "(er.`hot_score` < ? or (er.`hot_score` = ? and er.`target_id` < ?))"
 	if strings.TrimSpace(whereSQL) == "" {
 		whereSQL = condition
 	} else {
@@ -363,8 +338,7 @@ func appendRisingCursorWhere(whereSQL string, beforeScore float64, beforeID uint
 		return whereSQL, args
 	}
 
-	risingScoreSQL := mediaRisingScoreSQL()
-	condition := fmt.Sprintf("(%s < ? or (abs(%s - ?) < 0.000001 and `id` < ?))", risingScoreSQL, risingScoreSQL)
+	condition := "(er.`rising_score` < ? or (er.`rising_score` = ? and er.`target_id` < ?))"
 	if strings.TrimSpace(whereSQL) == "" {
 		whereSQL = condition
 	} else {
@@ -372,6 +346,32 @@ func appendRisingCursorWhere(whereSQL string, beforeScore float64, beforeID uint
 	}
 	args = append(args, beforeScore, beforeScore, beforeID)
 	return whereSQL, args
+}
+
+func mediaRankingListSQL(scoreColumn, whereSQL string) (string, error) {
+	var indexName string
+	switch scoreColumn {
+	case "hot_score":
+		indexName = "idx_entity_ranking_hot"
+	case "rising_score":
+		indexName = "idx_entity_ranking_rising"
+	default:
+		return "", fmt.Errorf("unsupported media ranking score column: %s", scoreColumn)
+	}
+
+	conditions := "er.`target_type` = 'media_asset'"
+	whereSQL = normalizeWhereSQL(whereSQL)
+	if whereSQL != "" {
+		conditions += " and " + strings.TrimSpace(whereSQL[len("where "):])
+	}
+
+	return fmt.Sprintf(
+		"select %s from `entity_ranking` er force index (`%s`) straight_join `media_asset` on `media_asset`.`id` = er.`target_id` where %s order by er.`%s` desc, er.`target_id` desc limit ?",
+		mediaAssetRows,
+		indexName,
+		conditions,
+		scoreColumn,
+	), nil
 }
 
 func appendCreatedCursorWhere(whereSQL string, beforeCreatedAt time.Time, beforeID uint64, args []any) (string, []any) {

@@ -10,10 +10,6 @@ type codeGetter interface {
 	Code() int
 }
 
-type messageGetter interface {
-	Message() string
-}
-
 type StatusError struct {
 	resultCode ResultCode
 	message    string
@@ -101,12 +97,12 @@ func MessageFromError(err error) string {
 		return ""
 	}
 
-	var message messageGetter
-	if errors.As(err, &message) {
-		return message.Message()
+	var publicError *StatusError
+	if errors.As(err, &publicError) {
+		return publicError.Message()
 	}
 
-	return err.Error()
+	return InternalServerErrorCode.Message()
 }
 
 func ErrorBody(err error) (int, Body) {

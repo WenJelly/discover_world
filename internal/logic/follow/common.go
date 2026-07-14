@@ -143,6 +143,10 @@ func buildPublicAccountSummaries(ctx context.Context, svcCtx *svc.ServiceContext
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询账号资料失败")
 	}
+	avatarURLs, err := mediaLogic.LoadAvatarURLsByOwner(ctx, svcCtx, profiles)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询账号头像失败")
+	}
 
 	accountByID := make(map[uint64]*model.UserAccount, len(accounts))
 	for _, account := range accounts {
@@ -172,7 +176,7 @@ func buildPublicAccountSummaries(ctx context.Context, svcCtx *svc.ServiceContext
 			Username:  account.Username,
 			Email:     "",
 			Nickname:  nickname,
-			AvatarUrl: mediaLogic.LoadAvatarURL(ctx, svcCtx, profile),
+			AvatarUrl: avatarURLs[id],
 			Bio:       bio,
 			Status:    account.Status,
 			Role:      strings.TrimSpace(account.Role),

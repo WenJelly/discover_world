@@ -36,14 +36,16 @@ func (l *UnfeatureAdminContentLogic) UnfeatureAdminContent(req *types.AdminFeatu
 	if err != nil {
 		return err
 	}
-	if err := l.svcCtx.AssetLinkModel.DeactivateActiveByAssetIDAndOwnerRole(l.ctx, targetID, adminOwnerTypeSite, adminLinkRoleFeatured); err != nil {
-		return commonresponse.InternalServerError("取消精选内容失败")
-	}
-	return adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	return adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "content.unfeature",
 		TargetType:     adminTargetMediaAsset,
 		TargetID:       targetID,
 		Reason:         req.Reason,
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.AssetLinkModel.DeactivateActiveByAssetIDAndOwnerRole(ctx, targetID, adminOwnerTypeSite, adminLinkRoleFeatured); err != nil {
+			return commonresponse.InternalServerError("取消精选内容失败")
+		}
+		return nil
 	})
 }

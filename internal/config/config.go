@@ -35,6 +35,11 @@ type AdminConfig struct {
 	Emails    []string `json:",optional"`
 }
 
+type RankingConfig struct {
+	RefreshIntervalSeconds int64 `json:",optional"`
+	BatchSize              int64 `json:",optional"`
+}
+
 type IpGeoStaticRule struct {
 	CIDR            string `json:",optional"`
 	Country         string `json:",optional"`
@@ -80,13 +85,24 @@ type Config struct {
 	Cos CosConfig
 
 	Admin          AdminConfig
+	Ranking        RankingConfig
 	IpGeo          IpGeoConfig
 	StorageSecrets map[string]StorageSecretConfig `json:",optional"`
 }
 
 func (c *Config) Normalize() {
 	c.Cos.Normalize()
+	c.Ranking.Normalize()
 	c.IpGeo.Normalize(c.Auth.AccessSecret)
+}
+
+func (c *RankingConfig) Normalize() {
+	if c.RefreshIntervalSeconds <= 0 {
+		c.RefreshIntervalSeconds = 3600
+	}
+	if c.BatchSize <= 0 {
+		c.BatchSize = 1000
+	}
 }
 
 func (c *Config) ApplyCosOverride(override CosConfig) {

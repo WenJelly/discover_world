@@ -73,6 +73,7 @@ func (l *ToggleMediaReactionLogic) ToggleMediaReaction(req *types.ToggleMediaRea
 				logx.WithContext(ctx).Errorf("record media hourly reaction stat failed: assetId=%d err=%v", asset.Id, err)
 			}
 		}
+		refreshMediaRanking(ctx, txSvc, asset.Id)
 		if nextActive && asset.OwnerUserId != loginUser.Id {
 			if _, err := txSvc.NotificationModel.Insert(ctx, &model.Notification{
 				RecipientUserId: asset.OwnerUserId,

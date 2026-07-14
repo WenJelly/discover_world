@@ -86,6 +86,7 @@ func (l *DeleteMediaAssetLogic) DeleteMediaAsset(req *types.DeleteMediaAssetRequ
 		if err := txSvc.MediaAssetModel.Update(ctx, asset); err != nil {
 			return err
 		}
+		refreshMediaRanking(ctx, txSvc, asset.Id)
 		if err := txSvc.MediaObjectModel.MarkDeletedByAssetID(ctx, asset.Id); err != nil {
 			return err
 		}

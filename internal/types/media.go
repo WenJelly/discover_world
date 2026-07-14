@@ -55,9 +55,9 @@ type MediaAssetResponse struct {
 	Visibility       string                `json:"visibility"`
 	Status           string                `json:"status"`
 	AuditStatus      string                `json:"auditStatus"`
-	ReviewMessage    string                `json:"reviewMessage"`
-	ReviewerId       string                `json:"reviewerId"`
-	ReviewTime       string                `json:"reviewTime"`
+	ReviewMessage    string                `json:"reviewMessage,omitempty"`
+	ReviewerId       string                `json:"reviewerId,omitempty"`
+	ReviewTime       string                `json:"reviewTime,omitempty"`
 	FileSize         int64                 `json:"fileSize"`
 	Width            int64                 `json:"width"`
 	Height           int64                 `json:"height"`
@@ -69,7 +69,7 @@ type MediaAssetResponse struct {
 	Urls             MediaAssetUrls        `json:"urls"`
 	Permissions      MediaAssetPermissions `json:"permissions"`
 	Stats            MediaAssetStats       `json:"stats"`
-	MetadataJson     string                `json:"metadataJson"`
+	MetadataJson     string                `json:"metadataJson,omitempty"`
 	CreatedAt        string                `json:"createdAt"`
 	UpdatedAt        string                `json:"updatedAt"`
 }

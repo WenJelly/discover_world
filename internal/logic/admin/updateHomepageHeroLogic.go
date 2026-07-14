@@ -5,13 +5,15 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"strings"
 
-	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/logic/adminsupport"
 	homepageLogic "discover_world/internal/logic/homepage"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
+	"discover_world/model"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -35,7 +37,7 @@ func (l *UpdateHomepageHeroLogic) UpdateHomepageHero(req *types.UpdateHomepageHe
 		req = &types.UpdateHomepageHeroRequest{}
 	}
 
-	adminUser, err := commonauth.LoadRequiredAdminUser(l.ctx, l.svcCtx, "")
+	adminUser, err := adminsupport.RequireAdminCapability(l.ctx, l.svcCtx, adminsupport.CapabilityOperationManage)
 	if err != nil {
 		return nil, err
 	}
@@ -61,8 +63,29 @@ func (l *UpdateHomepageHeroLogic) UpdateHomepageHero(req *types.UpdateHomepageHe
 		return nil, err
 	}
 
-	if err := l.svcCtx.SiteConfigModel.UpsertByKey(l.ctx, homepageLogic.SiteConfigKeyHero, valueJSON, adminUser.Id); err != nil {
-		return nil, commonresponse.InternalServerError("保存 Hero 配置失败")
+	previousValue := ""
+	current, err := l.svcCtx.SiteConfigModel.GetByKey(l.ctx, homepageLogic.SiteConfigKeyHero)
+	if err != nil && !errors.Is(err, model.ErrNotFound) {
+		return nil, commonresponse.InternalServerError("查询 Hero 配置失败")
+	}
+	if current != nil && current.ConfigValue.Valid {
+		previousValue = current.ConfigValue.String
+	}
+
+	if err := adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+		OperatorUserID: adminUser.Id,
+		Action:         "homepage.hero.update",
+		TargetType:     "site_config",
+		TargetID:       0,
+		Before:         map[string]any{"key": homepageLogic.SiteConfigKeyHero, "value": previousValue},
+		After:          map[string]any{"key": homepageLogic.SiteConfigKeyHero, "value": valueJSON},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.SiteConfigModel.UpsertByKey(ctx, homepageLogic.SiteConfigKeyHero, valueJSON, adminUser.Id); err != nil {
+			return commonresponse.InternalServerError("保存 Hero 配置失败")
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return homepageLogic.BuildHomepageConfigResponse(l.ctx, l.svcCtx, types.MediaVariantRequest{CompressType: 2})

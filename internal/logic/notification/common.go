@@ -99,6 +99,10 @@ func buildNotificationResponses(ctx context.Context, svcCtx *svc.ServiceContext,
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query notification actor profiles failed")
 	}
+	avatarURLs, err := mediaLogic.LoadAvatarURLsByOwner(ctx, svcCtx, profiles)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("query notification actor avatars failed")
+	}
 
 	accountByID := make(map[uint64]*model.UserAccount, len(accounts))
 	for _, account := range accounts {
@@ -120,7 +124,7 @@ func buildNotificationResponses(ctx context.Context, svcCtx *svc.ServiceContext,
 		resp = append(resp, types.NotificationResponse{
 			Id:          formatID(row.Id),
 			ActorUserId: formatID(actorID),
-			Actor:       buildAccountSummary(ctx, svcCtx, accountByID[actorID], profiles[actorID]),
+			Actor:       buildAccountSummary(accountByID[actorID], profiles[actorID], avatarURLs[actorID]),
 			EventType:   row.EventType,
 			TargetType:  row.TargetType,
 			TargetId:    formatID(row.TargetId),
@@ -133,7 +137,7 @@ func buildNotificationResponses(ctx context.Context, svcCtx *svc.ServiceContext,
 	return resp, nil
 }
 
-func buildAccountSummary(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile) types.AccountSummary {
+func buildAccountSummary(account *model.UserAccount, profile *model.UserProfile, avatarURL string) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}
@@ -152,7 +156,7 @@ func buildAccountSummary(ctx context.Context, svcCtx *svc.ServiceContext, accoun
 		Username:  account.Username,
 		Email:     "",
 		Nickname:  nickname,
-		AvatarUrl: mediaLogic.LoadAvatarURL(ctx, svcCtx, profile),
+		AvatarUrl: avatarURL,
 		Bio:       bio,
 		Status:    account.Status,
 		Role:      strings.TrimSpace(account.Role),

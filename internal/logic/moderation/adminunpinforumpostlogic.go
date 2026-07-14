@@ -37,15 +37,17 @@ func (l *AdminUnpinForumPostLogic) AdminUnpinForumPost(req *types.AdminModerateP
 	if err != nil {
 		return err
 	}
-	if err := l.svcCtx.PostDiscussionModel.SetBoardPinned(l.ctx, postID, false, time.Time{}); err != nil {
-		return commonresponse.InternalServerError("unpin forum post failed")
-	}
-	return adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	return adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "forum_post.unpin",
 		TargetType:     adminTargetForumPost,
 		TargetID:       postID,
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.PostDiscussionModel.SetBoardPinned(ctx, postID, false, time.Time{}); err != nil {
+			return commonresponse.InternalServerError("unpin forum post failed")
+		}
+		return nil
 	})
 }

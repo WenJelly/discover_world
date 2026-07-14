@@ -53,10 +53,7 @@ func (l *FeatureAdminContentLogic) FeatureAdminContent(req *types.AdminFeatureCo
 		return commonresponse.InternalServerError("查询精选内容失败")
 	}
 	next := append(existing, targetID)
-	if err := l.svcCtx.AssetLinkModel.ReplaceActiveAssetIDsByOwner(l.ctx, adminOwnerTypeSite, adminOwnerIDSite, adminLinkRoleFeatured, next); err != nil {
-		return commonresponse.InternalServerError("保存精选内容失败")
-	}
-	return adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	return adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "content.feature",
 		TargetType:     adminTargetMediaAsset,
@@ -64,5 +61,10 @@ func (l *FeatureAdminContentLogic) FeatureAdminContent(req *types.AdminFeatureCo
 		Reason:         req.Reason,
 		Before:         map[string]any{"featuredIds": existing},
 		After:          map[string]any{"featuredIds": next},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, adminOwnerTypeSite, adminOwnerIDSite, adminLinkRoleFeatured, next); err != nil {
+			return commonresponse.InternalServerError("保存精选内容失败")
+		}
+		return nil
 	})
 }

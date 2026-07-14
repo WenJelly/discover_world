@@ -119,18 +119,23 @@ func (l *GlobalSearchLogic) searchUsers(req normalizedSearchRequest) ([]types.Ac
 		return nil, commonresponse.InternalServerError("查询用户搜索结果失败")
 	}
 
+	profiles := make(map[uint64]*model.UserProfile, len(users))
+	for _, user := range users {
+		if user != nil {
+			profiles[user.Id] = &model.UserProfile{AvatarAssetId: user.AvatarAssetId}
+		}
+	}
+	avatarURLs, err := mediaLogic.LoadAvatarURLsByOwner(l.ctx, l.svcCtx, profiles)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询用户头像失败")
+	}
+
 	resp := make([]types.AccountSummary, 0, len(users))
 	for _, user := range users {
 		if user == nil {
 			continue
 		}
-		avatarURL := ""
-		if user.AvatarAssetId.Valid && user.AvatarAssetId.Int64 > 0 {
-			avatarURL = mediaLogic.LoadAvatarURL(l.ctx, l.svcCtx, &model.UserProfile{
-				AvatarAssetId: user.AvatarAssetId,
-			})
-		}
-		resp = append(resp, buildSearchUserSummary(user, avatarURL))
+		resp = append(resp, buildSearchUserSummary(user, avatarURLs[user.Id]))
 	}
 	return resp, nil
 }
@@ -248,13 +253,17 @@ func loadAuthorSummaries(ctx context.Context, svcCtx *svc.ServiceContext, userID
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询作者资料失败")
 	}
+	avatarURLs, err := mediaLogic.LoadAvatarURLsByOwner(ctx, svcCtx, profiles)
+	if err != nil {
+		return nil, commonresponse.InternalServerError("查询作者头像失败")
+	}
 
 	for _, account := range accounts {
 		if account == nil {
 			continue
 		}
 		profile := profiles[account.Id]
-		resp[account.Id] = buildAccountSummary(account, profile, mediaLogic.LoadAvatarURL(ctx, svcCtx, profile))
+		resp[account.Id] = buildAccountSummary(account, profile, avatarURLs[account.Id])
 	}
 	return resp, nil
 }

@@ -105,6 +105,13 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 		CanViewOriginal: canAccessOriginal,
 		CanDownload:     canAccessOriginal,
 	}
+	reviewMessage, reviewerID, reviewTime, rawMetadata := "", "", "", ""
+	if canManageMediaAsset(asset, viewer, svcCtx) {
+		reviewMessage = metadata.ReviewMessage
+		reviewerID = metadata.ReviewerId
+		reviewTime = metadata.ReviewTime
+		rawMetadata = nullStringValue(asset.MetadataJson)
+	}
 
 	return &types.MediaAssetResponse{
 		Id:               formatID(asset.Id),
@@ -120,9 +127,9 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 		Visibility:       asset.Visibility,
 		Status:           asset.Status,
 		AuditStatus:      asset.AuditStatus,
-		ReviewMessage:    metadata.ReviewMessage,
-		ReviewerId:       metadata.ReviewerId,
-		ReviewTime:       metadata.ReviewTime,
+		ReviewMessage:    reviewMessage,
+		ReviewerId:       reviewerID,
+		ReviewTime:       reviewTime,
 		FileSize:         fileSize,
 		Width:            width,
 		Height:           height,
@@ -140,7 +147,7 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 		Permissions:  permissions,
 		Stats:        buildMediaStats(stat),
 		IpRegion:     types.IpRegionResponse{},
-		MetadataJson: nullStringValue(asset.MetadataJson),
+		MetadataJson: rawMetadata,
 		CreatedAt:    formatTime(asset.CreatedAt),
 		UpdatedAt:    formatTime(asset.UpdatedAt),
 	}, nil

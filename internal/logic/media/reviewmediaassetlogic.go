@@ -71,10 +71,7 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 	}
 	asset.AuditStatus = auditStatus
 	asset.MetadataJson = mergeReviewMetadata(asset.MetadataJson, strings.TrimSpace(req.ReviewMessage), formatID(adminUser.Id), formatTime(now))
-	if err := l.svcCtx.MediaAssetModel.Update(l.ctx, asset); err != nil {
-		return nil, commonresponse.InternalServerError("审核媒体资源失败")
-	}
-	if err := adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	if err := adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "media.review",
 		TargetType:     targetTypeMediaAsset,
@@ -86,6 +83,12 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 			"auditStatus":  asset.AuditStatus,
 			"metadataJson": nullStringValue(asset.MetadataJson),
 		},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.MediaAssetModel.Update(ctx, asset); err != nil {
+			return commonresponse.InternalServerError("审核媒体资源失败")
+		}
+		refreshMediaRanking(ctx, txSvcCtx, asset.Id)
+		return nil
 	}); err != nil {
 		return nil, err
 	}

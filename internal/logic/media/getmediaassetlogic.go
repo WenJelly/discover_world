@@ -64,6 +64,7 @@ func (l *GetMediaAssetLogic) GetMediaAsset(req *types.GetMediaAssetRequest) (res
 			logx.WithContext(l.ctx).Errorf("record media hourly view stat failed: assetId=%d err=%v", asset.Id, err)
 		}
 	}
+	refreshMediaRanking(l.ctx, l.svcCtx, asset.Id)
 	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypeMediaAsset, asset.Id)
 	owner, _ := l.svcCtx.UserAccountModel.FindOne(l.ctx, asset.OwnerUserId)
 	profile, _ := l.svcCtx.UserProfileModel.FindOneByUserId(l.ctx, asset.OwnerUserId)

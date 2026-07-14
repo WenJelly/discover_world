@@ -36,15 +36,17 @@ func (l *AdminRestorePostLogic) AdminRestorePost(req *types.AdminModeratePostReq
 	if err != nil {
 		return err
 	}
-	if err := l.svcCtx.PostModel.SetStatus(l.ctx, postID, "active"); err != nil {
-		return commonresponse.InternalServerError("restore post failed")
-	}
-	return adminsupport.RecordOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
+	return adminsupport.TransactOperation(l.ctx, l.svcCtx, adminsupport.OperationLogInput{
 		OperatorUserID: adminUser.Id,
 		Action:         "post.restore",
 		TargetType:     adminTargetPost,
 		TargetID:       postID,
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
+	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
+		if err := txSvcCtx.PostModel.SetStatus(ctx, postID, "active"); err != nil {
+			return commonresponse.InternalServerError("restore post failed")
+		}
+		return nil
 	})
 }

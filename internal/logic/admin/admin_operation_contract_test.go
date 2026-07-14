@@ -21,6 +21,7 @@ func TestAdminOperationContracts(t *testing.T) {
 		capability string
 		mustAudit  bool
 	}{
+		{path: "adminupdateaccountlogic.go", capability: "adminsupport.CapabilityAccountManage", mustAudit: true},
 		{path: "getadminoperationdashboardlogic.go", capability: "adminsupport.CapabilityOperationManage"},
 		{path: "getadmintaglistlogic.go", capability: "adminsupport.CapabilityOperationManage"},
 		{path: "updateadmintaglogic.go", capability: "adminsupport.CapabilityOperationManage", mustAudit: true},
@@ -32,8 +33,24 @@ func TestAdminOperationContracts(t *testing.T) {
 		if !strings.Contains(source, "adminsupport.RequireAdminCapability") || !strings.Contains(source, item.capability) {
 			t.Fatalf("%s missing operation capability check", item.path)
 		}
-		if item.mustAudit && (!strings.Contains(source, "adminsupport.RecordOperation") || !strings.Contains(source, "adminsupport.OperationLogInput")) {
-			t.Fatalf("%s missing admin audit write", item.path)
+		if item.mustAudit && (!strings.Contains(source, "adminsupport.TransactOperation") || !strings.Contains(source, "adminsupport.OperationLogInput")) {
+			t.Fatalf("%s missing transactional admin audit write", item.path)
+		}
+	}
+}
+
+func TestHomepageGovernanceEntriesUseCapabilityAndTransactionalAudit(t *testing.T) {
+	for _, path := range []string{"updateHomepageFeaturedLogic.go", "updateHomepageHeroLogic.go"} {
+		source := readAdminLogicSource(t, path)
+		for _, required := range []string{
+			"adminsupport.RequireAdminCapability",
+			"adminsupport.CapabilityOperationManage",
+			"adminsupport.TransactOperation",
+			"adminsupport.OperationLogInput",
+		} {
+			if !strings.Contains(source, required) {
+				t.Fatalf("%s missing %s", path, required)
+			}
 		}
 	}
 }

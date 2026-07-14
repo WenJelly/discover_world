@@ -22,7 +22,7 @@ func TestMediaHotScoreSQLUsesWeightedEngagementAndAgeDecay(t *testing.T) {
 		"* 6",
 		"`download_count`",
 		"+ 2",
-		"pow(greatest(1, timestampdiff(hour, `created_at`, now())) + 24, 0.85)",
+		"pow(greatest(1, timestampdiff(hour, ma.`created_at`, now())) + 24, 0.85)",
 	} {
 		if !strings.Contains(expr, fragment) {
 			t.Fatalf("mediaHotScoreSQL missing %q in %s", fragment, expr)
@@ -31,7 +31,7 @@ func TestMediaHotScoreSQLUsesWeightedEngagementAndAgeDecay(t *testing.T) {
 }
 
 func TestMediaRisingScoreSQLUsesHourlyWindowsAndConfidence(t *testing.T) {
-	expr := mediaRisingScoreSQL()
+	expr := mediaRankingRefreshSQL(0, 100)
 
 	for _, fragment := range []string{
 		"`entity_stat_hourly`",
@@ -47,7 +47,7 @@ func TestMediaRisingScoreSQLUsesHourlyWindowsAndConfidence(t *testing.T) {
 		"greatest(0,",
 		"least(2,",
 		"1 - exp(-",
-		"pow(greatest(1, timestampdiff(hour, `created_at`, now())) + 12, 0.15)",
+		"pow(greatest(1, timestampdiff(hour, ma.`created_at`, now())) + 12, 0.15)",
 	} {
 		if !strings.Contains(expr, fragment) {
 			t.Fatalf("mediaRisingScoreSQL missing %q in %s", fragment, expr)
@@ -82,8 +82,8 @@ func TestMediaRisingCursorWhereUsesScoreAndIdTieBreaker(t *testing.T) {
 
 	for _, fragment := range []string{
 		"`status` = 'active'",
-		"abs(",
-		"`id` < ?",
+		"er.`rising_score` = ?",
+		"er.`target_id` < ?",
 	} {
 		if !strings.Contains(where, fragment) {
 			t.Fatalf("appendRisingCursorWhere missing %q in %s", fragment, where)
@@ -102,8 +102,8 @@ func TestMediaHotCursorWhereUsesScoreAndIdTieBreaker(t *testing.T) {
 
 	for _, fragment := range []string{
 		"`status` = 'active'",
-		"abs(",
-		"`id` < ?",
+		"er.`hot_score` = ?",
+		"er.`target_id` < ?",
 	} {
 		if !strings.Contains(where, fragment) {
 			t.Fatalf("appendHotCursorWhere missing %q in %s", fragment, where)

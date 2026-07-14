@@ -31,7 +31,7 @@ func TestAdminBackendModerationContracts(t *testing.T) {
 		for _, fragment := range []string{
 			"adminsupport.RequireAdminCapability",
 			"adminsupport.CapabilityContentModerate",
-			"adminsupport.RecordOperation",
+			"adminsupport.TransactOperation",
 			"OperationLogInput",
 		} {
 			if !strings.Contains(source, fragment) {
