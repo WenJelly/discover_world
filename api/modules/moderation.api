@@ -1,0 +1,145 @@
+syntax = "v1"
+
+import "common.api"
+
+type (
+	CreateModerationReportRequest {
+		TargetType  string `json:"targetType"`
+		TargetId    string `json:"targetId"`
+		Reason      string `json:"reason"`
+		Description string `json:"description,optional"`
+	}
+	ModerationReportResponse {
+		Id         string `json:"id"`
+		TargetType string `json:"targetType"`
+		TargetId   string `json:"targetId"`
+		Reason     string `json:"reason"`
+		Status     string `json:"status"`
+		CreatedAt  string `json:"createdAt"`
+	}
+	AdminModeratePostRequest {
+		Id       string `json:"id"`
+		Reason   string `json:"reason,optional"`
+		ReportId string `json:"reportId,optional"`
+	}
+	AdminModerationReportQueryRequest {
+		Status         string `json:"status,optional"`
+		TargetType     string `json:"targetType,optional"`
+		TargetId       string `json:"targetId,optional"`
+		ReporterUserId string `json:"reporterUserId,optional"`
+		CreatedAtFrom  string `json:"createdAtFrom,optional"`
+		CreatedAtTo    string `json:"createdAtTo,optional"`
+		PageNum        int64  `json:"pageNum,optional"`
+		PageSize       int64  `json:"pageSize,optional"`
+	}
+	AdminModerationReportDetailRequest {
+		Id string `json:"id"`
+	}
+	AdminModerationReportResolveRequest {
+		Id             string `json:"id"`
+		Resolution     string `json:"resolution"`
+		ResolutionNote string `json:"resolutionNote,optional"`
+		Action         string `json:"action,optional"`
+		TargetType     string `json:"targetType,optional"`
+		TargetId       string `json:"targetId,optional"`
+	}
+	AdminModerationReportResponse {
+		Id             string         `json:"id"`
+		ReporterUserId string         `json:"reporterUserId"`
+		Reporter       AccountSummary `json:"reporter"`
+		TargetType     string         `json:"targetType"`
+		TargetId       string         `json:"targetId"`
+		Reason         string         `json:"reason"`
+		Description    string         `json:"description"`
+		Status         string         `json:"status"`
+		HandlerUserId  string         `json:"handlerUserId"`
+		Resolution     string         `json:"resolution"`
+		ResolutionNote string         `json:"resolutionNote"`
+		CreatedAt      string         `json:"createdAt"`
+		UpdatedAt      string         `json:"updatedAt"`
+		ResolvedAt     string         `json:"resolvedAt"`
+	}
+	AdminModerationReportPageResponse {
+		PageNum  int64                           `json:"pageNum"`
+		PageSize int64                           `json:"pageSize"`
+		Total    int64                           `json:"total"`
+		List     []AdminModerationReportResponse `json:"list"`
+	}
+	AdminContentQueryRequest {
+		TargetType string `json:"targetType,optional"`
+		Status     string `json:"status,optional"`
+		UserId     string `json:"userId,optional"`
+		SearchText string `json:"searchText,optional"`
+		PageNum    int64  `json:"pageNum,optional"`
+		PageSize   int64  `json:"pageSize,optional"`
+	}
+	AdminContentResponse {
+		Id         string         `json:"id"`
+		TargetType string         `json:"targetType"`
+		Author     AccountSummary `json:"author"`
+		Title      string         `json:"title"`
+		Content    string         `json:"content"`
+		Status     string         `json:"status"`
+		CreatedAt  string         `json:"createdAt"`
+	}
+	AdminContentPageResponse {
+		PageNum  int64                  `json:"pageNum"`
+		PageSize int64                  `json:"pageSize"`
+		Total    int64                  `json:"total"`
+		List     []AdminContentResponse `json:"list"`
+	}
+)
+
+@server (
+	prefix: /api
+	group:  moderation
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler CreateModerationReport
+	post /moderation/report/create (CreateModerationReportRequest) returns (ModerationReportResponse)
+}
+
+@server (
+	prefix:     /api/admin
+	group:      moderation
+	jwt:        Auth
+	middleware: AdminCheck
+)
+service DiscoverWorld {
+	@handler GetAdminModerationReportList
+	post /moderation/report/list (AdminModerationReportQueryRequest) returns (AdminModerationReportPageResponse)
+
+	@handler GetAdminModerationReportDetail
+	post /moderation/report/detail (AdminModerationReportDetailRequest) returns (AdminModerationReportResponse)
+
+	@handler ResolveAdminModerationReport
+	post /moderation/report/resolve (AdminModerationReportResolveRequest) returns (AdminModerationReportResponse)
+
+	@handler GetAdminContentList
+	post /moderation/content/list (AdminContentQueryRequest) returns (AdminContentPageResponse)
+
+	@handler AdminHideComment
+	post /moderation/comment/hide (AdminModeratePostRequest)
+
+	@handler AdminRestoreComment
+	post /moderation/comment/restore (AdminModeratePostRequest)
+
+	@handler AdminHidePost
+	post /moderation/post/hide (AdminModeratePostRequest)
+
+	@handler AdminRestorePost
+	post /moderation/post/restore (AdminModeratePostRequest)
+
+	@handler AdminLockForumPost
+	post /forum/post/lock (AdminModeratePostRequest)
+
+	@handler AdminUnlockForumPost
+	post /forum/post/unlock (AdminModeratePostRequest)
+
+	@handler AdminPinForumPost
+	post /forum/post/pin (AdminModeratePostRequest)
+
+	@handler AdminUnpinForumPost
+	post /forum/post/unpin (AdminModeratePostRequest)
+}

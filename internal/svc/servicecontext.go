@@ -120,9 +120,9 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		IpGeoResolver:             commonipgeo.NewResolver(c.IpGeo),
 	}
 	svcCtx.AdminCheck = middleware.NewAdminCheckMiddleware(svcCtx).Handle
-	svcCtx.LoginRateLimit = middleware.NewRateLimitMiddleware(redisClient, c.Auth.AccessSecret, "login:ip", c.Redis.RateLimit.LoginIPLimit, 10*time.Minute).Handle
-	svcCtx.RegisterRateLimit = middleware.NewRateLimitMiddleware(redisClient, c.Auth.AccessSecret, "register:ip", c.Redis.RateLimit.RegisterIPLimit, time.Hour).Handle
-	svcCtx.SearchRateLimit = middleware.NewRateLimitMiddleware(redisClient, c.Auth.AccessSecret, "search:ip", c.Redis.RateLimit.SearchIPLimit, time.Minute).Handle
+	svcCtx.LoginRateLimit = middleware.NewLoginRateLimitMiddleware(redisClient, c.Auth.AccessSecret, c.Redis.RateLimit.LoginIPLimit).Handle
+	svcCtx.RegisterRateLimit = middleware.NewRegisterRateLimitMiddleware(redisClient, c.Auth.AccessSecret, c.Redis.RateLimit.RegisterIPLimit).Handle
+	svcCtx.SearchRateLimit = middleware.NewSearchRateLimitMiddleware(redisClient, c.Auth.AccessSecret, c.Redis.RateLimit.SearchIPLimit).Handle
 	svcCtx.TokenRevocation = middleware.NewTokenRevocationMiddleware(redisClient, c.Auth.AccessSecret).Handle
 
 	return svcCtx

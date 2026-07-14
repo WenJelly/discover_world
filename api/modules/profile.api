@@ -1,0 +1,65 @@
+syntax = "v1"
+
+import (
+	"common.api"
+	"media.api"
+	"post.api"
+)
+
+type (
+	ProfilePostListRequest {
+		UserId   string `json:"userId,optional"`
+		Cursor   string `json:"cursor,optional"`
+		PageSize int64  `json:"pageSize,optional"`
+	}
+	ProfileFeaturedMediaListRequest {
+		UserId   string              `json:"userId,optional"`
+		PageSize int64               `json:"pageSize,optional"`
+		Variant  MediaVariantRequest `json:"variantOption,optional"`
+	}
+	UpdateProfileFeaturedMediaRequest {
+		MediaAssetIds []string `json:"mediaAssetIds,optional"`
+	}
+	ProfileAlbumListRequest {
+		UserId   string `json:"userId,optional"`
+		PageNum  int64  `json:"pageNum,optional"`
+		PageSize int64  `json:"pageSize,optional"`
+	}
+	ProfileAlbumResponse {
+		Id          string             `json:"id"`
+		UserId      string             `json:"userId"`
+		Name        string             `json:"name"`
+		Description string             `json:"description"`
+		Cover       MediaAssetResponse `json:"cover"`
+		ItemCount   int64              `json:"itemCount"`
+		Visibility  string             `json:"visibility"`
+		Status      string             `json:"status"`
+		CreatedAt   string             `json:"createdAt"`
+		UpdatedAt   string             `json:"updatedAt"`
+	}
+	ProfileAlbumPageResponse {
+		PageNum  int64                  `json:"pageNum"`
+		PageSize int64                  `json:"pageSize"`
+		Total    int64                  `json:"total"`
+		List     []ProfileAlbumResponse `json:"list"`
+	}
+)
+
+@server (
+	prefix: /api
+	group:  profile
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler GetProfilePostCursorList
+	post /profile/post/list/cursor (ProfilePostListRequest) returns (ProfilePostCursorPageResponse)
+
+	@handler GetProfileFeaturedMediaList
+	post /profile/featured/media/list (ProfileFeaturedMediaListRequest) returns (MediaAssetPageResponse)
+
+	@handler UpdateProfileFeaturedMedia
+	post /profile/featured/media/update (UpdateProfileFeaturedMediaRequest) returns (MediaAssetPageResponse)
+
+	@handler GetProfileAlbumList
+	post /profile/album/list (ProfileAlbumListRequest) returns (ProfileAlbumPageResponse)
+}

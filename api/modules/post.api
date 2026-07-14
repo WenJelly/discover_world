@@ -1,0 +1,174 @@
+syntax = "v1"
+
+import (
+	"common.api"
+	"media.api"
+)
+
+type (
+	ProfilePostResponse {
+		Id          string               `json:"id"`
+		UserId      string               `json:"userId"`
+		Content     string               `json:"content"`
+		PostType    string               `json:"postType"`
+		Visibility  string               `json:"visibility"`
+		Status      string               `json:"status"`
+		Location    string               `json:"location"`
+		IpRegion    IpRegionResponse     `json:"ipRegion"`
+		IsPinned    bool                 `json:"isPinned"`
+		PinnedAt    string               `json:"pinnedAt"`
+		Images      []MediaAssetResponse `json:"images"`
+		Stats       MediaAssetStats      `json:"stats"`
+		LikedBy     []AccountSummary     `json:"likedBy"`
+		IsLiked     bool                 `json:"isLiked"`
+		IsFavorited bool                 `json:"isFavorited"`
+		CreatedAt   string               `json:"createdAt"`
+		UpdatedAt   string               `json:"updatedAt"`
+	}
+	ProfilePostCursorPageResponse {
+		PageSize   int64                 `json:"pageSize"`
+		HasMore    bool                  `json:"hasMore"`
+		NextCursor string                `json:"nextCursor"`
+		List       []ProfilePostResponse `json:"list"`
+	}
+	CreatePostRequest {
+		Content    string   `json:"content,optional"`
+		PostType   string   `json:"postType,optional"`
+		Visibility string   `json:"visibility,optional"`
+		ImageIds   []string `json:"imageIds,optional"`
+	}
+	UpdatePostRequest {
+		Id         string   `json:"id"`
+		Content    string   `json:"content,optional"`
+		PostType   string   `json:"postType,optional"`
+		Visibility string   `json:"visibility,optional"`
+		ImageIds   []string `json:"imageIds,optional"`
+	}
+	DeletePostRequest {
+		Id string `json:"id"`
+	}
+	GetPostDetailRequest {
+		Id string `json:"id"`
+	}
+	PinPostRequest {
+		Id string `json:"id"`
+	}
+	UnpinPostRequest {
+		Id string `json:"id"`
+	}
+	TogglePostReactionRequest {
+		Id           string `json:"id"`
+		ReactionType string `json:"reactionType,optional"`
+	}
+	TogglePostFavoriteRequest {
+		Id string `json:"id"`
+	}
+	PostToggleResponse {
+		Active  bool             `json:"active"`
+		Stats   MediaAssetStats  `json:"stats"`
+		LikedBy []AccountSummary `json:"likedBy"`
+	}
+	CreatePostCommentRequest {
+		PostId  string `json:"postId"`
+		Content string `json:"content"`
+	}
+	PostCommentCursorListRequest {
+		PostId   string `json:"postId"`
+		Cursor   string `json:"cursor,optional"`
+		PageSize int64  `json:"pageSize,optional"`
+	}
+	PostCommentResponse {
+		Id        string         `json:"id"`
+		PostId    string         `json:"postId"`
+		UserId    string         `json:"userId"`
+		Author    AccountSummary `json:"author"`
+		Content   string         `json:"content"`
+		Status    string         `json:"status"`
+		CreatedAt string         `json:"createdAt"`
+		UpdatedAt string         `json:"updatedAt"`
+	}
+	PostCommentCursorPageResponse {
+		PageSize   int64                 `json:"pageSize"`
+		HasMore    bool                  `json:"hasMore"`
+		NextCursor string                `json:"nextCursor"`
+		List       []PostCommentResponse `json:"list"`
+	}
+	PublicPostListRequest {
+		Cursor     string              `json:"cursor,optional"`
+		PageSize   int64               `json:"pageSize,optional"`
+		Sort       string              `json:"sort,optional"`
+		SearchText string              `json:"searchText,optional"`
+		PostType   string              `json:"postType,optional"`
+		Variant    MediaVariantRequest `json:"variantOption,optional"`
+	}
+	PublicPostResponse {
+		Id          string               `json:"id"`
+		UserId      string               `json:"userId"`
+		Author      AccountSummary       `json:"author"`
+		Content     string               `json:"content"`
+		PostType    string               `json:"postType"`
+		Visibility  string               `json:"visibility"`
+		Status      string               `json:"status"`
+		Location    string               `json:"location"`
+		IpRegion    IpRegionResponse     `json:"ipRegion"`
+		Images      []MediaAssetResponse `json:"images"`
+		Stats       MediaAssetStats      `json:"stats"`
+		LikedBy     []AccountSummary     `json:"likedBy"`
+		IsLiked     bool                 `json:"isLiked"`
+		IsFavorited bool                 `json:"isFavorited"`
+		CreatedAt   string               `json:"createdAt"`
+		UpdatedAt   string               `json:"updatedAt"`
+	}
+	PublicPostCursorPageResponse {
+		PageSize   int64                `json:"pageSize"`
+		HasMore    bool                 `json:"hasMore"`
+		NextCursor string               `json:"nextCursor"`
+		List       []PublicPostResponse `json:"list"`
+	}
+)
+
+@server (
+	prefix: /api
+	group:  "post"
+)
+service DiscoverWorld {
+	@handler GetPublicPostCursorList
+	post /post/public/list/cursor (PublicPostListRequest) returns (PublicPostCursorPageResponse)
+}
+
+@server (
+	prefix: /api
+	group:  "post"
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler CreatePost
+	post /post/create (CreatePostRequest) returns (ProfilePostResponse)
+
+	@handler UpdatePost
+	post /post/update (UpdatePostRequest) returns (ProfilePostResponse)
+
+	@handler DeletePost
+	post /post/delete (DeletePostRequest)
+
+	@handler GetPostDetail
+	post /post/detail (GetPostDetailRequest) returns (ProfilePostResponse)
+
+	@handler PinPost
+	post /post/pin (PinPostRequest) returns (ProfilePostResponse)
+
+	@handler UnpinPost
+	post /post/unpin (UnpinPostRequest) returns (ProfilePostResponse)
+
+	@handler TogglePostReaction
+	post /post/reaction/toggle (TogglePostReactionRequest) returns (PostToggleResponse)
+
+	@handler TogglePostFavorite
+	post /post/favorite/toggle (TogglePostFavoriteRequest) returns (PostToggleResponse)
+
+	@handler CreatePostComment
+	post /post/comment/create (CreatePostCommentRequest) returns (PostCommentResponse)
+
+	@handler GetPostCommentCursorList
+	post /post/comment/list/cursor (PostCommentCursorListRequest) returns (PostCommentCursorPageResponse)
+}

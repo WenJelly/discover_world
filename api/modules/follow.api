@@ -1,0 +1,48 @@
+syntax = "v1"
+
+import "common.api"
+
+type (
+	FollowTargetRequest {
+		TargetUserId string `json:"targetUserId"`
+	}
+	FollowStatusResponse {
+		TargetUserId   string `json:"targetUserId"`
+		IsFollowing    bool   `json:"isFollowing"`
+		FollowerCount  int64  `json:"followerCount"`
+		FollowingCount int64  `json:"followingCount"`
+	}
+	FollowListRequest {
+		TargetUserId string `json:"targetUserId,optional"`
+		Cursor       string `json:"cursor,optional"`
+		PageSize     int64  `json:"pageSize,optional"`
+	}
+	FollowUserListResponse {
+		PageSize   int64            `json:"pageSize"`
+		HasMore    bool             `json:"hasMore"`
+		NextCursor string           `json:"nextCursor"`
+		List       []AccountSummary `json:"list"`
+	}
+)
+
+@server (
+	prefix: /api
+	group:  follow
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler CreateFollow
+	post /follow/create (FollowTargetRequest) returns (FollowStatusResponse)
+
+	@handler CancelFollow
+	post /follow/cancel (FollowTargetRequest) returns (FollowStatusResponse)
+
+	@handler GetFollowStatus
+	post /follow/status (FollowTargetRequest) returns (FollowStatusResponse)
+
+	@handler GetFollowerList
+	post /follow/follower/list (FollowListRequest) returns (FollowUserListResponse)
+
+	@handler GetFollowingList
+	post /follow/following/list (FollowListRequest) returns (FollowUserListResponse)
+}

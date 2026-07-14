@@ -1,0 +1,58 @@
+syntax = "v1"
+
+import (
+	"common.api"
+	"media.api"
+)
+
+type (
+	GlobalSearchRequest {
+		Q            string              `json:"q,optional"`
+		Types        []string            `json:"types,optional"`
+		PageSize     int64               `json:"pageSize,optional"`
+		Variant      MediaVariantRequest `json:"variantOption,optional"`
+		SearchText   string              `json:"searchText,optional"`
+		CompressType int64               `json:"compressType,optional"`
+	}
+	GlobalSearchPostResponse {
+		Id        string           `json:"id"`
+		UserId    string           `json:"userId"`
+		Author    AccountSummary   `json:"author"`
+		Content   string           `json:"content"`
+		PostType  string           `json:"postType"`
+		Location  string           `json:"location"`
+		IpRegion  IpRegionResponse `json:"ipRegion"`
+		Stats     MediaAssetStats  `json:"stats"`
+		CreatedAt string           `json:"createdAt"`
+		UpdatedAt string           `json:"updatedAt"`
+	}
+	GlobalSearchAlbumResponse {
+		Id          string             `json:"id"`
+		UserId      string             `json:"userId"`
+		Author      AccountSummary     `json:"author"`
+		Name        string             `json:"name"`
+		Description string             `json:"description"`
+		Cover       MediaAssetResponse `json:"cover"`
+		CreatedAt   string             `json:"createdAt"`
+		UpdatedAt   string             `json:"updatedAt"`
+	}
+	GlobalSearchResponse {
+		Q        string                      `json:"q"`
+		Types    []string                    `json:"types"`
+		PageSize int64                       `json:"pageSize"`
+		Media    []MediaAssetResponse        `json:"media"`
+		Posts    []GlobalSearchPostResponse  `json:"posts"`
+		Albums   []GlobalSearchAlbumResponse `json:"albums"`
+		Users    []AccountSummary            `json:"users"`
+	}
+)
+
+@server (
+	prefix:     /api
+	group:      search
+	middleware: SearchRateLimit
+)
+service DiscoverWorld {
+	@handler GlobalSearch
+	post /search (GlobalSearchRequest) returns (GlobalSearchResponse)
+}

@@ -248,7 +248,7 @@ HTTP request
 - logic 负责把数据不存在、参数冲突、权限不足等情况转换成现有 `internal/common/response` 错误。
 - model 只返回数据访问错误，不依赖 API 响应包。
 - goctl 模型包中的 `ErrNotFound` 保持为 `sqlx.ErrNotFound` 的别名，logic 使用 `errors.Is` 判断。
-- `main.go` 中现有的全局 `httpx.SetErrorHandler` 继续统一生成响应体和记录服务端错误。
+- `discoverworld.go` 中现有的全局 `httpx.SetErrorHandler` 继续统一生成响应体和记录服务端错误。
 
 ## 迁移顺序
 

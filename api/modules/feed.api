@@ -1,0 +1,33 @@
+syntax = "v1"
+
+import (
+	"common.api"
+	"media.api"
+	"post.api"
+)
+
+type (
+	FollowingPostListRequest {
+		Cursor   string              `json:"cursor,optional"`
+		PageSize int64               `json:"pageSize,optional"`
+		Variant  MediaVariantRequest `json:"variantOption,optional"`
+	}
+	FollowingMediaListRequest {
+		Cursor   string              `json:"cursor,optional"`
+		PageSize int64               `json:"pageSize,optional"`
+		Variant  MediaVariantRequest `json:"variantOption,optional"`
+	}
+)
+
+@server (
+	prefix: /api
+	group:  feed
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler GetFollowingPostCursorList
+	post /feed/following/post/list/cursor (FollowingPostListRequest) returns (PublicPostCursorPageResponse)
+
+	@handler GetFollowingMediaCursorList
+	post /feed/following/media/list/cursor (FollowingMediaListRequest) returns (MediaAssetCursorPageResponse)
+}

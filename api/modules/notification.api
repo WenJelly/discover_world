@@ -1,0 +1,55 @@
+syntax = "v1"
+
+import "common.api"
+
+type (
+	NotificationListRequest {
+		Cursor   string `json:"cursor,optional"`
+		PageSize int64  `json:"pageSize,optional"`
+	}
+	NotificationResponse {
+		Id          string         `json:"id"`
+		ActorUserId string         `json:"actorUserId"`
+		Actor       AccountSummary `json:"actor"`
+		EventType   string         `json:"eventType"`
+		TargetType  string         `json:"targetType"`
+		TargetId    string         `json:"targetId"`
+		Title       string         `json:"title"`
+		Content     string         `json:"content"`
+		IsRead      bool           `json:"isRead"`
+		CreatedAt   string         `json:"createdAt"`
+	}
+	NotificationCursorPageResponse {
+		PageSize   int64                  `json:"pageSize"`
+		HasMore    bool                   `json:"hasMore"`
+		NextCursor string                 `json:"nextCursor"`
+		List       []NotificationResponse `json:"list"`
+	}
+	UnreadNotificationCountRequest  {}
+	UnreadNotificationCountResponse {
+		UnreadCount int64 `json:"unreadCount"`
+	}
+	MarkNotificationReadRequest {
+		Id string `json:"id"`
+	}
+	MarkAllNotificationsReadRequest  {}
+)
+
+@server (
+	prefix: /api
+	group:  notification
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler GetNotificationCursorList
+	post /notification/list/cursor (NotificationListRequest) returns (NotificationCursorPageResponse)
+
+	@handler GetUnreadNotificationCount
+	post /notification/unread/count (UnreadNotificationCountRequest) returns (UnreadNotificationCountResponse)
+
+	@handler MarkNotificationRead
+	post /notification/read (MarkNotificationReadRequest)
+
+	@handler MarkAllNotificationsRead
+	post /notification/read/all (MarkAllNotificationsReadRequest)
+}

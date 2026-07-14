@@ -1,0 +1,17 @@
+syntax = "v1"
+
+type OverviewStatsResponse {
+	PublicMediaAssetCount int64 `json:"publicMediaAssetCount"`
+	CreatorCount          int64 `json:"creatorCount"`
+	PublicPostCount       int64 `json:"publicPostCount"`
+	PublicAlbumCount      int64 `json:"publicAlbumCount"`
+}
+
+@server (
+	prefix: /api
+	group:  overview
+)
+service DiscoverWorld {
+	@handler GetOverviewStats
+	post /overview/stats returns (OverviewStatsResponse)
+}

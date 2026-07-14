@@ -1,0 +1,229 @@
+syntax = "v1"
+
+import "common.api"
+
+type (
+	QueryMediaAssetRequest {
+		Id            string              `json:"id,optional"`
+		Title         string              `json:"title,optional"`
+		Category      string              `json:"category,optional"`
+		Tags          []string            `json:"tags,optional"`
+		FileSize      int64               `json:"fileSize,optional"`
+		Width         int64               `json:"width,optional"`
+		Height        int64               `json:"height,optional"`
+		AspectRatio   float64             `json:"aspectRatio,optional"`
+		FileExt       string              `json:"fileExt,optional"`
+		OwnerUserId   string              `json:"ownerUserId,optional"`
+		SearchText    string              `json:"searchText,optional"`
+		CreatedAtFrom string              `json:"createdAtFrom,optional"`
+		CreatedAtTo   string              `json:"createdAtTo,optional"`
+		Variant       MediaVariantRequest `json:"variantOption,optional"`
+		PageNum       int64               `json:"pageNum,optional"`
+		PageSize      int64               `json:"pageSize,optional"`
+	}
+	CursorQueryMediaAssetRequest {
+		Id            string              `json:"id,optional"`
+		Title         string              `json:"title,optional"`
+		Category      string              `json:"category,optional"`
+		Tags          []string            `json:"tags,optional"`
+		FileSize      int64               `json:"fileSize,optional"`
+		Width         int64               `json:"width,optional"`
+		Height        int64               `json:"height,optional"`
+		AspectRatio   float64             `json:"aspectRatio,optional"`
+		FileExt       string              `json:"fileExt,optional"`
+		OwnerUserId   string              `json:"ownerUserId,optional"`
+		SearchText    string              `json:"searchText,optional"`
+		CreatedAtFrom string              `json:"createdAtFrom,optional"`
+		CreatedAtTo   string              `json:"createdAtTo,optional"`
+		Variant       MediaVariantRequest `json:"variantOption,optional"`
+		Sort          string              `json:"sort,optional"`
+		Cursor        string              `json:"cursor,optional"`
+		PageSize      int64               `json:"pageSize,optional"`
+	}
+	AdminQueryMediaAssetRequest {
+		Id            string              `json:"id,optional"`
+		Title         string              `json:"title,optional"`
+		Category      string              `json:"category,optional"`
+		AuditStatus   string              `json:"auditStatus,default=pending"`
+		Tags          []string            `json:"tags,optional"`
+		FileSize      int64               `json:"fileSize,optional"`
+		Width         int64               `json:"width,optional"`
+		Height        int64               `json:"height,optional"`
+		AspectRatio   float64             `json:"aspectRatio,optional"`
+		FileExt       string              `json:"fileExt,optional"`
+		OwnerUserId   string              `json:"ownerUserId,optional"`
+		SearchText    string              `json:"searchText,optional"`
+		CreatedAtFrom string              `json:"createdAtFrom,optional"`
+		CreatedAtTo   string              `json:"createdAtTo,optional"`
+		Variant       MediaVariantRequest `json:"variantOption,optional"`
+		PageNum       int64               `json:"pageNum,optional"`
+		PageSize      int64               `json:"pageSize,optional"`
+	}
+	GetMediaAssetRequest {
+		Id      string              `json:"id"`
+		Variant MediaVariantRequest `json:"variantOption,optional"`
+	}
+	ToggleMediaReactionRequest {
+		Id           string `json:"id"`
+		ReactionType string `json:"reactionType,optional"`
+	}
+	DownloadMediaAssetRequest {
+		Id string `json:"id"`
+	}
+	DeleteMediaAssetRequest {
+		Id    string `json:"id"`
+		Force bool   `json:"force,optional"`
+	}
+	ReviewMediaAssetRequest {
+		Id            string `json:"id"`
+		AuditStatus   string `json:"auditStatus"`
+		ReviewMessage string `json:"reviewMessage,optional"`
+	}
+	MediaAssetDirectUploadInitRequest {
+		Id            string   `json:"id,optional"`
+		FileName      string   `json:"fileName"`
+		FileSize      int64    `json:"fileSize"`
+		ContentType   string   `json:"contentType,optional"`
+		Title         string   `json:"title,optional"`
+		Description   string   `json:"description,optional"`
+		Category      string   `json:"category,optional"`
+		Tags          []string `json:"tags,optional"`
+		Visibility    string   `json:"visibility,optional"`
+		AssetUsage    string   `json:"assetUsage,optional"`
+		Width         int64    `json:"width,optional"`
+		Height        int64    `json:"height,optional"`
+		DominantColor string   `json:"dominantColor,optional"`
+		BlurHash      string   `json:"blurHash,optional"`
+	}
+	MediaAssetDirectUploadInitResponse {
+		SessionId     string            `json:"sessionId"`
+		AssetId       string            `json:"assetId"`
+		ObjectKey     string            `json:"objectKey"`
+		UploadUrl     string            `json:"uploadUrl"`
+		UploadMethod  string            `json:"uploadMethod"`
+		UploadHeaders map[string]string `json:"uploadHeaders"`
+		ExpiresAt     string            `json:"expiresAt"`
+	}
+	MediaAssetDirectUploadCompleteRequest {
+		SessionId     string `json:"sessionId"`
+		ETag          string `json:"eTag,optional"`
+		Width         int64  `json:"width,optional"`
+		Height        int64  `json:"height,optional"`
+		DominantColor string `json:"dominantColor,optional"`
+		BlurHash      string `json:"blurHash,optional"`
+	}
+	MediaAssetUrls {
+		Thumbnail string `json:"thumbnail"`
+		Preview   string `json:"preview"`
+		Detail    string `json:"detail"`
+		Original  string `json:"original"`
+	}
+	MediaAssetPermissions {
+		CanViewOriginal bool `json:"canViewOriginal"`
+		CanDownload     bool `json:"canDownload"`
+	}
+	MediaAssetResponse {
+		Id               string                `json:"id"`
+		MediaType        string                `json:"mediaType"`
+		AssetUsage       string                `json:"assetUsage"`
+		Title            string                `json:"title"`
+		Description      string                `json:"description"`
+		Category         string                `json:"category"`
+		Tags             []string              `json:"tags"`
+		OwnerUserId      string                `json:"ownerUserId"`
+		Owner            AccountSummary        `json:"owner"`
+		OriginalFilename string                `json:"originalFilename"`
+		Visibility       string                `json:"visibility"`
+		Status           string                `json:"status"`
+		AuditStatus      string                `json:"auditStatus"`
+		ReviewMessage    string                `json:"reviewMessage,omitempty"`
+		ReviewerId       string                `json:"reviewerId,omitempty"`
+		ReviewTime       string                `json:"reviewTime,omitempty"`
+		FileSize         int64                 `json:"fileSize"`
+		Width            int64                 `json:"width"`
+		Height           int64                 `json:"height"`
+		AspectRatio      float64               `json:"aspectRatio"`
+		MimeType         string                `json:"mimeType"`
+		FileExt          string                `json:"fileExt"`
+		DominantColor    string                `json:"dominantColor"`
+		BlurHash         string                `json:"blurHash"`
+		Urls             MediaAssetUrls        `json:"urls"`
+		Permissions      MediaAssetPermissions `json:"permissions"`
+		Stats            MediaAssetStats       `json:"stats"`
+		IsLiked          bool                  `json:"isLiked"`
+		IpRegion         IpRegionResponse      `json:"ipRegion"`
+		MetadataJson     string                `json:"metadataJson,omitempty"`
+		CreatedAt        string                `json:"createdAt"`
+		UpdatedAt        string                `json:"updatedAt"`
+	}
+	MediaAssetToggleResponse {
+		Active bool            `json:"active"`
+		Stats  MediaAssetStats `json:"stats"`
+	}
+	MediaAssetDownloadResponse {
+		Url      string          `json:"url"`
+		Filename string          `json:"filename"`
+		FileSize int64           `json:"fileSize"`
+		Stats    MediaAssetStats `json:"stats"`
+	}
+	MediaAssetPageResponse {
+		PageNum  int64                `json:"pageNum"`
+		PageSize int64                `json:"pageSize"`
+		Total    int64                `json:"total"`
+		List     []MediaAssetResponse `json:"list"`
+	}
+	MediaAssetCursorPageResponse {
+		PageSize   int64                `json:"pageSize"`
+		HasMore    bool                 `json:"hasMore"`
+		NextCursor string               `json:"nextCursor"`
+		List       []MediaAssetResponse `json:"list"`
+	}
+)
+
+@server (
+	prefix: /api
+	group:  media
+)
+service DiscoverWorld {
+	@handler GetMediaAssetList
+	post /media/list (QueryMediaAssetRequest) returns (MediaAssetPageResponse)
+
+	@handler GetMediaAssetCursorList
+	post /media/list/cursor (CursorQueryMediaAssetRequest) returns (MediaAssetCursorPageResponse)
+}
+
+@server (
+	prefix: /api
+	group:  media
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler GetMediaAsset
+	post /media/detail (GetMediaAssetRequest) returns (MediaAssetResponse)
+
+	@handler ToggleMediaReaction
+	post /media/reaction/toggle (ToggleMediaReactionRequest) returns (MediaAssetToggleResponse)
+
+	@handler DownloadMediaAsset
+	post /media/download (DownloadMediaAssetRequest) returns (MediaAssetDownloadResponse)
+
+	@handler InitDirectMediaUpload
+	post /media/upload/direct/init (MediaAssetDirectUploadInitRequest) returns (MediaAssetDirectUploadInitResponse)
+
+	@handler CompleteDirectMediaUpload
+	post /media/upload/direct/complete (MediaAssetDirectUploadCompleteRequest) returns (MediaAssetResponse)
+
+	@handler DeleteMediaAsset
+	post /media/delete (DeleteMediaAssetRequest)
+}
+
+@server (
+	prefix:     /api
+	group:      media
+	jwt:        Auth
+	middleware: AdminCheck
+)
+service DiscoverWorld {
+	@handler ReviewMediaAsset
+	post /media/review (ReviewMediaAssetRequest) returns (MediaAssetResponse)
+}

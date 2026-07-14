@@ -9,7 +9,7 @@ import (
 	"go.yaml.in/yaml/v2"
 )
 
-const DefaultConfigPath = "etc/application.yaml"
+const DefaultConfigPath = "etc/discoverworld.yaml"
 
 const defaultStorageSecretPath = "etc/storage/config/default.yaml"
 const legacyDefaultStorageSecretPath = "etc/storage/default.yaml"

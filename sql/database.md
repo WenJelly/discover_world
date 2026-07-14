@@ -20,7 +20,7 @@
 
 本次 IP 属地后端化新增：
 1. `sql/create/content_ip_attribution.sql`：内容 IP 属地快照表，记录动态、媒体等内容在创建/上传时解析出的归属地、解析来源和 IP HMAC，不保存明文 IP。
-2. 第一阶段不新增地域表；`ip2region` 使用离线 xdb 文件解析，库文件路径通过 `etc/application.yaml` 的 `IpGeo.Ip2Region.DBPath` / `IPv6DBPath` 配置。
+2. 第一阶段不新增地域表；`ip2region` 使用离线 xdb 文件解析，库文件路径通过 `etc/discoverworld.yaml` 的 `IpGeo.Ip2Region.DBPath` / `IPv6DBPath` 配置。
 3. 动态和论坛发布请求不接受用户填写地点；`post.location` 暂时保留用于兼容历史数据，新内容只展示服务端生成的 `ipRegion`。
 
 本次媒体排名性能优化新增：

@@ -1,0 +1,73 @@
+syntax = "v1"
+
+import (
+	"common.api"
+	"post.api"
+)
+
+type (
+	ForumBoardListRequest {
+		PageSize int64 `json:"pageSize,optional"`
+	}
+	ForumBoardResponse {
+		Id          string `json:"id"`
+		Slug        string `json:"slug"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Status      string `json:"status"`
+		SortOrder   int64  `json:"sortOrder"`
+		CreatedAt   string `json:"createdAt"`
+		UpdatedAt   string `json:"updatedAt"`
+	}
+	ForumBoardListResponse {
+		List []ForumBoardResponse `json:"list"`
+	}
+	ForumPostListRequest {
+		BoardId  string              `json:"boardId,optional"`
+		Cursor   string              `json:"cursor,optional"`
+		PageSize int64               `json:"pageSize,optional"`
+		Variant  MediaVariantRequest `json:"variantOption,optional"`
+	}
+	ForumPostResponse {
+		Post           PublicPostResponse `json:"post"`
+		Board          ForumBoardResponse `json:"board"`
+		Title          string             `json:"title"`
+		IsLocked       bool               `json:"isLocked"`
+		IsBoardPinned  bool               `json:"isBoardPinned"`
+		LastActivityAt string             `json:"lastActivityAt"`
+	}
+	ForumPostCursorPageResponse {
+		PageSize   int64               `json:"pageSize"`
+		HasMore    bool                `json:"hasMore"`
+		NextCursor string              `json:"nextCursor"`
+		List       []ForumPostResponse `json:"list"`
+	}
+	CreateForumPostRequest {
+		BoardId  string   `json:"boardId"`
+		Title    string   `json:"title"`
+		Content  string   `json:"content,optional"`
+		ImageIds []string `json:"imageIds,optional"`
+	}
+)
+
+@server (
+	prefix: /api
+	group:  forum
+)
+service DiscoverWorld {
+	@handler GetForumBoardList
+	post /forum/board/list (ForumBoardListRequest) returns (ForumBoardListResponse)
+
+	@handler GetForumPostCursorList
+	post /forum/post/list/cursor (ForumPostListRequest) returns (ForumPostCursorPageResponse)
+}
+
+@server (
+	prefix: /api
+	group:  forum
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler CreateForumPost
+	post /forum/post/create (CreateForumPostRequest) returns (ForumPostResponse)
+}

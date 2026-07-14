@@ -1,0 +1,108 @@
+syntax = "v1"
+
+type (
+	DetailAccountRequest {
+		Id    string `json:"id,optional"`
+		Email string `json:"email,optional"`
+	}
+	LoginRequest {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	LoginResponse {
+		Token     string `json:"token"`
+		Id        string `json:"id"`
+		Username  string `json:"username"`
+		Email     string `json:"email"`
+		Phone     string `json:"phone"`
+		Nickname  string `json:"nickname"`
+		AvatarUrl string `json:"avatarUrl"`
+		Bio       string `json:"bio"`
+		Status    string `json:"status"`
+		Role      string `json:"role"`
+		CreatedAt string `json:"createdAt"`
+		UpdatedAt string `json:"updatedAt"`
+	}
+	RegisterRequest {
+		Username      string `json:"username,optional"`
+		Email         string `json:"email"`
+		Password      string `json:"password"`
+		CheckPassword string `json:"checkPassword"`
+	}
+	RegisterResponse {
+		Id string `json:"id"`
+	}
+	UpdateAccountRequest {
+		Id        string `json:"id"`
+		Username  string `json:"username,optional"`
+		Email     string `json:"email,optional"`
+		Password  string `json:"password,optional"`
+		Nickname  string `json:"nickname,optional"`
+		AvatarUrl string `json:"avatarUrl,optional"`
+		Bio       string `json:"bio,optional"`
+	}
+	SetAccountAvatarRequest {
+		AssetId string `json:"assetId"`
+	}
+	DetailAccountResponse {
+		Id                      string `json:"id"`
+		Username                string `json:"username"`
+		Email                   string `json:"email"`
+		Phone                   string `json:"phone"`
+		Nickname                string `json:"nickname"`
+		AvatarUrl               string `json:"avatarUrl"`
+		Bio                     string `json:"bio"`
+		Status                  string `json:"status"`
+		Role                    string `json:"role"`
+		CreatedAt               string `json:"createdAt"`
+		UpdatedAt               string `json:"updatedAt"`
+		MediaAssetCount         int64  `json:"mediaAssetCount"`
+		PublicMediaAssetCount   int64  `json:"publicMediaAssetCount"`
+		ApprovedMediaAssetCount int64  `json:"approvedMediaAssetCount"`
+		PendingMediaAssetCount  int64  `json:"pendingMediaAssetCount"`
+		RejectedMediaAssetCount int64  `json:"rejectedMediaAssetCount"`
+		FollowerCount           int64  `json:"followerCount"`
+		FollowingCount          int64  `json:"followingCount"`
+		IsFollowing             bool   `json:"isFollowing"`
+	}
+)
+
+@server (
+	prefix:     /api
+	group:      account
+	middleware: LoginRateLimit
+)
+service DiscoverWorld {
+	@handler LoginAccount
+	post /account/login (LoginRequest) returns (LoginResponse)
+}
+
+
+@server (
+	prefix:     /api
+	group:      account
+	middleware: RegisterRateLimit
+)
+service DiscoverWorld {
+	@handler RegisterAccount
+	post /account/register (RegisterRequest) returns (RegisterResponse)
+}
+
+@server (
+	prefix: /api
+	group:  account
+	jwt:    Auth
+)
+service DiscoverWorld {
+	@handler DetailAccount
+	post /account/detail (DetailAccountRequest) returns (DetailAccountResponse)
+
+	@handler LogoutAccount
+	post /account/logout
+
+	@handler UpdateAccount
+	post /account/update (UpdateAccountRequest) returns (DetailAccountResponse)
+
+	@handler SetAccountAvatar
+	post /account/avatar/set (SetAccountAvatarRequest) returns (DetailAccountResponse)
+}

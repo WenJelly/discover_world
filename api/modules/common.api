@@ -1,0 +1,37 @@
+syntax = "v1"
+
+type (
+	MediaVariantRequest {
+		Variant      string `json:"variant,optional"`
+		CompressType int64  `json:"compressType,default=0"`
+		CutWidth     int64  `json:"cutWidth,optional"`
+		CutHeight    int64  `json:"cutHeight,optional"`
+	}
+	AccountSummary {
+		Id        string `json:"id"`
+		Username  string `json:"username"`
+		Email     string `json:"email"`
+		Nickname  string `json:"nickname"`
+		AvatarUrl string `json:"avatarUrl"`
+		Bio       string `json:"bio"`
+		Status    string `json:"status"`
+		Role      string `json:"role"`
+	}
+	IpRegionResponse {
+		Country         string `json:"country"`
+		Province        string `json:"province"`
+		City            string `json:"city"`
+		District        string `json:"district"`
+		Isp             string `json:"isp"`
+		DisplayLocation string `json:"displayLocation"`
+		Provider        string `json:"provider"`
+	}
+	MediaAssetStats {
+		ViewCount     int64 `json:"viewCount"`
+		ReactionCount int64 `json:"reactionCount"`
+		FavoriteCount int64 `json:"favoriteCount"`
+		CommentCount  int64 `json:"commentCount"`
+		ShareCount    int64 `json:"shareCount"`
+		DownloadCount int64 `json:"downloadCount"`
+	}
+)
