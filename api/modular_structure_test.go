@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -102,6 +103,43 @@ func TestEveryAPIModuleValidatesIndependently(t *testing.T) {
 				t.Fatalf("goctl validate %s: %v\n%s", module, err, output)
 			}
 		})
+	}
+}
+
+func TestGeneratedRoutesAndTypesAreCurrent(t *testing.T) {
+	if _, err := exec.LookPath("goctl"); err != nil {
+		t.Skip("goctl is not installed")
+	}
+
+	targetDir := t.TempDir()
+	goMod := []byte("module discover_world\n\ngo 1.26\n")
+	if err := os.WriteFile(filepath.Join(targetDir, "go.mod"), goMod, 0o644); err != nil {
+		t.Fatalf("write temporary go.mod: %v", err)
+	}
+	apiPath, err := filepath.Abs("discover_world.api")
+	if err != nil {
+		t.Fatalf("resolve aggregate API path: %v", err)
+	}
+	command := exec.Command("goctl", "api", "go", "--api", apiPath, "--dir", targetDir, "--style", "gozero")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("generate API in temporary directory: %v\n%s", err, output)
+	}
+
+	for _, relative := range []string{"internal/handler/routes.go", "internal/types/types.go"} {
+		generated, err := os.ReadFile(filepath.Join(targetDir, relative))
+		if err != nil {
+			t.Fatalf("read generated %s: %v", relative, err)
+		}
+		current, err := os.ReadFile(filepath.Join("..", relative))
+		if err != nil {
+			t.Fatalf("read repository %s: %v", relative, err)
+		}
+		generated = bytes.ReplaceAll(generated, []byte("\r\n"), []byte("\n"))
+		current = bytes.ReplaceAll(current, []byte("\r\n"), []byte("\n"))
+		if !bytes.Equal(generated, current) {
+			t.Errorf("%s is stale; regenerate it with goctl api go", relative)
+		}
 	}
 }
 
