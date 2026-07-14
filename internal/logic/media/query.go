@@ -103,7 +103,7 @@ func buildAdminMediaAssetListWhere(filter mediaListFilter) (string, []any, error
 }
 
 func NormalizeAdminMediaPage(pageNum, pageSize int64) (int64, int64, error) {
-	return normalizeMediaPage(pageNum, pageSize)
+	return normalizeAdminMediaPage(pageNum, pageSize)
 }
 
 func BuildAdminMediaAssetListWhere(req *types.AdminQueryMediaAssetRequest) (string, []any, error) {

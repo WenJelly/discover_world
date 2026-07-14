@@ -62,6 +62,10 @@ func Conflict(message string) error {
 	return NewError(ConflictCode, message)
 }
 
+func TooManyRequests(message string) error {
+	return NewError(TooManyRequestsCode, message)
+}
+
 func InternalServerError(message string) error {
 	return NewError(InternalServerErrorCode, message)
 }

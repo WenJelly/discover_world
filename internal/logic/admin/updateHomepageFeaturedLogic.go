@@ -78,6 +78,9 @@ func (l *UpdateHomepageFeaturedLogic) UpdateHomepageFeatured(req *types.UpdateHo
 	}); err != nil {
 		return nil, err
 	}
+	if err := l.svcCtx.InvalidateHomepageCache(l.ctx); err != nil {
+		l.Errorf("invalidate homepage cache after featured update failed: %v", err)
+	}
 
 	return homepageLogic.BuildHomepageConfigResponse(l.ctx, l.svcCtx, types.MediaVariantRequest{CompressType: 2})
 }

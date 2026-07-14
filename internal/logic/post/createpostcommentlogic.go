@@ -61,6 +61,7 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 	}
 
 	var commentID uint64
+	notificationCreated := false
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
 		result, err := txSvc.CommentRecordModel.Insert(ctx, &model.CommentRecord{
 			UserId:     loginUser.Id,
@@ -100,12 +101,19 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 				Content:         sql.NullString{String: content, Valid: strings.TrimSpace(content) != ""},
 			}); err != nil {
 				logx.WithContext(ctx).Errorf("create post comment notification failed: postId=%d actorId=%d err=%v", post.Id, loginUser.Id, err)
+			} else {
+				notificationCreated = true
 			}
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("create post comment failed")
+	}
+	if notificationCreated {
+		if err := l.svcCtx.InvalidateNotificationUnread(l.ctx, post.UserId); err != nil {
+			l.Errorf("invalidate unread cache after post comment notification failed: ownerId=%d err=%v", post.UserId, err)
+		}
 	}
 
 	comment, err := l.svcCtx.CommentRecordModel.FindOne(l.ctx, commentID)

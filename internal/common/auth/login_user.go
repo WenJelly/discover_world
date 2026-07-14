@@ -7,6 +7,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/model"
@@ -20,18 +21,48 @@ type AccountProvider interface {
 	IsAdminAccount(account *model.UserAccount) bool
 }
 
+type TokenMetadata struct {
+	ID        string
+	ExpiresAt time.Time
+}
+
+func ExtractTokenMetadataFromBearerToken(authorization, secret string) (TokenMetadata, error) {
+	claims, err := parseBearerTokenClaims(authorization, secret)
+	if err != nil {
+		return TokenMetadata{}, err
+	}
+	tokenID, _ := claims["jti"].(string)
+	tokenID = strings.TrimSpace(tokenID)
+	if tokenID == "" {
+		return TokenMetadata{}, errors.New("missing jti claim")
+	}
+	expiresAt, err := claimToUnixTime(claims["exp"])
+	if err != nil {
+		return TokenMetadata{}, err
+	}
+	return TokenMetadata{ID: tokenID, ExpiresAt: expiresAt}, nil
+}
+
 func ExtractUserIDFromBearerToken(authorization, secret string) (uint64, error) {
+	claims, err := parseBearerTokenClaims(authorization, secret)
+	if err != nil {
+		return 0, err
+	}
+	return claimToInt64(claims["userId"])
+}
+
+func parseBearerTokenClaims(authorization, secret string) (jwt.MapClaims, error) {
 	if strings.TrimSpace(secret) == "" {
-		return 0, errors.New("jwt secret is empty")
+		return nil, errors.New("jwt secret is empty")
 	}
 
 	if authorization == "" {
-		return 0, errors.New("missing authorization header")
+		return nil, errors.New("missing authorization header")
 	}
 
 	parts := strings.SplitN(strings.TrimSpace(authorization), " ", 2)
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || strings.TrimSpace(parts[1]) == "" {
-		return 0, errors.New("invalid authorization header")
+		return nil, errors.New("invalid authorization header")
 	}
 
 	token, err := jwt.Parse(parts[1], func(token *jwt.Token) (interface{}, error) {
@@ -41,15 +72,37 @@ func ExtractUserIDFromBearerToken(authorization, secret string) (uint64, error) 
 		return []byte(secret), nil
 	})
 	if err != nil || token == nil || !token.Valid {
-		return 0, errors.New("invalid token")
+		return nil, errors.New("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return 0, errors.New("invalid token claims")
+		return nil, errors.New("invalid token claims")
 	}
+	return claims, nil
+}
 
-	return claimToInt64(claims["userId"])
+func claimToUnixTime(value any) (time.Time, error) {
+	switch v := value.(type) {
+	case float64:
+		if v <= 0 || math.Trunc(v) != v {
+			return time.Time{}, errors.New("invalid exp claim")
+		}
+		return time.Unix(int64(v), 0), nil
+	case json.Number:
+		seconds, err := v.Int64()
+		if err != nil || seconds <= 0 {
+			return time.Time{}, errors.New("invalid exp claim")
+		}
+		return time.Unix(seconds, 0), nil
+	case int64:
+		if v <= 0 {
+			return time.Time{}, errors.New("invalid exp claim")
+		}
+		return time.Unix(v, 0), nil
+	default:
+		return time.Time{}, errors.New("invalid exp claim")
+	}
 }
 
 func ExtractUserIDFromContext(ctx context.Context) (uint64, error) {

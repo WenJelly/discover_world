@@ -59,6 +59,7 @@ func (l *ToggleMediaReactionLogic) ToggleMediaReaction(req *types.ToggleMediaRea
 		return nil, err
 	}
 	active := false
+	notificationCreated := false
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
 		nextActive, delta, err := txSvc.ReactionModel.ToggleStatus(ctx, loginUser.Id, targetTypeMediaAsset, asset.Id, reactionType)
 		if err != nil {
@@ -85,12 +86,19 @@ func (l *ToggleMediaReactionLogic) ToggleMediaReaction(req *types.ToggleMediaRea
 				Content:         sql.NullString{String: reactionType, Valid: reactionType != ""},
 			}); err != nil {
 				logx.WithContext(ctx).Errorf("create media reaction notification failed: assetId=%d actorId=%d err=%v", asset.Id, loginUser.Id, err)
+			} else {
+				notificationCreated = true
 			}
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("toggle media reaction failed")
+	}
+	if notificationCreated {
+		if err := l.svcCtx.InvalidateNotificationUnread(l.ctx, asset.OwnerUserId); err != nil {
+			l.Errorf("invalidate unread cache after media reaction notification failed: ownerId=%d err=%v", asset.OwnerUserId, err)
+		}
 	}
 	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypeMediaAsset, asset.Id)
 	return &types.MediaAssetToggleResponse{Active: active, Stats: buildMediaStats(stat)}, nil

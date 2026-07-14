@@ -37,6 +37,8 @@ type objectStorageMetadata struct {
 	ETag        string
 }
 
+var cosHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
 func loadStorageTarget(ctx context.Context, svcCtx *svc.ServiceContext, usageType string) (*storageTarget, error) {
 	var bucket *model.StorageBucket
 	var err error
@@ -299,11 +301,14 @@ func headObjectStorage(ctx context.Context, target *storageTarget, objectKey str
 	req.Header.Set("Authorization", buildCOSAuthorization(target.Secret.SecretId, target.Secret.SecretKey, parsedURL, http.MethodHead))
 	req.Host = parsedURL.Host
 
-	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	startedAt := time.Now()
+	resp, err := cosHTTPClient.Do(req)
 	if err != nil {
+		observeCOSRequest(http.MethodHead, startedAt, 0, err)
 		logx.WithContext(ctx).Errorf("COS head request failed: objectKey=%s url=%s err=%v", objectKey, targetURL, err)
 		return objectStorageMetadata{}, commonresponse.InternalServerError("校验 COS 对象失败")
 	}
+	observeCOSRequest(http.MethodHead, startedAt, resp.StatusCode, nil)
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
@@ -349,11 +354,14 @@ func readObjectHeaderStorage(ctx context.Context, target *storageTarget, objectK
 	req.Header.Set("Range", fmt.Sprintf("bytes=0-%d", maxBytes-1))
 	req.Host = parsedURL.Host
 
-	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	startedAt := time.Now()
+	resp, err := cosHTTPClient.Do(req)
 	if err != nil {
+		observeCOSRequest(http.MethodGet, startedAt, 0, err)
 		logx.WithContext(ctx).Errorf("COS header read request failed: objectKey=%s url=%s err=%v", objectKey, targetURL, err)
 		return nil, commonresponse.InternalServerError("校验 COS 对象内容失败")
 	}
+	observeCOSRequest(http.MethodGet, startedAt, resp.StatusCode, nil)
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {

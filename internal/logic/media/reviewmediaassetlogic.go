@@ -92,6 +92,9 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 	}); err != nil {
 		return nil, err
 	}
+	if err := l.svcCtx.InvalidateHomepageCache(l.ctx); err != nil {
+		l.Errorf("invalidate homepage cache after media review failed: %v", err)
+	}
 	if asset.OwnerUserId != adminUser.Id {
 		title := "作品审核已更新"
 		if auditStatus == "approved" {
@@ -109,6 +112,8 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 			Content:         sql.NullString{String: strings.TrimSpace(req.ReviewMessage), Valid: strings.TrimSpace(req.ReviewMessage) != ""},
 		}); err != nil {
 			l.Errorf("create media review notification failed: assetId=%d ownerId=%d err=%v", asset.Id, asset.OwnerUserId, err)
+		} else if err := l.svcCtx.InvalidateNotificationUnread(l.ctx, asset.OwnerUserId); err != nil {
+			l.Errorf("invalidate unread cache after media review notification failed: ownerId=%d err=%v", asset.OwnerUserId, err)
 		}
 	}
 

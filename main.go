@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"discover_world/internal/common/clientip"
 	"discover_world/internal/common/response"
@@ -44,13 +45,16 @@ func main() {
 
 	server := rest.MustNewServer(c.RestConf, rest.WithCors())
 	defer server.Stop()
-	server.Use(clientip.Middleware(c.IpGeo.TrustedProxies))
 
 	ctx := svc.NewServiceContext(c)
 	defer ctx.Close()
+	server.Use(clientip.Middleware(c.IpGeo.TrustedProxies))
+	server.Use(ctx.TokenRevocation)
 	cancelRankingRefresh, rankingRefreshDone := ranking.StartMediaRankingRefresher(
 		context.Background(),
 		ctx.EntityRankingModel,
+		ctx.Redis,
+		time.Duration(c.Redis.RankingLockSeconds)*time.Second,
 		c.Ranking.RefreshIntervalSeconds,
 		c.Ranking.BatchSize,
 	)

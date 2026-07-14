@@ -67,6 +67,14 @@ func initDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, req 
 	if err != nil {
 		return nil, err
 	}
+	if svcCtx.Redis != nil {
+		decision, limitErr := svcCtx.Redis.Allow(ctx, "upload:init:user", formatID(loginUser.Id), svcCtx.Config.Redis.RateLimit.UploadInitUserLimit, time.Hour)
+		if limitErr != nil {
+			logx.WithContext(ctx).Errorf("redis upload init rate limit failed open: %v", limitErr)
+		} else if !decision.Allowed {
+			return nil, commonresponse.TooManyRequests("上传请求过于频繁，请稍后重试")
+		}
+	}
 
 	storageUsage := storageUsageForAssetUsage(normalized.AssetUsage)
 	target, err := loadStorageTarget(ctx, svcCtx, storageUsage)
@@ -78,6 +86,18 @@ func initDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, req 
 	}
 	if !hasCompleteStorageConfig(target) {
 		return nil, commonresponse.InternalServerError("COS 配置不完整，请先配置本地密钥")
+	}
+	quotaReserved := false
+	quotaSubject := formatID(loginUser.Id) + ":" + time.Now().Format("20060102")
+	if svcCtx.Redis != nil {
+		decision, quotaErr := svcCtx.Redis.ConsumeQuota(ctx, "upload:bytes", quotaSubject, normalized.FileSize, svcCtx.Config.Redis.UploadDailyBytes, 48*time.Hour)
+		if quotaErr != nil {
+			logx.WithContext(ctx).Errorf("redis upload byte quota failed open: %v", quotaErr)
+		} else if !decision.Allowed {
+			return nil, commonresponse.TooManyRequests("今日上传额度已用完")
+		} else {
+			quotaReserved = true
+		}
 	}
 
 	expiresAt := time.Now().Add(directUploadTTL)
@@ -138,6 +158,11 @@ func initDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, req 
 		}
 		return nil
 	}); err != nil {
+		if quotaReserved {
+			if _, refundErr := svcCtx.Redis.ConsumeQuota(ctx, "upload:bytes", quotaSubject, -normalized.FileSize, svcCtx.Config.Redis.UploadDailyBytes, 48*time.Hour); refundErr != nil {
+				logx.WithContext(ctx).Errorf("refund redis upload byte quota failed: %v", refundErr)
+			}
+		}
 		return nil, err
 	}
 
@@ -153,6 +178,20 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 	loginUser, err := commonauth.LoadRequiredLoginUser(ctx, svcCtx, authorization)
 	if err != nil {
 		return nil, err
+	}
+	if svcCtx.Redis != nil {
+		release, acquired, lockErr := svcCtx.Redis.TryLock(ctx, "upload:complete:"+req.SessionId, time.Duration(svcCtx.Config.Redis.UploadCompleteLockSeconds)*time.Second)
+		if lockErr != nil {
+			logx.WithContext(ctx).Errorf("redis upload completion lock failed open: sessionId=%d err=%v", sessionID, lockErr)
+		} else if !acquired {
+			return nil, commonresponse.Conflict("上传完成处理中，请稍后重试")
+		} else {
+			defer func() {
+				if err := release(context.Background()); err != nil {
+					logx.WithContext(ctx).Errorf("release upload completion lock failed: sessionId=%d err=%v", sessionID, err)
+				}
+			}()
+		}
 	}
 
 	session, err := svcCtx.MediaUploadSessionModel.FindOne(ctx, sessionID)
@@ -297,6 +336,9 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 		return nil
 	}); err != nil {
 		return nil, err
+	}
+	if err := svcCtx.InvalidateHomepageCache(ctx); err != nil {
+		logx.WithContext(ctx).Errorf("invalidate homepage cache after direct upload completion failed: %v", err)
 	}
 
 	profile, _ := svcCtx.UserProfileModel.FindOneByUserId(ctx, loginUser.Id)

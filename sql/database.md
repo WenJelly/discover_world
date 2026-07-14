@@ -28,4 +28,4 @@
 2. 排名游标固定为 `(score DESC, target_id DESC)`；对应索引为 `idx_entity_ranking_hot (target_type, hot_score DESC, target_id DESC)` 和 `idx_entity_ranking_rising (target_type, rising_score DESC, target_id DESC)`。
 3. 浏览、点赞、下载、审核、上传完成和删除事件会增量刷新单条媒体排名；服务启动后按 `Ranking.RefreshIntervalSeconds` 定时、按 `Ranking.BatchSize` 分批全量刷新，以覆盖时间衰减和 24/48 小时窗口自然变化。
 4. 本文件仅标注结构变更；部署应用前需要单独执行 `sql/create/entity_ranking.sql`，本次代码修改不自动执行 DDL。
-5. 压测与执行计划：使用 `sql/benchmark/media_ranking_explain.sql` 分别记录 1 万、10 万、100 万数据量下的 actual rows、临时表/filesort 和耗时；设置 `DISCOVER_WORLD_BENCHMARK_MYSQL_DSN` 后运行 `go test ./model -run '^$' -bench 'BenchmarkMediaRanking' -count=5` 记录基准耗时，并运行 `go test ./model -run TestMediaRankingP95 -v` 记录 200 次查询的 P95。
+5. 压测与执行计划：使用 `sql/benchmark/media_ranking_explain.sql` 分别记录 1 万、10 万、100 万数据量下的估算行数、索引和 filesort；实际 rows examined 从 `sql/monitoring_checks.sql` 的 performance_schema 查询获取。设置 `DISCOVER_WORLD_BENCHMARK_MYSQL_DSN` 后运行 `go test ./model -run '^$' -bench 'BenchmarkMediaRanking' -count=5` 记录基准耗时，并运行 `go test ./model -run TestMediaRankingP95 -v` 记录 200 次查询的 P95。

@@ -7,21 +7,36 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	commonipgeo "discover_world/internal/common/ipgeo"
 	"discover_world/internal/config"
 	"discover_world/internal/middleware"
+	"discover_world/internal/redisx"
 	"discover_world/model"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/rest"
 )
 
+type databasePool interface {
+	SetMaxOpenConns(int)
+	SetMaxIdleConns(int)
+	SetConnMaxLifetime(time.Duration)
+	SetConnMaxIdleTime(time.Duration)
+}
+
 type ServiceContext struct {
 	Config config.Config
+	Redis  *redisx.Client
 
-	AdminCheck rest.Middleware
-	dbConn     sqlx.SqlConn
+	AdminCheck        rest.Middleware
+	LoginRateLimit    rest.Middleware
+	RegisterRateLimit rest.Middleware
+	SearchRateLimit   rest.Middleware
+	TokenRevocation   rest.Middleware
+	dbConn            sqlx.SqlConn
 
 	UserAccountModel          model.UserAccountModel
 	UserProfileModel          model.UserProfileModel
@@ -56,11 +71,21 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
+	c.Normalize()
 
 	conn := sqlx.NewMysql(c.Mysql.DataSource)
+	db, err := conn.RawDB()
+	logx.Must(err)
+	applyDatabasePoolSettings(db, c.Mysql)
+	redisClient, err := redisx.NewConfiguredClient(c.Redis.Nodes, c.Redis.KeyPrefix)
+	logx.Must(err)
+	if redisClient == nil {
+		logx.Must(redisx.ErrUnavailable)
+	}
 
 	svcCtx := &ServiceContext{
 		Config: c,
+		Redis:  redisClient,
 		dbConn: conn,
 
 		UserAccountModel:          model.NewUserAccountModel(conn),
@@ -95,8 +120,22 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		IpGeoResolver:             commonipgeo.NewResolver(c.IpGeo),
 	}
 	svcCtx.AdminCheck = middleware.NewAdminCheckMiddleware(svcCtx).Handle
+	svcCtx.LoginRateLimit = middleware.NewRateLimitMiddleware(redisClient, c.Auth.AccessSecret, "login:ip", c.Redis.RateLimit.LoginIPLimit, 10*time.Minute).Handle
+	svcCtx.RegisterRateLimit = middleware.NewRateLimitMiddleware(redisClient, c.Auth.AccessSecret, "register:ip", c.Redis.RateLimit.RegisterIPLimit, time.Hour).Handle
+	svcCtx.SearchRateLimit = middleware.NewRateLimitMiddleware(redisClient, c.Auth.AccessSecret, "search:ip", c.Redis.RateLimit.SearchIPLimit, time.Minute).Handle
+	svcCtx.TokenRevocation = middleware.NewTokenRevocationMiddleware(redisClient, c.Auth.AccessSecret).Handle
 
 	return svcCtx
+}
+
+func applyDatabasePoolSettings(pool databasePool, c config.MysqlConfig) {
+	if pool == nil {
+		return
+	}
+	pool.SetMaxOpenConns(c.MaxOpenConns)
+	pool.SetMaxIdleConns(c.MaxIdleConns)
+	pool.SetConnMaxLifetime(time.Duration(c.ConnMaxLifetimeSeconds) * time.Second)
+	pool.SetConnMaxIdleTime(time.Duration(c.ConnMaxIdleTimeSeconds) * time.Second)
 }
 
 func (s *ServiceContext) Close() {
@@ -120,9 +159,14 @@ func (s *ServiceContext) Transact(ctx context.Context, fn func(context.Context, 
 func (s *ServiceContext) withSession(session sqlx.Session) *ServiceContext {
 	conn := sqlx.NewSqlConnFromSession(session)
 	return &ServiceContext{
-		Config:     s.Config,
-		AdminCheck: s.AdminCheck,
-		dbConn:     conn,
+		Config:            s.Config,
+		Redis:             s.Redis,
+		AdminCheck:        s.AdminCheck,
+		LoginRateLimit:    s.LoginRateLimit,
+		RegisterRateLimit: s.RegisterRateLimit,
+		SearchRateLimit:   s.SearchRateLimit,
+		TokenRevocation:   s.TokenRevocation,
+		dbConn:            conn,
 
 		UserAccountModel:          model.NewUserAccountModel(conn),
 		UserProfileModel:          model.NewUserProfileModel(conn),

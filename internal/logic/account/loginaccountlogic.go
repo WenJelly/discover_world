@@ -10,6 +10,7 @@ import (
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
+	"discover_world/internal/redisx"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
@@ -41,6 +42,15 @@ func (l *LoginAccountLogic) LoginAccount(req *types.LoginRequest) (resp *types.L
 	if err != nil {
 		return nil, err
 	}
+	subject := redisx.HashSubject(l.svcCtx.Config.Auth.AccessSecret, email)
+	if l.svcCtx.Redis != nil {
+		decision, limitErr := l.svcCtx.Redis.Allow(l.ctx, "login:account", subject, l.svcCtx.Config.Redis.RateLimit.LoginAccountLimit, 15*time.Minute)
+		if limitErr != nil {
+			l.Errorf("redis account login rate limit failed open: %v", limitErr)
+		} else if !decision.Allowed {
+			return nil, commonresponse.TooManyRequests("登录失败次数过多，请稍后重试")
+		}
+	}
 
 	account, err := l.svcCtx.UserAccountModel.FindOneByEmailCaseSensitive(l.ctx, sql.NullString{String: email, Valid: true})
 	if err != nil {
@@ -65,6 +75,11 @@ func (l *LoginAccountLogic) LoginAccount(req *types.LoginRequest) (resp *types.L
 	detail, err := loadDetailAccountResponse(l.ctx, l.svcCtx, account)
 	if err != nil {
 		return nil, err
+	}
+	if l.svcCtx.Redis != nil {
+		if err := l.svcCtx.Redis.Delete(l.ctx, "ratelimit:login:account:"+subject); err != nil {
+			l.Errorf("clear account login rate limit failed: %v", err)
+		}
 	}
 
 	return buildLoginResponse(token, detail), nil

@@ -8,8 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"discover_world/internal/svc"
 	"discover_world/internal/types"
 	"discover_world/model"
+
+	"github.com/golang-jwt/jwt/v4"
 )
 
 func TestBuildDetailAccountResponseUsesProfileAndMediaStats(t *testing.T) {
@@ -199,5 +202,32 @@ func TestNormalizeEmailLowercasesStoredAccountEmail(t *testing.T) {
 
 	if got != "alice@example.com" {
 		t.Fatalf("normalizeEmail = %q, want lowercase stored email", got)
+	}
+}
+
+func TestCreateTokenIncludesUniqueJTI(t *testing.T) {
+	svcCtx := &svc.ServiceContext{}
+	svcCtx.Config.Auth.AccessSecret = "secret"
+	svcCtx.Config.Auth.AccessExpire = 3600
+	account := &model.UserAccount{Id: 9}
+
+	first, err := createToken(svcCtx, account)
+	if err != nil {
+		t.Fatalf("createToken first: %v", err)
+	}
+	second, err := createToken(svcCtx, account)
+	if err != nil {
+		t.Fatalf("createToken second: %v", err)
+	}
+	if first == second {
+		t.Fatal("two login tokens must not share the same jti")
+	}
+	parsed, err := jwt.Parse(first, func(*jwt.Token) (interface{}, error) { return []byte("secret"), nil })
+	if err != nil {
+		t.Fatalf("parse token: %v", err)
+	}
+	claims := parsed.Claims.(jwt.MapClaims)
+	if claims["jti"] == nil || claims["jti"] == "" {
+		t.Fatalf("token claims missing jti: %#v", claims)
 	}
 }

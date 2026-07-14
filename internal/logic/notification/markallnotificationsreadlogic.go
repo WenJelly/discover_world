@@ -35,5 +35,8 @@ func (l *MarkAllNotificationsReadLogic) MarkAllNotificationsRead(req *types.Mark
 	if err := l.svcCtx.NotificationModel.MarkAllRead(l.ctx, loginUser.Id); err != nil {
 		return commonresponse.InternalServerError("mark all notifications read failed")
 	}
+	if err := l.svcCtx.InvalidateNotificationUnread(l.ctx, loginUser.Id); err != nil {
+		l.Errorf("invalidate unread cache after mark all read failed: userId=%d err=%v", loginUser.Id, err)
+	}
 	return nil
 }

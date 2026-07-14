@@ -35,3 +35,15 @@ func TestMessageFromErrorOnlyTrustsStatusError(t *testing.T) {
 		t.Fatalf("status error message = %q, want public business message", got)
 	}
 }
+
+func TestTooManyRequestsUses429(t *testing.T) {
+	err := TooManyRequests("请求过于频繁")
+	statusCode, body := ErrorBody(err)
+
+	if statusCode != http.StatusTooManyRequests {
+		t.Fatalf("status code = %d, want 429", statusCode)
+	}
+	if body.Message != "请求过于频繁" {
+		t.Fatalf("message = %q", body.Message)
+	}
+}

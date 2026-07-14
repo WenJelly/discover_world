@@ -47,6 +47,7 @@ func (l *TogglePostFavoriteLogic) TogglePostFavorite(req *types.TogglePostFavori
 	}
 
 	active := false
+	notificationCreated := false
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
 		nextActive, delta, err := txSvc.FavoriteModel.ToggleStatus(ctx, loginUser.Id, targetTypePost, post.Id)
 		if err != nil {
@@ -69,12 +70,19 @@ func (l *TogglePostFavoriteLogic) TogglePostFavorite(req *types.TogglePostFavori
 				Title:           "新的收藏",
 			}); err != nil {
 				logx.WithContext(ctx).Errorf("create post favorite notification failed: postId=%d actorId=%d err=%v", post.Id, loginUser.Id, err)
+			} else {
+				notificationCreated = true
 			}
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("toggle post favorite failed")
+	}
+	if notificationCreated {
+		if err := l.svcCtx.InvalidateNotificationUnread(l.ctx, post.UserId); err != nil {
+			l.Errorf("invalidate unread cache after post favorite notification failed: ownerId=%d err=%v", post.UserId, err)
+		}
 	}
 	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypePost, post.Id)
 	return &types.PostToggleResponse{

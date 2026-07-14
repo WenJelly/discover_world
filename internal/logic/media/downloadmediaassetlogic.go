@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
@@ -45,6 +46,14 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 	loginUser, err := commonauth.LoadRequiredLoginUser(l.ctx, l.svcCtx, "")
 	if err != nil {
 		return nil, err
+	}
+	if l.svcCtx.Redis != nil {
+		decision, limitErr := l.svcCtx.Redis.Allow(l.ctx, "download:user", formatID(loginUser.Id), l.svcCtx.Config.Redis.RateLimit.DownloadUserLimit, time.Minute)
+		if limitErr != nil {
+			l.Errorf("redis download rate limit failed open: %v", limitErr)
+		} else if !decision.Allowed {
+			return nil, commonresponse.TooManyRequests("下载请求过于频繁，请稍后重试")
+		}
 	}
 
 	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, assetID)

@@ -31,7 +31,7 @@ func (l *GetMediaAssetListLogic) GetMediaAssetList(req *types.QueryMediaAssetReq
 		req = &types.QueryMediaAssetRequest{}
 	}
 
-	pageNum, pageSize, err := normalizeMediaPage(req.PageNum, req.PageSize)
+	pageNum, pageSize, err := normalizePublicMediaPage(req.PageNum, req.PageSize)
 	if err != nil {
 		return nil, err
 	}

@@ -17,7 +17,9 @@ const (
 
 	defaultMediaPageNum        = 1
 	defaultMediaPageSize       = 10
-	maxMediaPageSize           = 300
+	maxPublicMediaPageSize     = 60
+	maxPublicMediaOffset       = 10000
+	maxAdminMediaPageSize      = 300
 	defaultMediaCursorPageSize = 30
 	maxMediaCursorPageSize     = 60
 
@@ -117,14 +119,30 @@ func parseOptionalID(raw, field string) (uint64, error) {
 	return parseRequiredID(raw, field)
 }
 
-func normalizeMediaPage(pageNum, pageSize int64) (int64, int64, error) {
+func normalizePublicMediaPage(pageNum, pageSize int64) (int64, int64, error) {
 	if pageNum <= 0 {
 		pageNum = defaultMediaPageNum
 	}
 	if pageSize <= 0 {
 		pageSize = defaultMediaPageSize
 	}
-	if pageSize > maxMediaPageSize {
+	if pageSize > maxPublicMediaPageSize {
+		return 0, 0, commonresponse.BadRequest("公共媒体 pageSize 不能超过 60，请使用 cursor 分页")
+	}
+	if pageNum-1 > maxPublicMediaOffset/pageSize {
+		return 0, 0, commonresponse.BadRequest("公共媒体 OFFSET 不能超过 10000，请使用 cursor 分页")
+	}
+	return pageNum, pageSize, nil
+}
+
+func normalizeAdminMediaPage(pageNum, pageSize int64) (int64, int64, error) {
+	if pageNum <= 0 {
+		pageNum = defaultMediaPageNum
+	}
+	if pageSize <= 0 {
+		pageSize = defaultMediaPageSize
+	}
+	if pageSize > maxAdminMediaPageSize {
 		return 0, 0, commonresponse.BadRequest("pageSize 不能超过 300")
 	}
 	return pageNum, pageSize, nil

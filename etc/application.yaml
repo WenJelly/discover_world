@@ -4,12 +4,44 @@ Port: 8888
 MaxBytes: 33554432
 Timeout: 70000
 
+Middlewares:
+  Prometheus: true
+
+DevServer:
+  Enabled: true
+  Host: 127.0.0.1
+  Port: 6060
+  MetricsPath: /metrics
+  HealthPath: /healthz
+  EnableMetrics: true
+  EnablePprof: false
+
 Mysql:
   DataSource: root:a@tcp(localhost:3306)/discover_world?charset=utf8mb4&parseTime=true
+  MaxOpenConns: 32
+  MaxIdleConns: 32
+  ConnMaxLifetimeSeconds: 1800
+  ConnMaxIdleTimeSeconds: 300
 
-CacheRedis:
-  - Host: localhost:6379
-    Pass: root
+# Redis is required at startup for rate limiting, caches, locks and JWT revocation.
+# Email verification is intentionally not enabled until an email provider is integrated.
+Redis:
+  Nodes:
+    - Host: localhost:6379
+      Pass: root
+  KeyPrefix: dw:dev:v1
+  HomepageTTLSeconds: 600
+  NotificationUnreadTTLSeconds: 60
+  UploadCompleteLockSeconds: 30
+  RankingLockSeconds: 7200
+  UploadDailyBytes: 314572800
+  RateLimit:
+    LoginIPLimit: 20
+    LoginAccountLimit: 5
+    RegisterIPLimit: 10
+    SearchIPLimit: 30
+    UploadInitUserLimit: 20
+    DownloadUserLimit: 60
 
 Auth:
   AccessSecret: "this-is-wen-jelly-jwt"

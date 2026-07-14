@@ -31,5 +31,6 @@ var (
 	ForbiddenCode           = ResultCode{code: http.StatusForbidden, message: "禁止访问", statusCode: http.StatusForbidden}
 	NotFoundCode            = ResultCode{code: http.StatusNotFound, message: "资源不存在", statusCode: http.StatusNotFound}
 	ConflictCode            = ResultCode{code: http.StatusConflict, message: "资源冲突", statusCode: http.StatusConflict}
+	TooManyRequestsCode     = ResultCode{code: http.StatusTooManyRequests, message: "请求过于频繁", statusCode: http.StatusTooManyRequests}
 	InternalServerErrorCode = ResultCode{code: http.StatusInternalServerError, message: "服务器异常", statusCode: http.StatusInternalServerError}
 )

@@ -2,8 +2,12 @@ package ranking
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
+	"time"
+
+	"discover_world/internal/redisx"
 )
 
 type fakeMediaRankingModel struct {
@@ -17,6 +21,19 @@ type rankingBatch struct {
 	lastID uint64
 	count  int64
 	err    error
+}
+
+type fakeRankingLocker struct {
+	acquired bool
+	err      error
+	released int
+}
+
+func (f *fakeRankingLocker) TryLock(context.Context, string, time.Duration) (redisx.ReleaseFunc, bool, error) {
+	return redisx.ReleaseFunc(func(context.Context) error {
+		f.released++
+		return nil
+	}), f.acquired, f.err
 }
 
 func (f *fakeMediaRankingModel) RefreshMediaBatch(_ context.Context, afterID uint64, limit int64) (uint64, int64, error) {
@@ -62,5 +79,34 @@ func TestNormalizeRefreshSettingsRejectsUnboundedValues(t *testing.T) {
 	interval, batch = normalizeRefreshSettings(1, 50000)
 	if interval.Seconds() != 60 || batch != 5000 {
 		t.Fatalf("bounded values = (%s, %d), want (1m, 5000)", interval, batch)
+	}
+}
+
+func TestRefreshMediaRankingsWithLockSkipsWhenAnotherInstanceOwnsLock(t *testing.T) {
+	model := &fakeMediaRankingModel{batches: []rankingBatch{{lastID: 0, count: 0}}}
+	locker := &fakeRankingLocker{acquired: false}
+
+	if err := refreshMediaRankingsWithLock(context.Background(), model, locker, time.Minute, 100); err != nil {
+		t.Fatalf("refreshMediaRankingsWithLock returned error: %v", err)
+	}
+	if len(model.after) != 0 || locker.released != 0 {
+		t.Fatalf("skipped refresh touched model or release: after=%v released=%d", model.after, locker.released)
+	}
+}
+
+func TestRefreshMediaRankingsWithLockReleasesAfterRefreshAndReturnsLockErrors(t *testing.T) {
+	model := &fakeMediaRankingModel{batches: []rankingBatch{{lastID: 0, count: 0}}}
+	locker := &fakeRankingLocker{acquired: true}
+
+	if err := refreshMediaRankingsWithLock(context.Background(), model, locker, time.Minute, 100); err != nil {
+		t.Fatalf("refreshMediaRankingsWithLock returned error: %v", err)
+	}
+	if model.cleaned != 1 || locker.released != 1 {
+		t.Fatalf("refresh result cleaned=%d released=%d", model.cleaned, locker.released)
+	}
+
+	lockErr := errors.New("redis down")
+	if err := refreshMediaRankingsWithLock(context.Background(), model, &fakeRankingLocker{err: lockErr}, time.Minute, 100); !errors.Is(err, lockErr) {
+		t.Fatalf("lock error = %v, want %v", err, lockErr)
 	}
 }

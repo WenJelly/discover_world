@@ -51,6 +51,7 @@ func (l *TogglePostReactionLogic) TogglePostReaction(req *types.TogglePostReacti
 		return nil, err
 	}
 	active := false
+	notificationCreated := false
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
 		nextActive, delta, err := txSvc.ReactionModel.ToggleStatus(ctx, loginUser.Id, targetTypePost, post.Id, reactionType)
 		if err != nil {
@@ -74,12 +75,19 @@ func (l *TogglePostReactionLogic) TogglePostReaction(req *types.TogglePostReacti
 				Content:         sql.NullString{String: reactionType, Valid: reactionType != ""},
 			}); err != nil {
 				logx.WithContext(ctx).Errorf("create post reaction notification failed: postId=%d actorId=%d err=%v", post.Id, loginUser.Id, err)
+			} else {
+				notificationCreated = true
 			}
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("toggle post reaction failed")
+	}
+	if notificationCreated {
+		if err := l.svcCtx.InvalidateNotificationUnread(l.ctx, post.UserId); err != nil {
+			l.Errorf("invalidate unread cache after post reaction notification failed: ownerId=%d err=%v", post.UserId, err)
+		}
 	}
 	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypePost, post.Id)
 	likedByByPost, err := loadPostLikedBySummaries(l.ctx, l.svcCtx, []uint64{post.Id})

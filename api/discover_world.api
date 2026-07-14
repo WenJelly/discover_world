@@ -806,6 +806,9 @@ service DiscoverWorld {
 	@handler DetailAccount
 	post /account/detail (DetailAccountRequest) returns (DetailAccountResponse)
 
+	@handler LogoutAccount
+	post /account/logout
+
 	@handler UpdateAccount
 	post /account/update (UpdateAccountRequest) returns (DetailAccountResponse)
 

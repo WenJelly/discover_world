@@ -98,6 +98,9 @@ func (l *DeleteMediaAssetLogic) DeleteMediaAsset(req *types.DeleteMediaAssetRequ
 	if err != nil {
 		return commonresponse.InternalServerError("删除媒体资源失败")
 	}
+	if err := l.svcCtx.InvalidateHomepageCache(l.ctx); err != nil {
+		l.Errorf("invalidate homepage cache after media delete failed: %v", err)
+	}
 
 	return nil
 }

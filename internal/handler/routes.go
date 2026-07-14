@@ -30,12 +30,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			{
 				Method:  http.MethodPost,
 				Path:    "/account/login",
-				Handler: account.LoginAccountHandler(serverCtx),
+				Handler: serverCtx.LoginRateLimit(account.LoginAccountHandler(serverCtx)),
 			},
 			{
 				Method:  http.MethodPost,
 				Path:    "/account/register",
-				Handler: account.RegisterAccountHandler(serverCtx),
+				Handler: serverCtx.RegisterRateLimit(account.RegisterAccountHandler(serverCtx)),
 			},
 		},
 		rest.WithPrefix("/api"),
@@ -52,6 +52,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/account/detail",
 				Handler: account.DetailAccountHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/account/logout",
+				Handler: account.LogoutAccountHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
@@ -191,7 +196,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			{
 				Method:  http.MethodPost,
 				Path:    "/search",
-				Handler: search.GlobalSearchHandler(serverCtx),
+				Handler: serverCtx.SearchRateLimit(search.GlobalSearchHandler(serverCtx)),
 			},
 		},
 		rest.WithPrefix("/api"),

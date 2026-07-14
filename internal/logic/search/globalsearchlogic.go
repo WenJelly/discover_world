@@ -6,6 +6,7 @@ package search
 import (
 	"context"
 	"strconv"
+	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/logic/ipgeo"
@@ -51,28 +52,36 @@ func (l *GlobalSearchLogic) GlobalSearch(req *types.GlobalSearchRequest) (resp *
 	}
 
 	if includesSearchType(normalized.Types, searchTypeMedia) {
+		startedAt := time.Now()
 		media, err := l.searchMedia(normalized)
+		observeSearch(searchTypeMedia, startedAt, err)
 		if err != nil {
 			return nil, err
 		}
 		resp.Media = media
 	}
 	if includesSearchType(normalized.Types, searchTypePost) {
+		startedAt := time.Now()
 		posts, err := l.searchPosts(normalized)
+		observeSearch(searchTypePost, startedAt, err)
 		if err != nil {
 			return nil, err
 		}
 		resp.Posts = posts
 	}
 	if includesSearchType(normalized.Types, searchTypeAlbum) {
+		startedAt := time.Now()
 		albums, err := l.searchAlbums(normalized)
+		observeSearch(searchTypeAlbum, startedAt, err)
 		if err != nil {
 			return nil, err
 		}
 		resp.Albums = albums
 	}
 	if includesSearchType(normalized.Types, searchTypeUser) {
+		startedAt := time.Now()
 		users, err := l.searchUsers(normalized)
+		observeSearch(searchTypeUser, startedAt, err)
 		if err != nil {
 			return nil, err
 		}

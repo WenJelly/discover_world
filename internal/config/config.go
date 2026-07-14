@@ -40,6 +40,34 @@ type RankingConfig struct {
 	BatchSize              int64 `json:",optional"`
 }
 
+type RedisRateLimitConfig struct {
+	LoginIPLimit        int64 `json:",optional"`
+	LoginAccountLimit   int64 `json:",optional"`
+	RegisterIPLimit     int64 `json:",optional"`
+	SearchIPLimit       int64 `json:",optional"`
+	UploadInitUserLimit int64 `json:",optional"`
+	DownloadUserLimit   int64 `json:",optional"`
+}
+
+type RedisConfig struct {
+	Nodes                        cache.CacheConf      `json:",optional"`
+	KeyPrefix                    string               `json:",optional"`
+	HomepageTTLSeconds           int64                `json:",optional"`
+	NotificationUnreadTTLSeconds int64                `json:",optional"`
+	UploadCompleteLockSeconds    int64                `json:",optional"`
+	RankingLockSeconds           int64                `json:",optional"`
+	UploadDailyBytes             int64                `json:",optional"`
+	RateLimit                    RedisRateLimitConfig `json:",optional"`
+}
+
+type MysqlConfig struct {
+	DataSource             string
+	MaxOpenConns           int   `json:",optional"`
+	MaxIdleConns           int   `json:",optional"`
+	ConnMaxLifetimeSeconds int64 `json:",optional"`
+	ConnMaxIdleTimeSeconds int64 `json:",optional"`
+}
+
 type IpGeoStaticRule struct {
 	CIDR            string `json:",optional"`
 	Country         string `json:",optional"`
@@ -72,10 +100,8 @@ type IpGeoConfig struct {
 type Config struct {
 	rest.RestConf
 
-	Mysql struct {
-		DataSource string
-	}
-	CacheRedis cache.CacheConf
+	Mysql MysqlConfig
+	Redis RedisConfig
 
 	Auth struct {
 		AccessSecret string
@@ -92,8 +118,67 @@ type Config struct {
 
 func (c *Config) Normalize() {
 	c.Cos.Normalize()
+	c.Mysql.Normalize()
+	c.Redis.Normalize()
 	c.Ranking.Normalize()
 	c.IpGeo.Normalize(c.Auth.AccessSecret)
+}
+
+func (c *RedisConfig) Normalize() {
+	if strings.TrimSpace(c.KeyPrefix) == "" {
+		c.KeyPrefix = "dw:dev:v1"
+	}
+	if c.HomepageTTLSeconds <= 0 {
+		c.HomepageTTLSeconds = 600
+	}
+	if c.NotificationUnreadTTLSeconds <= 0 {
+		c.NotificationUnreadTTLSeconds = 60
+	}
+	if c.UploadCompleteLockSeconds <= 0 {
+		c.UploadCompleteLockSeconds = 30
+	}
+	if c.RankingLockSeconds <= 0 {
+		c.RankingLockSeconds = 7200
+	}
+	if c.UploadDailyBytes <= 0 {
+		c.UploadDailyBytes = 300 << 20
+	}
+	if c.RateLimit.LoginIPLimit <= 0 {
+		c.RateLimit.LoginIPLimit = 20
+	}
+	if c.RateLimit.LoginAccountLimit <= 0 {
+		c.RateLimit.LoginAccountLimit = 5
+	}
+	if c.RateLimit.RegisterIPLimit <= 0 {
+		c.RateLimit.RegisterIPLimit = 10
+	}
+	if c.RateLimit.SearchIPLimit <= 0 {
+		c.RateLimit.SearchIPLimit = 30
+	}
+	if c.RateLimit.UploadInitUserLimit <= 0 {
+		c.RateLimit.UploadInitUserLimit = 20
+	}
+	if c.RateLimit.DownloadUserLimit <= 0 {
+		c.RateLimit.DownloadUserLimit = 60
+	}
+}
+
+func (c *MysqlConfig) Normalize() {
+	if c.MaxOpenConns <= 0 {
+		c.MaxOpenConns = 32
+	}
+	if c.MaxIdleConns <= 0 {
+		c.MaxIdleConns = c.MaxOpenConns
+	}
+	if c.MaxIdleConns > c.MaxOpenConns {
+		c.MaxIdleConns = c.MaxOpenConns
+	}
+	if c.ConnMaxLifetimeSeconds <= 0 {
+		c.ConnMaxLifetimeSeconds = 1800
+	}
+	if c.ConnMaxIdleTimeSeconds <= 0 {
+		c.ConnMaxIdleTimeSeconds = 300
+	}
 }
 
 func (c *RankingConfig) Normalize() {

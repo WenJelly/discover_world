@@ -2,7 +2,9 @@ package account
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"net/mail"
 	"strconv"
@@ -180,8 +182,13 @@ func buildLoginResponse(token string, detail *types.DetailAccountResponse) *type
 
 func createToken(svcCtx *svc.ServiceContext, account *model.UserAccount) (string, error) {
 	now := time.Now().Unix()
+	tokenIDBytes := make([]byte, 16)
+	if _, err := rand.Read(tokenIDBytes); err != nil {
+		return "", err
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"userId": formatID(account.Id),
+		"jti":    hex.EncodeToString(tokenIDBytes),
 		"iat":    now,
 		"exp":    now + svcCtx.Config.Auth.AccessExpire,
 	})

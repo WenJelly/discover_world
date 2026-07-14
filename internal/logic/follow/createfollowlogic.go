@@ -57,6 +57,8 @@ func (l *CreateFollowLogic) CreateFollow(req *types.FollowTargetRequest) (*types
 			Content:         sql.NullString{String: loginUser.Username + " 关注了你", Valid: true},
 		}); err != nil {
 			l.Errorf("create follow notification failed: followerId=%d followingId=%d err=%v", loginUser.Id, target.Id, err)
+		} else if err := l.svcCtx.InvalidateNotificationUnread(l.ctx, target.Id); err != nil {
+			l.Errorf("invalidate unread cache after follow notification failed: targetId=%d err=%v", target.Id, err)
 		}
 	}
 	return buildFollowStatus(l.ctx, l.svcCtx, loginUser, target)

@@ -87,6 +87,9 @@ func (l *UpdateHomepageHeroLogic) UpdateHomepageHero(req *types.UpdateHomepageHe
 	}); err != nil {
 		return nil, err
 	}
+	if err := l.svcCtx.InvalidateHomepageCache(l.ctx); err != nil {
+		l.Errorf("invalidate homepage cache after hero update failed: %v", err)
+	}
 
 	return homepageLogic.BuildHomepageConfigResponse(l.ctx, l.svcCtx, types.MediaVariantRequest{CompressType: 2})
 }
