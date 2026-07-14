@@ -33,7 +33,7 @@ func (l *GetAdminOperationLogDetailLogic) GetAdminOperationLogDetail(req *types.
 	if err != nil {
 		return nil, err
 	}
-	row, err := l.svcCtx.AdminOperationLogModel.FindByID(l.ctx, id)
+	row, err := l.svcCtx.Models.Admin.AdminOperationLog.FindByID(l.ctx, id)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("操作日志不存在")

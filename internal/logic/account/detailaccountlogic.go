@@ -42,7 +42,7 @@ func (l *DetailAccountLogic) DetailAccount(req *types.DetailAccountRequest) (res
 		if err != nil {
 			return nil, err
 		}
-		target, err = l.svcCtx.UserAccountModel.FindOne(l.ctx, id)
+		target, err = l.svcCtx.Models.Account.UserAccount.FindOne(l.ctx, id)
 		if err != nil {
 			if errors.Is(err, sqlx.ErrNotFound) {
 				return nil, commonresponse.NotFound("账号不存在")
@@ -60,7 +60,7 @@ func (l *DetailAccountLogic) DetailAccount(req *types.DetailAccountRequest) (res
 		if err != nil {
 			return nil, err
 		}
-		target, err = l.svcCtx.UserAccountModel.FindOneByEmail(l.ctx, sql.NullString{String: email, Valid: true})
+		target, err = l.svcCtx.Models.Account.UserAccount.FindOneByEmail(l.ctx, sql.NullString{String: email, Valid: true})
 		if err != nil {
 			if errors.Is(err, sqlx.ErrNotFound) {
 				return nil, commonresponse.NotFound("账号不存在")
@@ -74,7 +74,7 @@ func (l *DetailAccountLogic) DetailAccount(req *types.DetailAccountRequest) (res
 		return nil, err
 	}
 	if loginUser.Id != target.Id {
-		isFollowing, err := l.svcCtx.UserFollowModel.IsFollowing(l.ctx, loginUser.Id, target.Id)
+		isFollowing, err := l.svcCtx.Models.Follow.UserFollow.IsFollowing(l.ctx, loginUser.Id, target.Id)
 		if err != nil {
 			return nil, commonresponse.InternalServerError("查询关注状态失败")
 		}

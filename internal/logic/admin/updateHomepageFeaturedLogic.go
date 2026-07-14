@@ -47,7 +47,7 @@ func (l *UpdateHomepageFeaturedLogic) UpdateHomepageFeatured(req *types.UpdateHo
 	// Every selected work must currently be public + approved (site-wide; an
 	// admin may feature any user's published work).
 	if len(ids) > 0 {
-		assetsByID, err := l.svcCtx.MediaAssetModel.FindPublicApprovedByIDs(l.ctx, ids)
+		assetsByID, err := l.svcCtx.Models.Media.MediaAsset.FindPublicApprovedByIDs(l.ctx, ids)
 		if err != nil {
 			return nil, commonresponse.InternalServerError("查询已发布作品失败")
 		}
@@ -58,7 +58,7 @@ func (l *UpdateHomepageFeaturedLogic) UpdateHomepageFeatured(req *types.UpdateHo
 		}
 	}
 
-	existing, err := l.svcCtx.AssetLinkModel.FindActiveAssetIDsByOwner(l.ctx, homepageLogic.OwnerTypeSite, homepageLogic.OwnerIDSite, homepageLogic.LinkRoleHomepageFeatured, homepageLogic.MaxHomepageFeaturedCount)
+	existing, err := l.svcCtx.Models.Media.AssetLink.FindActiveAssetIDsByOwner(l.ctx, homepageLogic.OwnerTypeSite, homepageLogic.OwnerIDSite, homepageLogic.LinkRoleHomepageFeatured, homepageLogic.MaxHomepageFeaturedCount)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询首页精选失败")
 	}
@@ -71,7 +71,7 @@ func (l *UpdateHomepageFeaturedLogic) UpdateHomepageFeatured(req *types.UpdateHo
 		Before:         map[string]any{"featuredIds": existing},
 		After:          map[string]any{"featuredIds": ids},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, homepageLogic.OwnerTypeSite, homepageLogic.OwnerIDSite, homepageLogic.LinkRoleHomepageFeatured, ids); err != nil {
+		if err := txSvcCtx.Models.Media.AssetLink.ReplaceActiveAssetIDsByOwner(ctx, homepageLogic.OwnerTypeSite, homepageLogic.OwnerIDSite, homepageLogic.LinkRoleHomepageFeatured, ids); err != nil {
 			return commonresponse.InternalServerError("保存首页精选失败")
 		}
 		return nil

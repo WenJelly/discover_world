@@ -38,15 +38,15 @@ func (l *CreateFollowLogic) CreateFollow(req *types.FollowTargetRequest) (*types
 	if err != nil {
 		return nil, err
 	}
-	wasFollowing, err := l.svcCtx.UserFollowModel.IsFollowing(l.ctx, loginUser.Id, target.Id)
+	wasFollowing, err := l.svcCtx.Models.Follow.UserFollow.IsFollowing(l.ctx, loginUser.Id, target.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query follow status failed")
 	}
-	if err := l.svcCtx.UserFollowModel.Follow(l.ctx, loginUser.Id, target.Id); err != nil {
+	if err := l.svcCtx.Models.Follow.UserFollow.Follow(l.ctx, loginUser.Id, target.Id); err != nil {
 		return nil, err
 	}
 	if !wasFollowing {
-		if _, err := l.svcCtx.NotificationModel.Insert(l.ctx, &notificationmodel.Notification{
+		if _, err := l.svcCtx.Models.Notification.Notification.Insert(l.ctx, &notificationmodel.Notification{
 			RecipientUserId: target.Id,
 			ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
 			EventType:       "follow",

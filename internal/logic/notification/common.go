@@ -93,11 +93,11 @@ func buildNotificationResponses(ctx context.Context, svcCtx *svc.ServiceContext,
 		}
 	}
 
-	accounts, err := svcCtx.UserAccountModel.FindByIDs(ctx, actorIDs)
+	accounts, err := svcCtx.Models.Account.UserAccount.FindByIDs(ctx, actorIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query notification actors failed")
 	}
-	profiles, err := svcCtx.UserProfileModel.FindByUserIDs(ctx, actorIDs)
+	profiles, err := svcCtx.Models.Profile.UserProfile.FindByUserIDs(ctx, actorIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query notification actor profiles failed")
 	}

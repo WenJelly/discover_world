@@ -81,7 +81,7 @@ func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserI
 
 	target := loginUser
 	if targetID != loginUser.Id {
-		target, err = svcCtx.UserAccountModel.FindOneActive(ctx, targetID)
+		target, err = svcCtx.Models.Account.UserAccount.FindOneActive(ctx, targetID)
 		if err != nil {
 			if errors.Is(err, sqlx.ErrNotFound) {
 				return nil, nil, access.ViewerAccessPublic, commonresponse.NotFound("账号不存在")
@@ -101,7 +101,7 @@ func ensureProfileForAccount(ctx context.Context, svcCtx *svc.ServiceContext, ac
 	if account == nil || account.Id == 0 {
 		return nil, commonresponse.BadRequest("账号不存在")
 	}
-	profile, err := svcCtx.UserProfileModel.FindOneByUserId(ctx, account.Id)
+	profile, err := svcCtx.Models.Profile.UserProfile.FindOneByUserId(ctx, account.Id)
 	if err == nil {
 		return profile, nil
 	}
@@ -109,13 +109,13 @@ func ensureProfileForAccount(ctx context.Context, svcCtx *svc.ServiceContext, ac
 		return nil, commonresponse.InternalServerError("查询用户资料失败")
 	}
 
-	if _, err := svcCtx.UserProfileModel.Insert(ctx, &profilemodel.UserProfile{
+	if _, err := svcCtx.Models.Profile.UserProfile.Insert(ctx, &profilemodel.UserProfile{
 		UserId:   account.Id,
 		Nickname: optionalString(account.Username),
 	}); err != nil {
 		return nil, commonresponse.InternalServerError("创建用户资料失败")
 	}
-	profile, err = svcCtx.UserProfileModel.FindOneByUserId(ctx, account.Id)
+	profile, err = svcCtx.Models.Profile.UserProfile.FindOneByUserId(ctx, account.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询用户资料失败")
 	}
@@ -300,11 +300,11 @@ func loadPostViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer
 		return state, nil
 	}
 
-	liked, err := svcCtx.ReactionModel.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs, defaultPostReaction)
+	liked, err := svcCtx.Models.Interaction.Reaction.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs, defaultPostReaction)
 	if err != nil {
 		return state, err
 	}
-	favorited, err := svcCtx.FavoriteModel.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs)
+	favorited, err := svcCtx.Models.Interaction.Favorite.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs)
 	if err != nil {
 		return state, err
 	}
@@ -351,7 +351,7 @@ func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, asse
 		return resp, nil
 	}
 
-	assetsByID, err := svcCtx.MediaAssetModel.FindByIDs(ctx, assetIDs)
+	assetsByID, err := svcCtx.Models.Media.MediaAsset.FindByIDs(ctx, assetIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")
 	}

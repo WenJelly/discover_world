@@ -41,7 +41,7 @@ func (l *AdminRestoreCommentLogic) AdminRestoreComment(req *types.AdminModerateP
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.CommentRecordModel.SetStatus(ctx, commentID, "active"); err != nil {
+		if err := txSvcCtx.Models.Post.CommentRecord.SetStatus(ctx, commentID, "active"); err != nil {
 			return commonresponse.InternalServerError("restore comment failed")
 		}
 		return nil

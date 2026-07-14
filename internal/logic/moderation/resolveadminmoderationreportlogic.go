@@ -41,7 +41,7 @@ func (l *ResolveAdminModerationReportLogic) ResolveAdminModerationReport(req *ty
 	if err != nil {
 		return nil, err
 	}
-	report, err := l.svcCtx.ModerationReportModel.FindOne(l.ctx, reportID)
+	report, err := l.svcCtx.Models.Moderation.ModerationReport.FindOne(l.ctx, reportID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("举报不存在")
@@ -73,7 +73,7 @@ func (l *ResolveAdminModerationReportLogic) ResolveAdminModerationReport(req *ty
 		if err := applyModerationAction(ctx, txSvcCtx, req.Action, targetType, targetID); err != nil {
 			return err
 		}
-		if err := txSvcCtx.ModerationReportModel.Resolve(ctx, moderationmodel.ResolveModerationReportRequest{
+		if err := txSvcCtx.Models.Moderation.ModerationReport.Resolve(ctx, moderationmodel.ResolveModerationReportRequest{
 			Id:             reportID,
 			HandlerUserId:  adminUser.Id,
 			Status:         status,
@@ -83,7 +83,7 @@ func (l *ResolveAdminModerationReportLogic) ResolveAdminModerationReport(req *ty
 		}); err != nil {
 			return commonresponse.InternalServerError("处理举报失败")
 		}
-		updated, err := txSvcCtx.ModerationReportModel.FindOne(ctx, reportID)
+		updated, err := txSvcCtx.Models.Moderation.ModerationReport.FindOne(ctx, reportID)
 		if err != nil {
 			return commonresponse.InternalServerError("查询举报处理结果失败")
 		}

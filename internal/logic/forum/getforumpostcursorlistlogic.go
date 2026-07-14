@@ -50,7 +50,7 @@ func (l *GetForumPostCursorListLogic) GetForumPostCursorList(req *types.ForumPos
 		}
 	}
 
-	discussions, err := l.svcCtx.PostDiscussionModel.FindPublicByBoardBeforeCursor(l.ctx, boardID, cursor, pageSize+1)
+	discussions, err := l.svcCtx.Models.Post.PostDiscussion.FindPublicByBoardBeforeCursor(l.ctx, boardID, cursor, pageSize+1)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query forum posts failed")
 	}

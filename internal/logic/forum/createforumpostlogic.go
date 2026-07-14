@@ -43,7 +43,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 	if err != nil {
 		return nil, err
 	}
-	if _, err := l.svcCtx.ForumBoardModel.FindOneActiveByID(l.ctx, boardID); err != nil {
+	if _, err := l.svcCtx.Models.Forum.ForumBoard.FindOneActiveByID(l.ctx, boardID); err != nil {
 		if err == sqlx.ErrNotFound {
 			return nil, commonresponse.NotFound("forum board not found")
 		}
@@ -70,7 +70,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 
 	var postID uint64
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		result, err := txSvc.PostModel.Insert(ctx, &postmodel.Post{
+		result, err := txSvc.Models.Post.Post.Insert(ctx, &postmodel.Post{
 			UserId:     loginUser.Id,
 			Content:    optionalString(content),
 			PostType:   "daily",
@@ -88,10 +88,10 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 			return sql.ErrNoRows
 		}
 		postID = uint64(id)
-		if err := txSvc.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, ownerTypePost, postID, linkRoleAttachment, imageIDs); err != nil {
+		if err := txSvc.Models.Media.AssetLink.ReplaceActiveAssetIDsByOwner(ctx, ownerTypePost, postID, linkRoleAttachment, imageIDs); err != nil {
 			return err
 		}
-		if _, err := txSvc.PostDiscussionModel.Insert(ctx, &postmodel.PostDiscussion{
+		if _, err := txSvc.Models.Post.PostDiscussion.Insert(ctx, &postmodel.PostDiscussion{
 			PostId:         postID,
 			BoardId:        boardID,
 			Title:          title,
@@ -100,7 +100,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 		}); err != nil {
 			return err
 		}
-		if err := txSvc.EntityStatModel.Ensure(ctx, targetTypePost, postID); err != nil {
+		if err := txSvc.Models.Statistics.EntityStat.Ensure(ctx, targetTypePost, postID); err != nil {
 			return err
 		}
 		if err := ipgeo.RecordContentAttribution(ctx, txSvc, ipgeo.TargetTypePost, postID, ipgeo.ActionTypeCreate, loginUser.Id); err != nil {
@@ -112,7 +112,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 		return nil, commonresponse.InternalServerError("create forum post failed")
 	}
 
-	discussion, err := l.svcCtx.PostDiscussionModel.FindByPostID(l.ctx, postID)
+	discussion, err := l.svcCtx.Models.Post.PostDiscussion.FindByPostID(l.ctx, postID)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("load forum post failed")
 	}

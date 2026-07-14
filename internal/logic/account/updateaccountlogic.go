@@ -44,7 +44,7 @@ func (l *UpdateAccountLogic) UpdateAccount(req *types.UpdateAccountRequest) (res
 		return nil, commonresponse.Forbidden("无权更新该账号")
 	}
 
-	account, err := l.svcCtx.UserAccountModel.FindOne(l.ctx, id)
+	account, err := l.svcCtx.Models.Account.UserAccount.FindOne(l.ctx, id)
 	if err != nil {
 		return nil, commonresponse.NotFound("账号不存在")
 	}
@@ -58,10 +58,10 @@ func (l *UpdateAccountLogic) UpdateAccount(req *types.UpdateAccountRequest) (res
 	if err := applyProfilePatch(profile, req.Nickname, req.Bio); err != nil {
 		return nil, err
 	}
-	if err := l.svcCtx.UserAccountModel.Update(l.ctx, account); err != nil {
+	if err := l.svcCtx.Models.Account.UserAccount.Update(l.ctx, account); err != nil {
 		return nil, commonresponse.InternalServerError("更新账号失败")
 	}
-	if err := l.svcCtx.UserProfileModel.Update(l.ctx, profile); err != nil {
+	if err := l.svcCtx.Models.Profile.UserProfile.Update(l.ctx, profile); err != nil {
 		return nil, commonresponse.InternalServerError("更新用户资料失败")
 	}
 

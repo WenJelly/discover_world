@@ -70,7 +70,7 @@ func (l *RegisterAccountLogic) RegisterAccount(req *types.RegisterRequest) (resp
 		Role:         defaultRole,
 		Status:       "active",
 	}
-	result, err := l.svcCtx.UserAccountModel.Insert(l.ctx, account)
+	result, err := l.svcCtx.Models.Account.UserAccount.Insert(l.ctx, account)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("创建账号失败")
 	}
@@ -80,7 +80,7 @@ func (l *RegisterAccountLogic) RegisterAccount(req *types.RegisterRequest) (resp
 	}
 	account.Id = uint64(id)
 
-	_, _ = l.svcCtx.UserProfileModel.Insert(l.ctx, &profilemodel.UserProfile{
+	_, _ = l.svcCtx.Models.Profile.UserProfile.Insert(l.ctx, &profilemodel.UserProfile{
 		UserId:   account.Id,
 		Nickname: optionalString(username),
 	})

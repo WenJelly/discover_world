@@ -55,7 +55,7 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 		return nil, commonresponse.BadRequest("auditStatus 必须是 pending、approved 或 rejected")
 	}
 
-	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, id)
+	asset, err := l.svcCtx.Models.Media.MediaAsset.FindOneActive(l.ctx, id)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("媒体资源不存在")
@@ -84,7 +84,7 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 			"metadataJson": nullStringValue(asset.MetadataJson),
 		},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.MediaAssetModel.Update(ctx, asset); err != nil {
+		if err := txSvcCtx.Models.Media.MediaAsset.Update(ctx, asset); err != nil {
 			return commonresponse.InternalServerError("审核媒体资源失败")
 		}
 		refreshMediaRanking(ctx, txSvcCtx, asset.Id)
@@ -102,7 +102,7 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 		} else if auditStatus == "rejected" {
 			title = "作品审核未通过"
 		}
-		if _, err := l.svcCtx.NotificationModel.Insert(l.ctx, &notificationmodel.Notification{
+		if _, err := l.svcCtx.Models.Notification.Notification.Insert(l.ctx, &notificationmodel.Notification{
 			RecipientUserId: asset.OwnerUserId,
 			ActorUserId:     sql.NullInt64{Int64: int64(adminUser.Id), Valid: true},
 			EventType:       "media_review",
@@ -117,10 +117,10 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 		}
 	}
 
-	owner, _ := l.svcCtx.UserAccountModel.FindOne(l.ctx, asset.OwnerUserId)
-	profile, _ := l.svcCtx.UserProfileModel.FindOneByUserId(l.ctx, asset.OwnerUserId)
-	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypeMediaAsset, asset.Id)
-	tags, _ := l.svcCtx.TaggingModel.FindNamesByTargetIDs(l.ctx, targetTypeMediaAsset, []uint64{asset.Id})
+	owner, _ := l.svcCtx.Models.Account.UserAccount.FindOne(l.ctx, asset.OwnerUserId)
+	profile, _ := l.svcCtx.Models.Profile.UserProfile.FindOneByUserId(l.ctx, asset.OwnerUserId)
+	stat, _ := l.svcCtx.Models.Statistics.EntityStat.FindOneByTargetTypeTargetId(l.ctx, targetTypeMediaAsset, asset.Id)
+	tags, _ := l.svcCtx.Models.Taxonomy.Tagging.FindNamesByTargetIDs(l.ctx, targetTypeMediaAsset, []uint64{asset.Id})
 
 	return buildMediaAssetResponse(l.ctx, l.svcCtx, asset, nil, owner, profile, stat, tags[asset.Id], adminUser, types.MediaVariantRequest{})
 }

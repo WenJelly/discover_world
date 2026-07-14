@@ -42,7 +42,7 @@ func (l *UnpinPostLogic) UnpinPost(req *types.UnpinPostRequest) (*types.ProfileP
 		return nil, err
 	}
 
-	post, err := l.svcCtx.PostModel.FindOneActive(l.ctx, postID)
+	post, err := l.svcCtx.Models.Post.Post.FindOneActive(l.ctx, postID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("post not found")
@@ -53,10 +53,10 @@ func (l *UnpinPostLogic) UnpinPost(req *types.UnpinPostRequest) (*types.ProfileP
 		return nil, commonresponse.Forbidden("no permission to unpin this post")
 	}
 
-	if err := l.svcCtx.PostModel.SetPinned(l.ctx, post.Id, false, time.Time{}); err != nil {
+	if err := l.svcCtx.Models.Post.Post.SetPinned(l.ctx, post.Id, false, time.Time{}); err != nil {
 		return nil, commonresponse.InternalServerError("unpin post failed")
 	}
-	updated, err := l.svcCtx.PostModel.FindOneActive(l.ctx, post.Id)
+	updated, err := l.svcCtx.Models.Post.Post.FindOneActive(l.ctx, post.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("load unpinned post failed")
 	}

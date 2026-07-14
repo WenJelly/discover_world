@@ -93,7 +93,7 @@ func (l *GlobalSearchLogic) GlobalSearch(req *types.GlobalSearchRequest) (resp *
 }
 
 func (l *GlobalSearchLogic) searchMedia(req normalizedSearchRequest) ([]types.MediaAssetResponse, error) {
-	assets, err := l.svcCtx.SearchModel.SearchPublicMediaAssets(l.ctx, req.Query, req.PageSize)
+	assets, err := l.svcCtx.Models.Search.Search.SearchPublicMediaAssets(l.ctx, req.Query, req.PageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询媒体搜索结果失败")
 	}
@@ -108,7 +108,7 @@ func (l *GlobalSearchLogic) searchMedia(req normalizedSearchRequest) ([]types.Me
 }
 
 func (l *GlobalSearchLogic) searchPosts(req normalizedSearchRequest) ([]types.GlobalSearchPostResponse, error) {
-	posts, err := l.svcCtx.SearchModel.SearchPublicPosts(l.ctx, req.Query, req.PageSize)
+	posts, err := l.svcCtx.Models.Search.Search.SearchPublicPosts(l.ctx, req.Query, req.PageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态搜索结果失败")
 	}
@@ -116,7 +116,7 @@ func (l *GlobalSearchLogic) searchPosts(req normalizedSearchRequest) ([]types.Gl
 }
 
 func (l *GlobalSearchLogic) searchAlbums(req normalizedSearchRequest) ([]types.GlobalSearchAlbumResponse, error) {
-	albums, err := l.svcCtx.SearchModel.SearchPublicAlbums(l.ctx, req.Query, req.PageSize)
+	albums, err := l.svcCtx.Models.Search.Search.SearchPublicAlbums(l.ctx, req.Query, req.PageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询相册搜索结果失败")
 	}
@@ -124,7 +124,7 @@ func (l *GlobalSearchLogic) searchAlbums(req normalizedSearchRequest) ([]types.G
 }
 
 func (l *GlobalSearchLogic) searchUsers(req normalizedSearchRequest) ([]types.AccountSummary, error) {
-	users, err := l.svcCtx.SearchModel.SearchPublicUsers(l.ctx, req.Query, req.PageSize)
+	users, err := l.svcCtx.Models.Search.Search.SearchPublicUsers(l.ctx, req.Query, req.PageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询用户搜索结果失败")
 	}
@@ -169,7 +169,7 @@ func buildSearchPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 	if err != nil {
 		return nil, err
 	}
-	stats, err := svcCtx.EntityStatModel.FindByTargetIDs(ctx, searchTypePost, postIDs)
+	stats, err := svcCtx.Models.Statistics.EntityStat.FindByTargetIDs(ctx, searchTypePost, postIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态统计失败")
 	}
@@ -255,11 +255,11 @@ func loadAuthorSummaries(ctx context.Context, svcCtx *svc.ServiceContext, userID
 		return resp, nil
 	}
 
-	accounts, err := svcCtx.UserAccountModel.FindByIDs(ctx, userIDs)
+	accounts, err := svcCtx.Models.Account.UserAccount.FindByIDs(ctx, userIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询作者账号失败")
 	}
-	profiles, err := svcCtx.UserProfileModel.FindByUserIDs(ctx, userIDs)
+	profiles, err := svcCtx.Models.Profile.UserProfile.FindByUserIDs(ctx, userIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询作者资料失败")
 	}
@@ -285,7 +285,7 @@ func loadCoverResponses(ctx context.Context, svcCtx *svc.ServiceContext, coverID
 		return resp, nil
 	}
 
-	assetsByID, err := svcCtx.MediaAssetModel.FindPublicApprovedByIDs(ctx, coverIDs)
+	assetsByID, err := svcCtx.Models.Media.MediaAsset.FindPublicApprovedByIDs(ctx, coverIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询相册封面失败")
 	}

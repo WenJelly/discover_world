@@ -70,7 +70,7 @@ func (l *CreatePostLogic) CreatePost(req *types.CreatePostRequest) (*types.Profi
 			Visibility: visibility,
 			Status:     postStatusActive,
 		}
-		result, err := txSvc.PostModel.Insert(ctx, data)
+		result, err := txSvc.Models.Post.Post.Insert(ctx, data)
 		if err != nil {
 			return err
 		}
@@ -79,10 +79,10 @@ func (l *CreatePostLogic) CreatePost(req *types.CreatePostRequest) (*types.Profi
 			return sql.ErrNoRows
 		}
 		postID = uint64(id)
-		if err := txSvc.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, ownerTypePost, postID, linkRoleAttachment, imageIDs); err != nil {
+		if err := txSvc.Models.Media.AssetLink.ReplaceActiveAssetIDsByOwner(ctx, ownerTypePost, postID, linkRoleAttachment, imageIDs); err != nil {
 			return err
 		}
-		if err := txSvc.EntityStatModel.Ensure(ctx, targetTypePost, postID); err != nil {
+		if err := txSvc.Models.Statistics.EntityStat.Ensure(ctx, targetTypePost, postID); err != nil {
 			return err
 		}
 		if err := ipgeo.RecordContentAttribution(ctx, txSvc, ipgeo.TargetTypePost, postID, ipgeo.ActionTypeCreate, loginUser.Id); err != nil {
@@ -94,7 +94,7 @@ func (l *CreatePostLogic) CreatePost(req *types.CreatePostRequest) (*types.Profi
 		return nil, commonresponse.InternalServerError("create post failed")
 	}
 
-	created, err := l.svcCtx.PostModel.FindOneActive(l.ctx, postID)
+	created, err := l.svcCtx.Models.Post.Post.FindOneActive(l.ctx, postID)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("load created post failed")
 	}

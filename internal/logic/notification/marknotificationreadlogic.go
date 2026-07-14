@@ -39,7 +39,7 @@ func (l *MarkNotificationReadLogic) MarkNotificationRead(req *types.MarkNotifica
 	if err != nil {
 		return err
 	}
-	if err := l.svcCtx.NotificationModel.MarkRead(l.ctx, loginUser.Id, id); err != nil {
+	if err := l.svcCtx.Models.Notification.Notification.MarkRead(l.ctx, loginUser.Id, id); err != nil {
 		return commonresponse.InternalServerError("mark notification read failed")
 	}
 	if err := l.svcCtx.InvalidateNotificationUnread(l.ctx, loginUser.Id); err != nil {

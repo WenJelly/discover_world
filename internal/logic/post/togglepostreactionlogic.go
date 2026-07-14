@@ -52,19 +52,19 @@ func (l *TogglePostReactionLogic) TogglePostReaction(req *types.TogglePostReacti
 	active := false
 	notificationCreated := false
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		nextActive, delta, err := txSvc.ReactionModel.ToggleStatus(ctx, loginUser.Id, targetTypePost, post.Id, reactionType)
+		nextActive, delta, err := txSvc.Models.Interaction.Reaction.ToggleStatus(ctx, loginUser.Id, targetTypePost, post.Id, reactionType)
 		if err != nil {
 			return err
 		}
 		active = nextActive
-		if err := txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "reaction_count", delta); err != nil {
+		if err := txSvc.Models.Statistics.EntityStat.IncrementCounter(ctx, targetTypePost, post.Id, "reaction_count", delta); err != nil {
 			return err
 		}
-		if err := txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypePost, post.Id, "reaction_count", delta); err != nil {
+		if err := txSvc.Models.Statistics.EntityStatHourly.IncrementCounter(ctx, targetTypePost, post.Id, "reaction_count", delta); err != nil {
 			return err
 		}
 		if nextActive && post.UserId != loginUser.Id {
-			if _, err := txSvc.NotificationModel.Insert(ctx, &notificationmodel.Notification{
+			if _, err := txSvc.Models.Notification.Notification.Insert(ctx, &notificationmodel.Notification{
 				RecipientUserId: post.UserId,
 				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
 				EventType:       "post_reaction",
@@ -88,7 +88,7 @@ func (l *TogglePostReactionLogic) TogglePostReaction(req *types.TogglePostReacti
 			l.Errorf("invalidate unread cache after post reaction notification failed: ownerId=%d err=%v", post.UserId, err)
 		}
 	}
-	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypePost, post.Id)
+	stat, _ := l.svcCtx.Models.Statistics.EntityStat.FindOneByTargetTypeTargetId(l.ctx, targetTypePost, post.Id)
 	likedByByPost, err := loadPostLikedBySummaries(l.ctx, l.svcCtx, []uint64{post.Id})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post liked users failed")

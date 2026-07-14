@@ -129,7 +129,7 @@ func initDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, req 
 			ExpireAt:         sql.NullTime{Time: expiresAt, Valid: true},
 			ExtraJson:        directUploadExtraJSON(normalized),
 		}
-		result, err := txSvc.MediaUploadSessionModel.Insert(txCtx, session)
+		result, err := txSvc.Models.Media.MediaUploadSession.Insert(txCtx, session)
 		if err != nil {
 			return commonresponse.InternalServerError("创建上传会话失败")
 		}
@@ -195,7 +195,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 		}
 	}
 
-	session, err := svcCtx.MediaUploadSessionModel.FindOne(ctx, sessionID)
+	session, err := svcCtx.Models.Media.MediaUploadSession.FindOne(ctx, sessionID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("上传会话不存在")
@@ -213,7 +213,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 	}
 	if session.ExpireAt.Valid && time.Now().After(session.ExpireAt.Time) {
 		session.Status = "expired"
-		_ = svcCtx.MediaUploadSessionModel.Update(ctx, session)
+		_ = svcCtx.Models.Media.MediaUploadSession.Update(ctx, session)
 		return nil, commonresponse.BadRequest("上传会话已过期")
 	}
 
@@ -269,7 +269,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 	var asset *mediamodel.MediaAsset
 	var object *mediamodel.MediaObject
 	if err := svcCtx.Transact(ctx, func(txCtx context.Context, txSvc *svc.ServiceContext) error {
-		loaded, err := txSvc.MediaAssetModel.FindOneActive(txCtx, assetID)
+		loaded, err := txSvc.Models.Media.MediaAsset.FindOneActive(txCtx, assetID)
 		if err != nil {
 			if errors.Is(err, sqlx.ErrNotFound) {
 				return commonresponse.NotFound("媒体资源不存在")
@@ -280,7 +280,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 			return commonresponse.Forbidden("无权完成该媒体资源")
 		}
 
-		if err := txSvc.MediaObjectModel.MarkDeletedByAssetID(txCtx, loaded.Id); err != nil {
+		if err := txSvc.Models.Media.MediaObject.MarkDeletedByAssetID(txCtx, loaded.Id); err != nil {
 			return commonresponse.InternalServerError("更新历史媒体对象失败")
 		}
 
@@ -299,7 +299,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 			AccessType: target.Bucket.AccessType,
 			Status:     "active",
 		}
-		if _, err := txSvc.MediaObjectModel.Insert(txCtx, object); err != nil {
+		if _, err := txSvc.Models.Media.MediaObject.Insert(txCtx, object); err != nil {
 			return commonresponse.InternalServerError("保存媒体对象失败")
 		}
 
@@ -315,7 +315,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 		}
 		loaded.MetadataJson = metadataJSON(metadata)
 		loaded.Status = "active"
-		if err := txSvc.MediaAssetModel.Update(txCtx, loaded); err != nil {
+		if err := txSvc.Models.Media.MediaAsset.Update(txCtx, loaded); err != nil {
 			return commonresponse.InternalServerError("更新媒体资源失败")
 		}
 		if err := replaceAssetTags(txCtx, txSvc, loaded.Id, metadata.Tags); err != nil {
@@ -329,7 +329,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 
 		session.Status = "completed"
 		session.CallbackPayload = directUploadCompleteJSON(objectMeta, etag)
-		if err := txSvc.MediaUploadSessionModel.Update(txCtx, session); err != nil {
+		if err := txSvc.Models.Media.MediaUploadSession.Update(txCtx, session); err != nil {
 			return commonresponse.InternalServerError("更新上传会话失败")
 		}
 
@@ -342,7 +342,7 @@ func completeDirectMediaUpload(ctx context.Context, svcCtx *svc.ServiceContext, 
 		logx.WithContext(ctx).Errorf("invalidate homepage cache after direct upload completion failed: %v", err)
 	}
 
-	profile, _ := svcCtx.UserProfileModel.FindOneByUserId(ctx, loginUser.Id)
+	profile, _ := svcCtx.Models.Profile.UserProfile.FindOneByUserId(ctx, loginUser.Id)
 	tags := parseMediaMetadata(asset.MetadataJson).Tags
 	return buildMediaAssetResponse(ctx, svcCtx, asset, object, loginUser, profile, nil, tags, loginUser, types.MediaVariantRequest{})
 }
@@ -408,7 +408,7 @@ func normalizeDirectUploadInitRequest(req *types.MediaAssetDirectUploadInitReque
 func prepareDirectUploadAsset(ctx context.Context, svcCtx *svc.ServiceContext, req directUploadInitRequest, storageUsage string, loginUser *accountmodel.UserAccount) (*mediamodel.MediaAsset, error) {
 	var existing *mediamodel.MediaAsset
 	if req.ID > 0 {
-		asset, err := svcCtx.MediaAssetModel.FindOneActive(ctx, req.ID)
+		asset, err := svcCtx.Models.Media.MediaAsset.FindOneActive(ctx, req.ID)
 		if err != nil {
 			if errors.Is(err, sqlx.ErrNotFound) {
 				return nil, commonresponse.NotFound("媒体资源不存在")
@@ -443,7 +443,7 @@ func prepareDirectUploadAsset(ctx context.Context, svcCtx *svc.ServiceContext, r
 			AuditStatus:      auditStatus,
 			MetadataJson:     metadataJSON(metadata),
 		}
-		result, err := svcCtx.MediaAssetModel.Insert(ctx, asset)
+		result, err := svcCtx.Models.Media.MediaAsset.Insert(ctx, asset)
 		if err != nil {
 			return nil, commonresponse.InternalServerError("保存媒体资源失败")
 		}
@@ -463,7 +463,7 @@ func prepareDirectUploadAsset(ctx context.Context, svcCtx *svc.ServiceContext, r
 	existing.Status = "uploading"
 	existing.AuditStatus = auditStatus
 	existing.MetadataJson = metadataJSON(metadata)
-	if err := svcCtx.MediaAssetModel.Update(ctx, existing); err != nil {
+	if err := svcCtx.Models.Media.MediaAsset.Update(ctx, existing); err != nil {
 		return nil, commonresponse.InternalServerError("更新媒体资源失败")
 	}
 	return existing, nil
@@ -572,7 +572,7 @@ func buildDirectUploadAssetResponse(ctx context.Context, svcCtx *svc.ServiceCont
 	if session == nil || !session.AssetId.Valid || session.AssetId.Int64 <= 0 {
 		return nil, commonresponse.InternalServerError("上传会话缺少媒体资源")
 	}
-	asset, err := svcCtx.MediaAssetModel.FindOneActive(ctx, uint64(session.AssetId.Int64))
+	asset, err := svcCtx.Models.Media.MediaAsset.FindOneActive(ctx, uint64(session.AssetId.Int64))
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("媒体资源不存在")
@@ -582,14 +582,14 @@ func buildDirectUploadAssetResponse(ctx context.Context, svcCtx *svc.ServiceCont
 	if asset.OwnerUserId != viewer.Id && !svcCtx.IsAdminAccount(viewer) {
 		return nil, commonresponse.Forbidden("无权查看该媒体资源")
 	}
-	object, err := svcCtx.MediaObjectModel.FindOriginalByAssetID(ctx, asset.Id)
+	object, err := svcCtx.Models.Media.MediaObject.FindOriginalByAssetID(ctx, asset.Id)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.BadRequest("上传对象尚未完成")
 		}
 		return nil, commonresponse.InternalServerError("查询媒体对象失败")
 	}
-	profile, _ := svcCtx.UserProfileModel.FindOneByUserId(ctx, viewer.Id)
+	profile, _ := svcCtx.Models.Profile.UserProfile.FindOneByUserId(ctx, viewer.Id)
 	tags := parseMediaMetadata(asset.MetadataJson).Tags
 	return buildMediaAssetResponse(ctx, svcCtx, asset, object, viewer, profile, nil, tags, viewer, types.MediaVariantRequest{})
 }

@@ -47,7 +47,7 @@ func (l *GetAdminMediaAssetListLogic) GetAdminMediaAssetList(req *types.AdminQue
 	if err != nil {
 		return nil, err
 	}
-	total, err := l.svcCtx.MediaAssetModel.CountByWhere(l.ctx, whereSQL, args...)
+	total, err := l.svcCtx.Models.Media.MediaAsset.CountByWhere(l.ctx, whereSQL, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (l *GetAdminMediaAssetListLogic) GetAdminMediaAssetList(req *types.AdminQue
 		}, nil
 	}
 
-	assets, err := l.svcCtx.MediaAssetModel.FindByWhere(l.ctx, whereSQL, "`id` desc", pageSize, (pageNum-1)*pageSize, args...)
+	assets, err := l.svcCtx.Models.Media.MediaAsset.FindByWhere(l.ctx, whereSQL, "`id` desc", pageSize, (pageNum-1)*pageSize, args...)
 	if err != nil {
 		return nil, err
 	}

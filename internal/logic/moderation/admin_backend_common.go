@@ -167,17 +167,17 @@ func applyModerationAction(ctx context.Context, svcCtx *svc.ServiceContext, acti
 	}
 	switch action {
 	case "hide_post":
-		return svcCtx.PostModel.SetStatus(ctx, targetID, "hidden")
+		return svcCtx.Models.Post.Post.SetStatus(ctx, targetID, "hidden")
 	case "restore_post":
-		return svcCtx.PostModel.SetStatus(ctx, targetID, "active")
+		return svcCtx.Models.Post.Post.SetStatus(ctx, targetID, "active")
 	case "hide_comment":
-		return svcCtx.CommentRecordModel.SetStatus(ctx, targetID, "hidden")
+		return svcCtx.Models.Post.CommentRecord.SetStatus(ctx, targetID, "hidden")
 	case "restore_comment":
-		return svcCtx.CommentRecordModel.SetStatus(ctx, targetID, "active")
+		return svcCtx.Models.Post.CommentRecord.SetStatus(ctx, targetID, "active")
 	case "lock_forum_post":
-		return svcCtx.PostDiscussionModel.SetLocked(ctx, targetID, true)
+		return svcCtx.Models.Post.PostDiscussion.SetLocked(ctx, targetID, true)
 	case "unlock_forum_post":
-		return svcCtx.PostDiscussionModel.SetLocked(ctx, targetID, false)
+		return svcCtx.Models.Post.PostDiscussion.SetLocked(ctx, targetID, false)
 	default:
 		if strings.TrimSpace(targetType) == "" {
 			return commonresponse.BadRequest("unknown moderation action")

@@ -43,7 +43,7 @@ func (l *UnfeatureAdminContentLogic) UnfeatureAdminContent(req *types.AdminFeatu
 		TargetID:       targetID,
 		Reason:         req.Reason,
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.AssetLinkModel.DeactivateActiveByAssetIDAndOwnerRole(ctx, targetID, adminOwnerTypeSite, adminLinkRoleFeatured); err != nil {
+		if err := txSvcCtx.Models.Media.AssetLink.DeactivateActiveByAssetIDAndOwnerRole(ctx, targetID, adminOwnerTypeSite, adminLinkRoleFeatured); err != nil {
 			return commonresponse.InternalServerError("取消精选内容失败")
 		}
 		return nil

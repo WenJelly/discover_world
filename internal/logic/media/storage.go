@@ -43,7 +43,7 @@ func loadStorageTarget(ctx context.Context, svcCtx *svc.ServiceContext, usageTyp
 	var bucket *mediamodel.StorageBucket
 	var err error
 	for _, candidate := range storageUsageCandidates(usageType) {
-		bucket, err = svcCtx.StorageBucketModel.FindDefaultActiveByUsage(ctx, candidate)
+		bucket, err = svcCtx.Models.Media.StorageBucket.FindDefaultActiveByUsage(ctx, candidate)
 		if err == nil {
 			break
 		}
@@ -55,7 +55,7 @@ func loadStorageTarget(ctx context.Context, svcCtx *svc.ServiceContext, usageTyp
 		return nil, commonresponse.InternalServerError("未配置可用存储桶")
 	}
 
-	provider, err := svcCtx.StorageProviderModel.FindOne(ctx, bucket.ProviderId)
+	provider, err := svcCtx.Models.Media.StorageProvider.FindOne(ctx, bucket.ProviderId)
 	if err != nil || provider.Status != 1 {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.InternalServerError("存储服务商不存在")
@@ -86,7 +86,7 @@ func loadStorageTargetByIDs(ctx context.Context, svcCtx *svc.ServiceContext, pro
 		return nil, commonresponse.InternalServerError("上传会话存储配置不完整")
 	}
 
-	bucket, err := svcCtx.StorageBucketModel.FindOne(ctx, bucketID)
+	bucket, err := svcCtx.Models.Media.StorageBucket.FindOne(ctx, bucketID)
 	if err != nil || bucket.ProviderId != providerID || bucket.Status != 1 {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.InternalServerError("存储桶不存在")
@@ -94,7 +94,7 @@ func loadStorageTargetByIDs(ctx context.Context, svcCtx *svc.ServiceContext, pro
 		return nil, commonresponse.InternalServerError("查询存储桶失败")
 	}
 
-	provider, err := svcCtx.StorageProviderModel.FindOne(ctx, providerID)
+	provider, err := svcCtx.Models.Media.StorageProvider.FindOne(ctx, providerID)
 	if err != nil || provider.Status != 1 {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.InternalServerError("存储服务商不存在")

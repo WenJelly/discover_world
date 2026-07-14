@@ -48,7 +48,7 @@ func (l *UpdateHomepageHeroLogic) UpdateHomepageHero(req *types.UpdateHomepageHe
 		if err != nil {
 			return nil, err
 		}
-		assetsByID, err := l.svcCtx.MediaAssetModel.FindPublicApprovedByIDs(l.ctx, []uint64{assetID})
+		assetsByID, err := l.svcCtx.Models.Media.MediaAsset.FindPublicApprovedByIDs(l.ctx, []uint64{assetID})
 		if err != nil {
 			return nil, commonresponse.InternalServerError("查询已发布作品失败")
 		}
@@ -63,7 +63,7 @@ func (l *UpdateHomepageHeroLogic) UpdateHomepageHero(req *types.UpdateHomepageHe
 	}
 
 	previousValue := ""
-	current, err := l.svcCtx.SiteConfigModel.GetByKey(l.ctx, homepageLogic.SiteConfigKeyHero)
+	current, err := l.svcCtx.Models.Homepage.SiteConfig.GetByKey(l.ctx, homepageLogic.SiteConfigKeyHero)
 	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, commonresponse.InternalServerError("查询 Hero 配置失败")
 	}
@@ -79,7 +79,7 @@ func (l *UpdateHomepageHeroLogic) UpdateHomepageHero(req *types.UpdateHomepageHe
 		Before:         map[string]any{"key": homepageLogic.SiteConfigKeyHero, "value": previousValue},
 		After:          map[string]any{"key": homepageLogic.SiteConfigKeyHero, "value": valueJSON},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.SiteConfigModel.UpsertByKey(ctx, homepageLogic.SiteConfigKeyHero, valueJSON, adminUser.Id); err != nil {
+		if err := txSvcCtx.Models.Homepage.SiteConfig.UpsertByKey(ctx, homepageLogic.SiteConfigKeyHero, valueJSON, adminUser.Id); err != nil {
 			return commonresponse.InternalServerError("保存 Hero 配置失败")
 		}
 		return nil

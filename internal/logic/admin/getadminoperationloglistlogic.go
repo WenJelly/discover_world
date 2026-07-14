@@ -33,11 +33,11 @@ func (l *GetAdminOperationLogListLogic) GetAdminOperationLogList(req *types.Admi
 	if err != nil {
 		return nil, err
 	}
-	total, err := l.svcCtx.AdminOperationLogModel.CountByFilter(l.ctx, filter)
+	total, err := l.svcCtx.Models.Admin.AdminOperationLog.CountByFilter(l.ctx, filter)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询操作日志数量失败")
 	}
-	rows, err := l.svcCtx.AdminOperationLogModel.FindByFilter(l.ctx, filter, pageNum, pageSize)
+	rows, err := l.svcCtx.Models.Admin.AdminOperationLog.FindByFilter(l.ctx, filter, pageNum, pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询操作日志失败")
 	}

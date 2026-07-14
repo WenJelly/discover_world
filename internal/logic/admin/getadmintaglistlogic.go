@@ -30,11 +30,11 @@ func (l *GetAdminTagListLogic) GetAdminTagList(req *types.AdminTagQueryRequest) 
 	}
 	pageNum, pageSize := adminsupport.NormalizePage(req.PageNum, req.PageSize)
 	filter := taxonomymodel.TagFilter{Name: req.Name, TagType: req.TagType, Status: req.Status}
-	total, err := l.svcCtx.TagModel.CountByFilter(l.ctx, filter)
+	total, err := l.svcCtx.Models.Taxonomy.Tag.CountByFilter(l.ctx, filter)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询标签数量失败")
 	}
-	rows, err := l.svcCtx.TagModel.FindByFilter(l.ctx, filter, pageNum, pageSize)
+	rows, err := l.svcCtx.Models.Taxonomy.Tag.FindByFilter(l.ctx, filter, pageNum, pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询标签列表失败")
 	}

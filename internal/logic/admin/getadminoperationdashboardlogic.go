@@ -25,15 +25,15 @@ func (l *GetAdminOperationDashboardLogic) GetAdminOperationDashboard(_ *types.Ad
 	if _, err := adminsupport.RequireAdminCapability(l.ctx, l.svcCtx, adminsupport.CapabilityOperationManage); err != nil {
 		return nil, err
 	}
-	pendingMedia, err := l.svcCtx.MediaAssetModel.CountByWhere(l.ctx, "`status` <> 'deleted' and `deleted_at` is null and `audit_status` = ?", "pending")
+	pendingMedia, err := l.svcCtx.Models.Media.MediaAsset.CountByWhere(l.ctx, "`status` <> 'deleted' and `deleted_at` is null and `audit_status` = ?", "pending")
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询待审核媒体数失败")
 	}
-	openReports, err := l.svcCtx.ModerationReportModel.CountByFilter(l.ctx, moderationmodel.ModerationReportFilter{Status: "open"})
+	openReports, err := l.svcCtx.Models.Moderation.ModerationReport.CountByFilter(l.ctx, moderationmodel.ModerationReportFilter{Status: "open"})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询待处理举报数失败")
 	}
-	stats, err := l.svcCtx.SiteStatsModel.GetOverviewStats(l.ctx)
+	stats, err := l.svcCtx.Models.Statistics.SiteStats.GetOverviewStats(l.ctx)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询站点统计失败")
 	}

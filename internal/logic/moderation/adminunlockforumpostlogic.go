@@ -44,7 +44,7 @@ func (l *AdminUnlockForumPostLogic) AdminUnlockForumPost(req *types.AdminModerat
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.PostDiscussionModel.SetLocked(ctx, postID, false); err != nil {
+		if err := txSvcCtx.Models.Post.PostDiscussion.SetLocked(ctx, postID, false); err != nil {
 			return commonresponse.InternalServerError("unlock forum post failed")
 		}
 		return nil

@@ -71,10 +71,10 @@ func RequireAdminCapability(ctx context.Context, svcCtx *svc.ServiceContext, cap
 		return loginUser, nil
 	}
 	capability = strings.TrimSpace(capability)
-	if capability == "" || svcCtx.AdminRolePolicyModel == nil {
+	if capability == "" || svcCtx.Models.Admin.AdminRolePolicy == nil {
 		return nil, commonresponse.Forbidden("无后台权限")
 	}
-	ok, err := svcCtx.AdminRolePolicyModel.HasCapability(ctx, strings.TrimSpace(loginUser.Role), capability)
+	ok, err := svcCtx.Models.Admin.AdminRolePolicy.HasCapability(ctx, strings.TrimSpace(loginUser.Role), capability)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询后台权限失败")
 	}
@@ -105,7 +105,7 @@ func BuildAuditSnapshot(value any) (sql.NullString, error) {
 }
 
 func RecordOperation(ctx context.Context, svcCtx *svc.ServiceContext, input OperationLogInput) error {
-	if svcCtx == nil || svcCtx.AdminOperationLogModel == nil {
+	if svcCtx == nil || svcCtx.Models.Admin.AdminOperationLog == nil {
 		return commonresponse.InternalServerError("后台审计日志模型未初始化")
 	}
 	reason, err := NormalizeReason(input.Reason)
@@ -125,7 +125,7 @@ func RecordOperation(ctx context.Context, svcCtx *svc.ServiceContext, input Oper
 		return commonresponse.InternalServerError("生成操作元数据失败")
 	}
 
-	_, err = svcCtx.AdminOperationLogModel.Insert(ctx, &adminmodel.AdminOperationLog{
+	_, err = svcCtx.Models.Admin.AdminOperationLog.Insert(ctx, &adminmodel.AdminOperationLog{
 		OperatorUserId: input.OperatorUserID,
 		Action:         strings.TrimSpace(input.Action),
 		TargetType:     strings.TrimSpace(input.TargetType),

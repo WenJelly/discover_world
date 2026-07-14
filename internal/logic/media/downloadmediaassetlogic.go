@@ -56,7 +56,7 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 		}
 	}
 
-	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, assetID)
+	asset, err := l.svcCtx.Models.Media.MediaAsset.FindOneActive(l.ctx, assetID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("媒体资源不存在")
@@ -70,7 +70,7 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 		return nil, commonresponse.Forbidden("无权下载原图")
 	}
 
-	object, err := l.svcCtx.MediaObjectModel.FindOriginalByAssetID(l.ctx, asset.Id)
+	object, err := l.svcCtx.Models.Media.MediaObject.FindOriginalByAssetID(l.ctx, asset.Id)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("原图不存在")
@@ -78,7 +78,7 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 		return nil, commonresponse.InternalServerError("查询原图失败")
 	}
 
-	bucket, err := l.svcCtx.StorageBucketModel.FindOne(l.ctx, object.BucketId)
+	bucket, err := l.svcCtx.Models.Media.StorageBucket.FindOne(l.ctx, object.BucketId)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("原图存储桶不存在")
@@ -91,17 +91,17 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 		return nil, commonresponse.InternalServerError("原图访问地址不可用")
 	}
 
-	if err := l.svcCtx.EntityStatModel.IncrementCounter(l.ctx, targetTypeMediaAsset, asset.Id, "download_count", 1); err != nil {
+	if err := l.svcCtx.Models.Statistics.EntityStat.IncrementCounter(l.ctx, targetTypeMediaAsset, asset.Id, "download_count", 1); err != nil {
 		return nil, commonresponse.InternalServerError("更新下载量失败")
 	}
-	if l.svcCtx.EntityStatHourlyModel != nil {
-		if err := l.svcCtx.EntityStatHourlyModel.IncrementCounter(l.ctx, targetTypeMediaAsset, asset.Id, "download_count", 1); err != nil {
+	if l.svcCtx.Models.Statistics.EntityStatHourly != nil {
+		if err := l.svcCtx.Models.Statistics.EntityStatHourly.IncrementCounter(l.ctx, targetTypeMediaAsset, asset.Id, "download_count", 1); err != nil {
 			logx.WithContext(l.ctx).Errorf("record media hourly download stat failed: assetId=%d err=%v", asset.Id, err)
 		}
 	}
 	refreshMediaRanking(l.ctx, l.svcCtx, asset.Id)
 
-	stat, err := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypeMediaAsset, asset.Id)
+	stat, err := l.svcCtx.Models.Statistics.EntityStat.FindOneByTargetTypeTargetId(l.ctx, targetTypeMediaAsset, asset.Id)
 	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, commonresponse.InternalServerError("查询下载量失败")
 	}

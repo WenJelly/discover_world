@@ -70,34 +70,34 @@ func BuildAttributionRecord(ctx context.Context, resolver commonipgeo.Resolver, 
 }
 
 func RecordContentAttribution(ctx context.Context, svcCtx *svc.ServiceContext, targetType string, targetID uint64, actionType string, userID uint64) error {
-	if svcCtx == nil || !svcCtx.Config.IpGeo.Enabled || svcCtx.ContentIpAttributionModel == nil {
+	if svcCtx == nil || !svcCtx.Config.IpGeo.Enabled || svcCtx.Models.Moderation.ContentIpAttribution == nil {
 		return nil
 	}
 	record, ok, err := BuildAttributionRecord(ctx, svcCtx.IpGeoResolver, svcCtx.Config.IpGeo.HashSecret, targetType, targetID, actionType, userID)
 	if err != nil || !ok {
 		return err
 	}
-	return svcCtx.ContentIpAttributionModel.Upsert(ctx, record)
+	return svcCtx.Models.Moderation.ContentIpAttribution.Upsert(ctx, record)
 }
 
 func LoadRegionsByTarget(ctx context.Context, svcCtx *svc.ServiceContext, targetType string, targetIDs []uint64) (map[uint64]types.IpRegionResponse, error) {
 	resp := make(map[uint64]types.IpRegionResponse)
-	if svcCtx == nil || svcCtx.ContentIpAttributionModel == nil || len(targetIDs) == 0 {
+	if svcCtx == nil || svcCtx.Models.Moderation.ContentIpAttribution == nil || len(targetIDs) == 0 {
 		return resp, nil
 	}
-	records, err := svcCtx.ContentIpAttributionModel.FindByTargets(ctx, targetType, targetIDs, ActionTypeCreate)
+	records, err := svcCtx.Models.Moderation.ContentIpAttribution.FindByTargets(ctx, targetType, targetIDs, ActionTypeCreate)
 	if err != nil {
 		return nil, err
 	}
 	if targetType == TargetTypeMediaAsset {
-		uploadRecords, err := svcCtx.ContentIpAttributionModel.FindByTargets(ctx, targetType, targetIDs, ActionTypeUpload)
+		uploadRecords, err := svcCtx.Models.Moderation.ContentIpAttribution.FindByTargets(ctx, targetType, targetIDs, ActionTypeUpload)
 		if err != nil {
 			return nil, err
 		}
 		for id, record := range uploadRecords {
 			records[id] = record
 		}
-		directRecords, err := svcCtx.ContentIpAttributionModel.FindByTargets(ctx, targetType, targetIDs, ActionTypeDirectUploadComplete)
+		directRecords, err := svcCtx.Models.Moderation.ContentIpAttribution.FindByTargets(ctx, targetType, targetIDs, ActionTypeDirectUploadComplete)
 		if err != nil {
 			return nil, err
 		}

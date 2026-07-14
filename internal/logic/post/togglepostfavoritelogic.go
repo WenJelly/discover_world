@@ -48,19 +48,19 @@ func (l *TogglePostFavoriteLogic) TogglePostFavorite(req *types.TogglePostFavori
 	active := false
 	notificationCreated := false
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		nextActive, delta, err := txSvc.FavoriteModel.ToggleStatus(ctx, loginUser.Id, targetTypePost, post.Id)
+		nextActive, delta, err := txSvc.Models.Interaction.Favorite.ToggleStatus(ctx, loginUser.Id, targetTypePost, post.Id)
 		if err != nil {
 			return err
 		}
 		active = nextActive
-		if err := txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "favorite_count", delta); err != nil {
+		if err := txSvc.Models.Statistics.EntityStat.IncrementCounter(ctx, targetTypePost, post.Id, "favorite_count", delta); err != nil {
 			return err
 		}
-		if err := txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypePost, post.Id, "favorite_count", delta); err != nil {
+		if err := txSvc.Models.Statistics.EntityStatHourly.IncrementCounter(ctx, targetTypePost, post.Id, "favorite_count", delta); err != nil {
 			return err
 		}
 		if nextActive && post.UserId != loginUser.Id {
-			if _, err := txSvc.NotificationModel.Insert(ctx, &notificationmodel.Notification{
+			if _, err := txSvc.Models.Notification.Notification.Insert(ctx, &notificationmodel.Notification{
 				RecipientUserId: post.UserId,
 				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
 				EventType:       "post_favorite",
@@ -83,7 +83,7 @@ func (l *TogglePostFavoriteLogic) TogglePostFavorite(req *types.TogglePostFavori
 			l.Errorf("invalidate unread cache after post favorite notification failed: ownerId=%d err=%v", post.UserId, err)
 		}
 	}
-	stat, _ := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypePost, post.Id)
+	stat, _ := l.svcCtx.Models.Statistics.EntityStat.FindOneByTargetTypeTargetId(l.ctx, targetTypePost, post.Id)
 	return &types.PostToggleResponse{
 		Active:  active,
 		Stats:   buildStats(stat),

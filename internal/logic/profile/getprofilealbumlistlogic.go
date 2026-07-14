@@ -43,11 +43,11 @@ func (l *GetProfileAlbumListLogic) GetProfileAlbumList(req *types.ProfileAlbumLi
 		return nil, err
 	}
 
-	total, err := l.svcCtx.AlbumModel.CountByUser(l.ctx, target.Id, includePrivate)
+	total, err := l.svcCtx.Models.Profile.Album.CountByUser(l.ctx, target.Id, includePrivate)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询相册数量失败")
 	}
-	albums, err := l.svcCtx.AlbumModel.FindByUser(l.ctx, target.Id, includePrivate, pageSize, (pageNum-1)*pageSize)
+	albums, err := l.svcCtx.Models.Profile.Album.FindByUser(l.ctx, target.Id, includePrivate, pageSize, (pageNum-1)*pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询相册失败")
 	}
@@ -64,7 +64,7 @@ func (l *GetProfileAlbumListLogic) GetProfileAlbumList(req *types.ProfileAlbumLi
 		}
 	}
 
-	itemCounts, err := l.svcCtx.AssetLinkModel.CountActiveByOwners(l.ctx, ownerTypeAlbum, linkRoleAlbumItem, albumIDs)
+	itemCounts, err := l.svcCtx.Models.Media.AssetLink.CountActiveByOwners(l.ctx, ownerTypeAlbum, linkRoleAlbumItem, albumIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询相册图片数量失败")
 	}

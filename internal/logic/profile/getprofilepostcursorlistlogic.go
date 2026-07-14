@@ -48,7 +48,7 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 	}
 
 	visibleValues := access.VisibleValuesForLevel(accessLevel)
-	posts, err := l.svcCtx.PostModel.FindByUserBeforePinCursor(l.ctx, target.Id, visibleValues, cursor, pageSize+1)
+	posts, err := l.svcCtx.Models.Post.Post.FindByUserBeforePinCursor(l.ctx, target.Id, visibleValues, cursor, pageSize+1)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态失败")
 	}
@@ -65,7 +65,7 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 		}
 	}
 
-	assetIDsByPost, err := l.svcCtx.AssetLinkModel.FindActiveAssetIDsByOwners(l.ctx, ownerTypePost, linkRoleAttachment, postIDs)
+	assetIDsByPost, err := l.svcCtx.Models.Media.AssetLink.FindActiveAssetIDsByOwners(l.ctx, ownerTypePost, linkRoleAttachment, postIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态图片失败")
 	}
@@ -77,7 +77,7 @@ func (l *GetProfilePostCursorListLogic) GetProfilePostCursorList(req *types.Prof
 	if err != nil {
 		return nil, err
 	}
-	statsByPost, err := l.svcCtx.EntityStatModel.FindByTargetIDs(l.ctx, targetTypePost, postIDs)
+	statsByPost, err := l.svcCtx.Models.Statistics.EntityStat.FindByTargetIDs(l.ctx, targetTypePost, postIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询动态统计失败")
 	}

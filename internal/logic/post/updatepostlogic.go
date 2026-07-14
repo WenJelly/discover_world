@@ -40,7 +40,7 @@ func (l *UpdatePostLogic) UpdatePost(req *types.UpdatePostRequest) (*types.Profi
 	if err != nil {
 		return nil, err
 	}
-	existing, err := l.svcCtx.PostModel.FindOneActive(l.ctx, postID)
+	existing, err := l.svcCtx.Models.Post.Post.FindOneActive(l.ctx, postID)
 	if err != nil {
 		return nil, commonresponse.NotFound("post not found")
 	}
@@ -74,7 +74,7 @@ func (l *UpdatePostLogic) UpdatePost(req *types.UpdatePostRequest) (*types.Profi
 			return nil, err
 		}
 	} else {
-		imageIDs, err = l.svcCtx.AssetLinkModel.FindActiveAssetIDsByOwner(l.ctx, ownerTypePost, existing.Id, linkRoleAttachment, maxPostImageCount)
+		imageIDs, err = l.svcCtx.Models.Media.AssetLink.FindActiveAssetIDsByOwner(l.ctx, ownerTypePost, existing.Id, linkRoleAttachment, maxPostImageCount)
 		if err != nil {
 			return nil, commonresponse.InternalServerError("query post images failed")
 		}
@@ -92,11 +92,11 @@ func (l *UpdatePostLogic) UpdatePost(req *types.UpdatePostRequest) (*types.Profi
 	existing.Status = postStatusActive
 
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		if err := txSvc.PostModel.Update(ctx, existing); err != nil {
+		if err := txSvc.Models.Post.Post.Update(ctx, existing); err != nil {
 			return err
 		}
 		if replaceImages {
-			return txSvc.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, ownerTypePost, existing.Id, linkRoleAttachment, imageIDs)
+			return txSvc.Models.Media.AssetLink.ReplaceActiveAssetIDsByOwner(ctx, ownerTypePost, existing.Id, linkRoleAttachment, imageIDs)
 		}
 		return nil
 	})
@@ -104,7 +104,7 @@ func (l *UpdatePostLogic) UpdatePost(req *types.UpdatePostRequest) (*types.Profi
 		return nil, commonresponse.InternalServerError("update post failed")
 	}
 
-	updated, err := l.svcCtx.PostModel.FindOneActive(l.ctx, existing.Id)
+	updated, err := l.svcCtx.Models.Post.Post.FindOneActive(l.ctx, existing.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("load updated post failed")
 	}

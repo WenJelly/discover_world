@@ -45,7 +45,7 @@ func (l *AdminPinForumPostLogic) AdminPinForumPost(req *types.AdminModeratePostR
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.PostDiscussionModel.SetBoardPinned(ctx, postID, true, time.Now()); err != nil {
+		if err := txSvcCtx.Models.Post.PostDiscussion.SetBoardPinned(ctx, postID, true, time.Now()); err != nil {
 			return commonresponse.InternalServerError("pin forum post failed")
 		}
 		return nil

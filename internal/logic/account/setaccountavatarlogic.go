@@ -44,7 +44,7 @@ func (l *SetAccountAvatarLogic) SetAccountAvatar(req *types.SetAccountAvatarRequ
 	if err != nil {
 		return nil, err
 	}
-	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, assetID)
+	asset, err := l.svcCtx.Models.Media.MediaAsset.FindOneActive(l.ctx, assetID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("头像资源不存在")
@@ -60,7 +60,7 @@ func (l *SetAccountAvatarLogic) SetAccountAvatar(req *types.SetAccountAvatarRequ
 		return nil, err
 	}
 	profile.AvatarAssetId = sql.NullInt64{Int64: int64(assetID), Valid: true}
-	if err := l.svcCtx.UserProfileModel.Update(l.ctx, profile); err != nil {
+	if err := l.svcCtx.Models.Profile.UserProfile.Update(l.ctx, profile); err != nil {
 		return nil, commonresponse.InternalServerError("更新头像失败")
 	}
 

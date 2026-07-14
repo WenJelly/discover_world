@@ -14,19 +14,19 @@ func replaceAssetTags(ctx context.Context, svcCtx *svc.ServiceContext, assetID u
 	tags = normalizeTags(tags)
 	tagIDs := make([]uint64, 0, len(tags))
 	for _, name := range tags {
-		tag, err := svcCtx.TagModel.EnsureByName(ctx, name)
+		tag, err := svcCtx.Models.Taxonomy.Tag.EnsureByName(ctx, name)
 		if err != nil {
 			return err
 		}
 		tagIDs = append(tagIDs, tag.Id)
 	}
-	return svcCtx.TaggingModel.ReplaceTargetTags(ctx, targetTypeMediaAsset, assetID, tagIDs)
+	return svcCtx.Models.Taxonomy.Tagging.ReplaceTargetTags(ctx, targetTypeMediaAsset, assetID, tagIDs)
 }
 
 func ensureEntityStat(ctx context.Context, svcCtx *svc.ServiceContext, assetID uint64) {
-	_, err := svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(ctx, targetTypeMediaAsset, assetID)
+	_, err := svcCtx.Models.Statistics.EntityStat.FindOneByTargetTypeTargetId(ctx, targetTypeMediaAsset, assetID)
 	if errors.Is(err, sqlx.ErrNotFound) {
-		_, _ = svcCtx.EntityStatModel.Insert(ctx, &statisticsmodel.EntityStat{
+		_, _ = svcCtx.Models.Statistics.EntityStat.Insert(ctx, &statisticsmodel.EntityStat{
 			TargetType: targetTypeMediaAsset,
 			TargetId:   assetID,
 		})

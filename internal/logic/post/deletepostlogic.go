@@ -41,7 +41,7 @@ func (l *DeletePostLogic) DeletePost(req *types.DeletePostRequest) error {
 	if err != nil {
 		return err
 	}
-	post, err := l.svcCtx.PostModel.FindOneActive(l.ctx, postID)
+	post, err := l.svcCtx.Models.Post.Post.FindOneActive(l.ctx, postID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return commonresponse.NotFound("post not found")
@@ -53,10 +53,10 @@ func (l *DeletePostLogic) DeletePost(req *types.DeletePostRequest) error {
 	}
 
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		if err := txSvc.PostModel.SoftDelete(ctx, post.Id, time.Now()); err != nil {
+		if err := txSvc.Models.Post.Post.SoftDelete(ctx, post.Id, time.Now()); err != nil {
 			return err
 		}
-		return txSvc.AssetLinkModel.DeactivateByOwner(ctx, ownerTypePost, post.Id, linkRoleAttachment)
+		return txSvc.Models.Media.AssetLink.DeactivateByOwner(ctx, ownerTypePost, post.Id, linkRoleAttachment)
 	})
 	if err != nil {
 		return commonresponse.InternalServerError("delete post failed")

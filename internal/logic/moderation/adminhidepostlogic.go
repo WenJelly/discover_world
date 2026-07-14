@@ -44,7 +44,7 @@ func (l *AdminHidePostLogic) AdminHidePost(req *types.AdminModeratePostRequest) 
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.PostModel.SetStatus(ctx, postID, "hidden"); err != nil {
+		if err := txSvcCtx.Models.Post.Post.SetStatus(ctx, postID, "hidden"); err != nil {
 			return commonresponse.InternalServerError("hide post failed")
 		}
 		return nil

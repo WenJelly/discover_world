@@ -52,7 +52,7 @@ func main() {
 	server.Use(ctx.TokenRevocation)
 	cancelRankingRefresh, rankingRefreshDone := ranking.StartMediaRankingRefresher(
 		context.Background(),
-		ctx.EntityRankingModel,
+		ctx.Models.Statistics.EntityRanking,
 		ctx.Redis,
 		time.Duration(c.Redis.RankingLockSeconds)*time.Second,
 		c.Ranking.RefreshIntervalSeconds,

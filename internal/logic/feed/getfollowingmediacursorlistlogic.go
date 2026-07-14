@@ -43,7 +43,7 @@ func (l *GetFollowingMediaCursorListLogic) GetFollowingMediaCursorList(req *type
 		return nil, err
 	}
 
-	followingIDs, _, err := l.svcCtx.UserFollowModel.ListFollowingIDs(l.ctx, loginUser.Id, 0, maxFollowingSourceUsers)
+	followingIDs, _, err := l.svcCtx.Models.Follow.UserFollow.ListFollowingIDs(l.ctx, loginUser.Id, 0, maxFollowingSourceUsers)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query following users failed")
 	}
@@ -56,7 +56,7 @@ func (l *GetFollowingMediaCursorListLogic) GetFollowingMediaCursorList(req *type
 		}, nil
 	}
 
-	assets, err := l.svcCtx.MediaAssetModel.FindPublicWorkByOwnersBeforeID(l.ctx, followingIDs, cursor, pageSize+1)
+	assets, err := l.svcCtx.Models.Media.MediaAsset.FindPublicWorkByOwnersBeforeID(l.ctx, followingIDs, cursor, pageSize+1)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query following media failed")
 	}

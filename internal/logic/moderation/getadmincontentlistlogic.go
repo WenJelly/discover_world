@@ -72,11 +72,11 @@ func (l *GetAdminContentListLogic) listAdminPostContent(req *types.AdminContentQ
 		UserId:     userID,
 		SearchText: req.SearchText,
 	}
-	total, err := l.svcCtx.PostModel.CountAdminByFilter(l.ctx, filter)
+	total, err := l.svcCtx.Models.Post.Post.CountAdminByFilter(l.ctx, filter)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询内容总数失败")
 	}
-	rows, err := l.svcCtx.PostModel.FindAdminByFilter(l.ctx, filter, pageNum, pageSize)
+	rows, err := l.svcCtx.Models.Post.Post.FindAdminByFilter(l.ctx, filter, pageNum, pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询内容列表失败")
 	}
@@ -100,11 +100,11 @@ func (l *GetAdminContentListLogic) listAdminCommentContent(req *types.AdminConte
 		UserId:     userID,
 		SearchText: req.SearchText,
 	}
-	total, err := l.svcCtx.CommentRecordModel.CountByFilter(l.ctx, filter)
+	total, err := l.svcCtx.Models.Post.CommentRecord.CountByFilter(l.ctx, filter)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询内容总数失败")
 	}
-	rows, err := l.svcCtx.CommentRecordModel.FindByFilter(l.ctx, filter, pageNum, pageSize)
+	rows, err := l.svcCtx.Models.Post.CommentRecord.FindByFilter(l.ctx, filter, pageNum, pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询内容列表失败")
 	}
@@ -134,21 +134,21 @@ func (l *GetAdminContentListLogic) listMixedAdminContent(req *types.AdminContent
 		SearchText: req.SearchText,
 	}
 
-	postTotal, err := l.svcCtx.PostModel.CountAdminByFilter(l.ctx, postFilter)
+	postTotal, err := l.svcCtx.Models.Post.Post.CountAdminByFilter(l.ctx, postFilter)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询内容总数失败")
 	}
-	commentTotal, err := l.svcCtx.CommentRecordModel.CountByFilter(l.ctx, commentFilter)
+	commentTotal, err := l.svcCtx.Models.Post.CommentRecord.CountByFilter(l.ctx, commentFilter)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询内容总数失败")
 	}
 
 	scanSize := pageNum * pageSize
-	postRows, err := l.svcCtx.PostModel.FindAdminByFilter(l.ctx, postFilter, 1, scanSize)
+	postRows, err := l.svcCtx.Models.Post.Post.FindAdminByFilter(l.ctx, postFilter, 1, scanSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询内容列表失败")
 	}
-	commentRows, err := l.svcCtx.CommentRecordModel.FindByFilter(l.ctx, commentFilter, 1, scanSize)
+	commentRows, err := l.svcCtx.Models.Post.CommentRecord.FindByFilter(l.ctx, commentFilter, 1, scanSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询内容列表失败")
 	}
@@ -214,7 +214,7 @@ func (l *GetAdminContentListLogic) loadAdminContentAuthors(userIDs []uint64) (ma
 	if len(userIDs) == 0 {
 		return accountsByID, map[uint64]*profilemodel.UserProfile{}, nil
 	}
-	accounts, err := l.svcCtx.UserAccountModel.FindByIDs(l.ctx, userIDs)
+	accounts, err := l.svcCtx.Models.Account.UserAccount.FindByIDs(l.ctx, userIDs)
 	if err != nil {
 		return nil, nil, commonresponse.InternalServerError("查询作者账号失败")
 	}
@@ -223,7 +223,7 @@ func (l *GetAdminContentListLogic) loadAdminContentAuthors(userIDs []uint64) (ma
 			accountsByID[account.Id] = account
 		}
 	}
-	profiles, err := l.svcCtx.UserProfileModel.FindByUserIDs(l.ctx, userIDs)
+	profiles, err := l.svcCtx.Models.Profile.UserProfile.FindByUserIDs(l.ctx, userIDs)
 	if err != nil {
 		return nil, nil, commonresponse.InternalServerError("查询作者资料失败")
 	}

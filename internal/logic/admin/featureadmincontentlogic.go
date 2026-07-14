@@ -37,7 +37,7 @@ func (l *FeatureAdminContentLogic) FeatureAdminContent(req *types.AdminFeatureCo
 	if err != nil {
 		return err
 	}
-	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, targetID)
+	asset, err := l.svcCtx.Models.Media.MediaAsset.FindOneActive(l.ctx, targetID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return commonresponse.NotFound("媒体资源不存在")
@@ -47,7 +47,7 @@ func (l *FeatureAdminContentLogic) FeatureAdminContent(req *types.AdminFeatureCo
 	if asset.AuditStatus != "approved" || asset.AssetUsage != "work" {
 		return commonresponse.BadRequest("只能精选已审核通过的作品")
 	}
-	existing, err := l.svcCtx.AssetLinkModel.FindActiveAssetIDsByOwner(l.ctx, adminOwnerTypeSite, adminOwnerIDSite, adminLinkRoleFeatured, 100)
+	existing, err := l.svcCtx.Models.Media.AssetLink.FindActiveAssetIDsByOwner(l.ctx, adminOwnerTypeSite, adminOwnerIDSite, adminLinkRoleFeatured, 100)
 	if err != nil {
 		return commonresponse.InternalServerError("查询精选内容失败")
 	}
@@ -61,7 +61,7 @@ func (l *FeatureAdminContentLogic) FeatureAdminContent(req *types.AdminFeatureCo
 		Before:         map[string]any{"featuredIds": existing},
 		After:          map[string]any{"featuredIds": next},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, adminOwnerTypeSite, adminOwnerIDSite, adminLinkRoleFeatured, next); err != nil {
+		if err := txSvcCtx.Models.Media.AssetLink.ReplaceActiveAssetIDsByOwner(ctx, adminOwnerTypeSite, adminOwnerIDSite, adminLinkRoleFeatured, next); err != nil {
 			return commonresponse.InternalServerError("保存精选内容失败")
 		}
 		return nil

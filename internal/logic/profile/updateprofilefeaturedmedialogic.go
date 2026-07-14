@@ -47,7 +47,7 @@ func (l *UpdateProfileFeaturedMediaLogic) UpdateProfileFeaturedMedia(req *types.
 		return nil, err
 	}
 	if len(ids) > 0 {
-		assetsByID, err := l.svcCtx.MediaAssetModel.FindOwnerPublicApprovedByIDs(l.ctx, loginUser.Id, ids)
+		assetsByID, err := l.svcCtx.Models.Media.MediaAsset.FindOwnerPublicApprovedByIDs(l.ctx, loginUser.Id, ids)
 		if err != nil {
 			return nil, commonresponse.InternalServerError("查询已发布图片失败")
 		}
@@ -59,7 +59,7 @@ func (l *UpdateProfileFeaturedMediaLogic) UpdateProfileFeaturedMedia(req *types.
 	}
 
 	if err := l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		return txSvcCtx.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, ownerTypeUserProfile, userProfile.Id, linkRoleFeaturedMedia, ids)
+		return txSvcCtx.Models.Media.AssetLink.ReplaceActiveAssetIDsByOwner(ctx, ownerTypeUserProfile, userProfile.Id, linkRoleFeaturedMedia, ids)
 	}); err != nil {
 		return nil, commonresponse.InternalServerError("保存个人精选图片失败")
 	}

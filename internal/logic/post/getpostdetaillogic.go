@@ -44,10 +44,10 @@ func (l *GetPostDetailLogic) GetPostDetail(req *types.GetPostDetailRequest) (*ty
 		return nil, err
 	}
 	if err := l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		if err := txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "view_count", 1); err != nil {
+		if err := txSvc.Models.Statistics.EntityStat.IncrementCounter(ctx, targetTypePost, post.Id, "view_count", 1); err != nil {
 			return err
 		}
-		return txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypePost, post.Id, "view_count", 1)
+		return txSvc.Models.Statistics.EntityStatHourly.IncrementCounter(ctx, targetTypePost, post.Id, "view_count", 1)
 	}); err != nil {
 		return nil, commonresponse.InternalServerError("update post view count failed")
 	}

@@ -36,7 +36,7 @@ func (l *UpdateAdminTagLogic) UpdateAdminTag(req *types.AdminTagUpdateRequest) (
 	if err != nil {
 		return nil, err
 	}
-	tag, err := l.svcCtx.TagModel.FindOne(l.ctx, id)
+	tag, err := l.svcCtx.Models.Taxonomy.Tag.FindOne(l.ctx, id)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("标签不存在")
@@ -66,7 +66,7 @@ func (l *UpdateAdminTagLogic) UpdateAdminTag(req *types.AdminTagUpdateRequest) (
 		Before:         before,
 		After:          after,
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.TagModel.Update(ctx, tag); err != nil {
+		if err := txSvcCtx.Models.Taxonomy.Tag.Update(ctx, tag); err != nil {
 			return commonresponse.InternalServerError("更新标签失败")
 		}
 		return nil

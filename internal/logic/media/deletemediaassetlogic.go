@@ -46,7 +46,7 @@ func (l *DeleteMediaAssetLogic) DeleteMediaAsset(req *types.DeleteMediaAssetRequ
 		return err
 	}
 
-	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, id)
+	asset, err := l.svcCtx.Models.Media.MediaAsset.FindOneActive(l.ctx, id)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return commonresponse.NotFound("媒体资源不存在")
@@ -57,16 +57,16 @@ func (l *DeleteMediaAssetLogic) DeleteMediaAsset(req *types.DeleteMediaAssetRequ
 		return commonresponse.Forbidden("无权删除该媒体资源")
 	}
 
-	links, err := l.svcCtx.AssetLinkModel.FindActiveByAssetID(l.ctx, asset.Id)
+	links, err := l.svcCtx.Models.Media.AssetLink.FindActiveByAssetID(l.ctx, asset.Id)
 	if err != nil {
 		return commonresponse.InternalServerError("查询媒体引用失败")
 	}
 	references := buildMediaDeleteReferenceSummary(links)
-	avatarProfiles, err := l.svcCtx.UserProfileModel.FindAvatarReferencesByAssetID(l.ctx, asset.Id)
+	avatarProfiles, err := l.svcCtx.Models.Profile.UserProfile.FindAvatarReferencesByAssetID(l.ctx, asset.Id)
 	if err != nil {
 		return commonresponse.InternalServerError("查询头像引用失败")
 	}
-	coverAlbums, err := l.svcCtx.AlbumModel.FindCoverReferencesByAssetID(l.ctx, asset.Id)
+	coverAlbums, err := l.svcCtx.Models.Profile.Album.FindCoverReferencesByAssetID(l.ctx, asset.Id)
 	if err != nil {
 		return commonresponse.InternalServerError("查询相册封面引用失败")
 	}
@@ -82,15 +82,15 @@ func (l *DeleteMediaAssetLogic) DeleteMediaAsset(req *types.DeleteMediaAssetRequ
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
 		asset.Status = "deleted"
 		asset.DeletedAt = sql.NullTime{Time: time.Now(), Valid: true}
-		if err := txSvc.MediaAssetModel.Update(ctx, asset); err != nil {
+		if err := txSvc.Models.Media.MediaAsset.Update(ctx, asset); err != nil {
 			return err
 		}
 		refreshMediaRanking(ctx, txSvc, asset.Id)
-		if err := txSvc.MediaObjectModel.MarkDeletedByAssetID(ctx, asset.Id); err != nil {
+		if err := txSvc.Models.Media.MediaObject.MarkDeletedByAssetID(ctx, asset.Id); err != nil {
 			return err
 		}
 		if references.hasPostReferences() {
-			return txSvc.AssetLinkModel.DeactivateActiveByAssetIDAndOwnerRole(ctx, asset.Id, deleteReferenceOwnerPost, deleteReferenceRoleAttachment)
+			return txSvc.Models.Media.AssetLink.DeactivateActiveByAssetIDAndOwnerRole(ctx, asset.Id, deleteReferenceOwnerPost, deleteReferenceRoleAttachment)
 		}
 		return nil
 	})

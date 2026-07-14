@@ -53,7 +53,7 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 	if err != nil {
 		return nil, err
 	}
-	discussion, err := l.svcCtx.PostDiscussionModel.FindByPostID(l.ctx, post.Id)
+	discussion, err := l.svcCtx.Models.Post.PostDiscussion.FindByPostID(l.ctx, post.Id)
 	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, commonresponse.InternalServerError("query forum post failed")
 	}
@@ -64,7 +64,7 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 	var commentID uint64
 	notificationCreated := false
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		result, err := txSvc.CommentRecordModel.Insert(ctx, &postmodel.CommentRecord{
+		result, err := txSvc.Models.Post.CommentRecord.Insert(ctx, &postmodel.CommentRecord{
 			UserId:     loginUser.Id,
 			TargetType: targetTypePost,
 			TargetId:   post.Id,
@@ -82,17 +82,17 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 			return sql.ErrNoRows
 		}
 		commentID = uint64(id)
-		if err := txSvc.EntityStatModel.IncrementCounter(ctx, targetTypePost, post.Id, "comment_count", 1); err != nil {
+		if err := txSvc.Models.Statistics.EntityStat.IncrementCounter(ctx, targetTypePost, post.Id, "comment_count", 1); err != nil {
 			return err
 		}
-		if err := txSvc.EntityStatHourlyModel.IncrementCounter(ctx, targetTypePost, post.Id, "comment_count", 1); err != nil {
+		if err := txSvc.Models.Statistics.EntityStatHourly.IncrementCounter(ctx, targetTypePost, post.Id, "comment_count", 1); err != nil {
 			return err
 		}
-		if err := txSvc.PostDiscussionModel.TouchActivity(ctx, post.Id, time.Now()); err != nil {
+		if err := txSvc.Models.Post.PostDiscussion.TouchActivity(ctx, post.Id, time.Now()); err != nil {
 			return err
 		}
 		if post.UserId != loginUser.Id {
-			if _, err := txSvc.NotificationModel.Insert(ctx, &notificationmodel.Notification{
+			if _, err := txSvc.Models.Notification.Notification.Insert(ctx, &notificationmodel.Notification{
 				RecipientUserId: post.UserId,
 				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
 				EventType:       "post_comment",
@@ -117,7 +117,7 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 		}
 	}
 
-	comment, err := l.svcCtx.CommentRecordModel.FindOne(l.ctx, commentID)
+	comment, err := l.svcCtx.Models.Post.CommentRecord.FindOne(l.ctx, commentID)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("load post comment failed")
 	}

@@ -53,7 +53,7 @@ func (l *GetMediaAssetCursorListLogic) GetMediaAssetCursorList(req *types.Cursor
 		if err != nil {
 			return nil, err
 		}
-		assets, err = l.svcCtx.MediaAssetModel.FindByWhereBeforeHotScore(l.ctx, whereSQL, cursor.HotScore, cursor.ID, pageSize+1, args...)
+		assets, err = l.svcCtx.Models.Media.MediaAsset.FindByWhereBeforeHotScore(l.ctx, whereSQL, cursor.HotScore, cursor.ID, pageSize+1, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +62,7 @@ func (l *GetMediaAssetCursorListLogic) GetMediaAssetCursorList(req *types.Cursor
 		if err != nil {
 			return nil, err
 		}
-		assets, err = l.svcCtx.MediaAssetModel.FindByWhereBeforeRisingScore(l.ctx, whereSQL, cursor.RisingScore, cursor.ID, pageSize+1, args...)
+		assets, err = l.svcCtx.Models.Media.MediaAsset.FindByWhereBeforeRisingScore(l.ctx, whereSQL, cursor.RisingScore, cursor.ID, pageSize+1, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +71,7 @@ func (l *GetMediaAssetCursorListLogic) GetMediaAssetCursorList(req *types.Cursor
 		if err != nil {
 			return nil, err
 		}
-		assets, err = l.svcCtx.MediaAssetModel.FindByWhereBeforeCreatedAt(l.ctx, whereSQL, cursor.CreatedAt, cursor.ID, pageSize+1, args...)
+		assets, err = l.svcCtx.Models.Media.MediaAsset.FindByWhereBeforeCreatedAt(l.ctx, whereSQL, cursor.CreatedAt, cursor.ID, pageSize+1, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +80,7 @@ func (l *GetMediaAssetCursorListLogic) GetMediaAssetCursorList(req *types.Cursor
 		if err != nil {
 			return nil, err
 		}
-		assets, err = l.svcCtx.MediaAssetModel.FindByWhereBeforeID(l.ctx, whereSQL, "`id` desc", int64(cursorID), pageSize+1, args...)
+		assets, err = l.svcCtx.Models.Media.MediaAsset.FindByWhereBeforeID(l.ctx, whereSQL, "`id` desc", int64(cursorID), pageSize+1, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -96,13 +96,13 @@ func (l *GetMediaAssetCursorListLogic) GetMediaAssetCursorList(req *types.Cursor
 		lastAssetID := assets[len(assets)-1].Id
 		switch sort {
 		case mediaCursorSortHot:
-			hotScore, err := l.svcCtx.MediaAssetModel.FindHotScoreByID(l.ctx, lastAssetID)
+			hotScore, err := l.svcCtx.Models.Media.MediaAsset.FindHotScoreByID(l.ctx, lastAssetID)
 			if err != nil {
 				return nil, err
 			}
 			nextCursor, err = encodeHotMediaCursor(lastAssetID, hotScore)
 		case mediaCursorSortRising:
-			risingScore, err := l.svcCtx.MediaAssetModel.FindRisingScoreByID(l.ctx, lastAssetID)
+			risingScore, err := l.svcCtx.Models.Media.MediaAsset.FindRisingScoreByID(l.ctx, lastAssetID)
 			if err != nil {
 				return nil, err
 			}

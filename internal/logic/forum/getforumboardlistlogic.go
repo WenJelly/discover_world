@@ -36,7 +36,7 @@ func (l *GetForumBoardListLogic) GetForumBoardList(req *types.ForumBoardListRequ
 		return nil, err
 	}
 
-	boards, err := l.svcCtx.ForumBoardModel.FindActive(l.ctx, pageSize)
+	boards, err := l.svcCtx.Models.Forum.ForumBoard.FindActive(l.ctx, pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query forum boards failed")
 	}

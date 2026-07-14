@@ -33,11 +33,11 @@ func (l *GetAdminModerationReportListLogic) GetAdminModerationReportList(req *ty
 	if err != nil {
 		return nil, err
 	}
-	total, err := l.svcCtx.ModerationReportModel.CountByFilter(l.ctx, filter)
+	total, err := l.svcCtx.Models.Moderation.ModerationReport.CountByFilter(l.ctx, filter)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询举报数量失败")
 	}
-	rows, err := l.svcCtx.ModerationReportModel.FindByFilter(l.ctx, filter, pageNum, pageSize)
+	rows, err := l.svcCtx.Models.Moderation.ModerationReport.FindByFilter(l.ctx, filter, pageNum, pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询举报列表失败")
 	}

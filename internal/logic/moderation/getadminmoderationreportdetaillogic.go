@@ -33,7 +33,7 @@ func (l *GetAdminModerationReportDetailLogic) GetAdminModerationReportDetail(req
 	if err != nil {
 		return nil, err
 	}
-	row, err := l.svcCtx.ModerationReportModel.FindOne(l.ctx, id)
+	row, err := l.svcCtx.Models.Moderation.ModerationReport.FindOne(l.ctx, id)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("举报不存在")

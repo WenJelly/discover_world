@@ -42,7 +42,7 @@ func (l *GetNotificationCursorListLogic) GetNotificationCursorList(req *types.No
 		return nil, err
 	}
 
-	rows, err := l.svcCtx.NotificationModel.FindByRecipientBeforeID(l.ctx, loginUser.Id, cursor, pageSize+1)
+	rows, err := l.svcCtx.Models.Notification.Notification.FindByRecipientBeforeID(l.ctx, loginUser.Id, cursor, pageSize+1)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query notifications failed")
 	}

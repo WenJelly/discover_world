@@ -41,14 +41,14 @@ func (l *MergeAdminTagLogic) MergeAdminTag(req *types.AdminTagMergeRequest) (*ty
 	if sourceID == targetID {
 		return nil, commonresponse.BadRequest("sourceTagId 和 targetTagId 不能相同")
 	}
-	source, err := l.svcCtx.TagModel.FindOne(l.ctx, sourceID)
+	source, err := l.svcCtx.Models.Taxonomy.Tag.FindOne(l.ctx, sourceID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("源标签不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询源标签失败")
 	}
-	target, err := l.svcCtx.TagModel.FindOne(l.ctx, targetID)
+	target, err := l.svcCtx.Models.Taxonomy.Tag.FindOne(l.ctx, targetID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("目标标签不存在")
@@ -67,10 +67,10 @@ func (l *MergeAdminTagLogic) MergeAdminTag(req *types.AdminTagMergeRequest) (*ty
 		Before:         before,
 		After:          map[string]any{"source": buildAdminTagResponse(source), "target": resp},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.TaggingModel.MoveTaggings(ctx, sourceID, targetID); err != nil {
+		if err := txSvcCtx.Models.Taxonomy.Tagging.MoveTaggings(ctx, sourceID, targetID); err != nil {
 			return commonresponse.InternalServerError("迁移标签关联失败")
 		}
-		if err := txSvcCtx.TagModel.Update(ctx, source); err != nil {
+		if err := txSvcCtx.Models.Taxonomy.Tag.Update(ctx, source); err != nil {
 			return commonresponse.InternalServerError("禁用源标签失败")
 		}
 		return nil

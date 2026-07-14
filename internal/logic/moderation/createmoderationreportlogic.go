@@ -53,7 +53,7 @@ func (l *CreateModerationReportLogic) CreateModerationReport(req *types.CreateMo
 		return nil, err
 	}
 
-	result, err := l.svcCtx.ModerationReportModel.Insert(l.ctx, &moderationmodel.ModerationReport{
+	result, err := l.svcCtx.Models.Moderation.ModerationReport.Insert(l.ctx, &moderationmodel.ModerationReport{
 		ReporterUserId: loginUser.Id,
 		TargetType:     targetType,
 		TargetId:       targetID,

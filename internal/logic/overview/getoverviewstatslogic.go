@@ -28,7 +28,7 @@ func NewGetOverviewStatsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *GetOverviewStatsLogic) GetOverviewStats() (resp *types.OverviewStatsResponse, err error) {
-	stats, err := l.svcCtx.SiteStatsModel.GetOverviewStats(l.ctx)
+	stats, err := l.svcCtx.Models.Statistics.SiteStats.GetOverviewStats(l.ctx)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询站点统计失败")
 	}

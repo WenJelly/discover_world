@@ -45,7 +45,7 @@ func (l *AdminUnpinForumPostLogic) AdminUnpinForumPost(req *types.AdminModerateP
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.PostDiscussionModel.SetBoardPinned(ctx, postID, false, time.Time{}); err != nil {
+		if err := txSvcCtx.Models.Post.PostDiscussion.SetBoardPinned(ctx, postID, false, time.Time{}); err != nil {
 			return commonresponse.InternalServerError("unpin forum post failed")
 		}
 		return nil

@@ -41,7 +41,7 @@ func (l *GetUnreadNotificationCountLogic) GetUnreadNotificationCount(req *types.
 			return &types.UnreadNotificationCountResponse{UnreadCount: count}, nil
 		}
 	}
-	count, err := l.svcCtx.NotificationModel.CountUnread(l.ctx, loginUser.Id)
+	count, err := l.svcCtx.Models.Notification.Notification.CountUnread(l.ctx, loginUser.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("count unread notifications failed")
 	}

@@ -43,7 +43,7 @@ func (l *GetFollowingPostCursorListLogic) GetFollowingPostCursorList(req *types.
 		return nil, err
 	}
 
-	followingIDs, _, err := l.svcCtx.UserFollowModel.ListFollowingIDs(l.ctx, loginUser.Id, 0, maxFollowingSourceUsers)
+	followingIDs, _, err := l.svcCtx.Models.Follow.UserFollow.ListFollowingIDs(l.ctx, loginUser.Id, 0, maxFollowingSourceUsers)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query following users failed")
 	}
@@ -56,7 +56,7 @@ func (l *GetFollowingPostCursorListLogic) GetFollowingPostCursorList(req *types.
 		}, nil
 	}
 
-	posts, err := l.svcCtx.PostModel.FindPublicByAuthorsBeforeCursor(l.ctx, followingIDs, cursor, pageSize+1)
+	posts, err := l.svcCtx.Models.Post.Post.FindPublicByAuthorsBeforeCursor(l.ctx, followingIDs, cursor, pageSize+1)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query following posts failed")
 	}

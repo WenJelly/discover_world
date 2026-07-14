@@ -61,7 +61,7 @@ func nullStringValue(value sql.NullString) string {
 }
 
 func loadFollowTarget(ctx context.Context, svcCtx *svc.ServiceContext, targetID uint64) (*accountmodel.UserAccount, error) {
-	target, err := svcCtx.UserAccountModel.FindOneActive(ctx, targetID)
+	target, err := svcCtx.Models.Account.UserAccount.FindOneActive(ctx, targetID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("账号不存在")
@@ -86,17 +86,17 @@ func buildFollowStatus(ctx context.Context, svcCtx *svc.ServiceContext, loginUse
 		return &types.FollowStatusResponse{}, nil
 	}
 
-	followerCount, err := svcCtx.UserFollowModel.CountFollowers(ctx, target.Id)
+	followerCount, err := svcCtx.Models.Follow.UserFollow.CountFollowers(ctx, target.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询粉丝数失败")
 	}
-	followingCount, err := svcCtx.UserFollowModel.CountFollowing(ctx, target.Id)
+	followingCount, err := svcCtx.Models.Follow.UserFollow.CountFollowing(ctx, target.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询关注数失败")
 	}
 	isFollowing := false
 	if loginUser != nil && loginUser.Id != target.Id {
-		isFollowing, err = svcCtx.UserFollowModel.IsFollowing(ctx, loginUser.Id, target.Id)
+		isFollowing, err = svcCtx.Models.Follow.UserFollow.IsFollowing(ctx, loginUser.Id, target.Id)
 		if err != nil {
 			return nil, commonresponse.InternalServerError("查询关注状态失败")
 		}
@@ -137,11 +137,11 @@ func buildPublicAccountSummaries(ctx context.Context, svcCtx *svc.ServiceContext
 		return []types.AccountSummary{}, nil
 	}
 
-	accounts, err := svcCtx.UserAccountModel.FindByIDs(ctx, userIDs)
+	accounts, err := svcCtx.Models.Account.UserAccount.FindByIDs(ctx, userIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询账号列表失败")
 	}
-	profiles, err := svcCtx.UserProfileModel.FindByUserIDs(ctx, userIDs)
+	profiles, err := svcCtx.Models.Profile.UserProfile.FindByUserIDs(ctx, userIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询账号资料失败")
 	}

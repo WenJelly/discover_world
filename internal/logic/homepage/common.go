@@ -76,7 +76,7 @@ func buildHeroConfig(ctx context.Context, svcCtx *svc.ServiceContext, variant ty
 	hero.FocalX = payload.FocalX
 	hero.FocalY = payload.FocalY
 
-	assetsByID, err := svcCtx.MediaAssetModel.FindPublicApprovedByIDs(ctx, []uint64{payload.AssetId})
+	assetsByID, err := svcCtx.Models.Media.MediaAsset.FindPublicApprovedByIDs(ctx, []uint64{payload.AssetId})
 	if err != nil {
 		return hero, commonresponse.InternalServerError("查询 Hero 图失败")
 	}
@@ -99,7 +99,7 @@ func buildHeroConfig(ctx context.Context, svcCtx *svc.ServiceContext, variant ty
 }
 
 func buildFeaturedList(ctx context.Context, svcCtx *svc.ServiceContext, variant types.MediaVariantRequest) ([]types.MediaAssetResponse, error) {
-	assetIDs, err := svcCtx.AssetLinkModel.FindActiveAssetIDsByOwner(ctx, OwnerTypeSite, OwnerIDSite, LinkRoleHomepageFeatured, MaxHomepageFeaturedCount)
+	assetIDs, err := svcCtx.Models.Media.AssetLink.FindActiveAssetIDsByOwner(ctx, OwnerTypeSite, OwnerIDSite, LinkRoleHomepageFeatured, MaxHomepageFeaturedCount)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询首页精选失败")
 	}
@@ -107,7 +107,7 @@ func buildFeaturedList(ctx context.Context, svcCtx *svc.ServiceContext, variant 
 		return []types.MediaAssetResponse{}, nil
 	}
 
-	assetsByID, err := svcCtx.MediaAssetModel.FindPublicApprovedByIDs(ctx, assetIDs)
+	assetsByID, err := svcCtx.Models.Media.MediaAsset.FindPublicApprovedByIDs(ctx, assetIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")
 	}
@@ -132,7 +132,7 @@ func buildFeaturedList(ctx context.Context, svcCtx *svc.ServiceContext, variant 
 // loadHeroPayload reads and parses the stored hero config, returning nil when
 // nothing is configured yet.
 func loadHeroPayload(ctx context.Context, svcCtx *svc.ServiceContext) (*heroConfigPayload, error) {
-	config, err := svcCtx.SiteConfigModel.GetByKey(ctx, SiteConfigKeyHero)
+	config, err := svcCtx.Models.Homepage.SiteConfig.GetByKey(ctx, SiteConfigKeyHero)
 	if err != nil {
 		if err == sqlx.ErrNotFound {
 			return nil, nil

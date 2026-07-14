@@ -51,7 +51,7 @@ func (l *GetPostCommentCursorListLogic) GetPostCommentCursorList(req *types.Post
 		return nil, err
 	}
 
-	comments, err := l.svcCtx.CommentRecordModel.FindActiveByTargetBeforeID(l.ctx, targetTypePost, postID, int64(cursorID), pageSize+1)
+	comments, err := l.svcCtx.Models.Post.CommentRecord.FindActiveByTargetBeforeID(l.ctx, targetTypePost, postID, int64(cursorID), pageSize+1)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post comments failed")
 	}

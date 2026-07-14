@@ -44,7 +44,7 @@ func (l *AdminRestorePostLogic) AdminRestorePost(req *types.AdminModeratePostReq
 		Reason:         req.Reason,
 		Metadata:       map[string]any{"reportId": req.ReportId},
 	}, func(ctx context.Context, txSvcCtx *svc.ServiceContext) error {
-		if err := txSvcCtx.PostModel.SetStatus(ctx, postID, "active"); err != nil {
+		if err := txSvcCtx.Models.Post.Post.SetStatus(ctx, postID, "active"); err != nil {
 			return commonresponse.InternalServerError("restore post failed")
 		}
 		return nil

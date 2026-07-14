@@ -116,7 +116,7 @@ func validatePostImages(ctx context.Context, svcCtx *svc.ServiceContext, ownerID
 	if len(imageIDs) == 0 {
 		return nil
 	}
-	assets, err := svcCtx.MediaAssetModel.FindByIDs(ctx, imageIDs)
+	assets, err := svcCtx.Models.Media.MediaAsset.FindByIDs(ctx, imageIDs)
 	if err != nil {
 		return commonresponse.InternalServerError("query images failed")
 	}
@@ -194,7 +194,7 @@ func buildForumPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, di
 			postIDs = append(postIDs, discussion.PostId)
 		}
 	}
-	postsByID, err := svcCtx.PostModel.FindByIDs(ctx, postIDs)
+	postsByID, err := svcCtx.Models.Post.Post.FindByIDs(ctx, postIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query forum posts failed")
 	}
@@ -224,7 +224,7 @@ func buildForumPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, di
 			continue
 		}
 		discussion := orderedDiscussions[index]
-		board, err := svcCtx.ForumBoardModel.FindOneActiveByID(ctx, discussion.BoardId)
+		board, err := svcCtx.Models.Forum.ForumBoard.FindOneActiveByID(ctx, discussion.BoardId)
 		if err != nil {
 			if err == sqlx.ErrNotFound {
 				continue

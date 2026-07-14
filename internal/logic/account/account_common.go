@@ -78,19 +78,19 @@ func loadDetailAccountResponse(ctx context.Context, svcCtx *svc.ServiceContext, 
 	if err != nil {
 		return nil, err
 	}
-	stats, err := svcCtx.MediaAssetModel.CountStatsByOwner(ctx, account.Id)
+	stats, err := svcCtx.Models.Media.MediaAsset.CountStatsByOwner(ctx, account.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询媒体资源统计失败")
 	}
-	publicMediaAssetCount, err := svcCtx.MediaAssetModel.CountPublicApprovedByOwner(ctx, account.Id)
+	publicMediaAssetCount, err := svcCtx.Models.Media.MediaAsset.CountPublicApprovedByOwner(ctx, account.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询公开媒体资源统计失败")
 	}
-	followerCount, err := svcCtx.UserFollowModel.CountFollowers(ctx, account.Id)
+	followerCount, err := svcCtx.Models.Follow.UserFollow.CountFollowers(ctx, account.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询粉丝数失败")
 	}
-	followingCount, err := svcCtx.UserFollowModel.CountFollowing(ctx, account.Id)
+	followingCount, err := svcCtx.Models.Follow.UserFollow.CountFollowing(ctx, account.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询关注数失败")
 	}
@@ -144,7 +144,7 @@ func isAdminAccountForDetail(svcCtx *svc.ServiceContext, account *accountmodel.U
 }
 
 func ensureUserProfile(ctx context.Context, svcCtx *svc.ServiceContext, account *accountmodel.UserAccount) (*profilemodel.UserProfile, error) {
-	profile, err := svcCtx.UserProfileModel.FindOneByUserId(ctx, account.Id)
+	profile, err := svcCtx.Models.Profile.UserProfile.FindOneByUserId(ctx, account.Id)
 	if err == nil {
 		return profile, nil
 	}
@@ -156,10 +156,10 @@ func ensureUserProfile(ctx context.Context, svcCtx *svc.ServiceContext, account 
 		UserId:   account.Id,
 		Nickname: optionalString(account.Username),
 	}
-	if _, err := svcCtx.UserProfileModel.Insert(ctx, profile); err != nil {
+	if _, err := svcCtx.Models.Profile.UserProfile.Insert(ctx, profile); err != nil {
 		return nil, commonresponse.InternalServerError("创建用户资料失败")
 	}
-	return svcCtx.UserProfileModel.FindOneByUserId(ctx, account.Id)
+	return svcCtx.Models.Profile.UserProfile.FindOneByUserId(ctx, account.Id)
 }
 
 func buildLoginResponse(token string, detail *types.DetailAccountResponse) *types.LoginResponse {
@@ -308,7 +308,7 @@ func ensureEmailAvailable(ctx context.Context, svcCtx *svc.ServiceContext, accou
 	if strings.TrimSpace(email) == "" {
 		return nil
 	}
-	existing, err := svcCtx.UserAccountModel.FindOneByEmail(ctx, sql.NullString{String: email, Valid: true})
+	existing, err := svcCtx.Models.Account.UserAccount.FindOneByEmail(ctx, sql.NullString{String: email, Valid: true})
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil
@@ -325,7 +325,7 @@ func ensureUsernameAvailable(ctx context.Context, svcCtx *svc.ServiceContext, ac
 	if strings.TrimSpace(username) == "" {
 		return nil
 	}
-	existing, err := svcCtx.UserAccountModel.FindOneByUsername(ctx, username)
+	existing, err := svcCtx.Models.Account.UserAccount.FindOneByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil
@@ -366,7 +366,7 @@ func updateAccountByAdmin(ctx context.Context, svcCtx *svc.ServiceContext, req *
 	if err != nil {
 		return nil, err
 	}
-	account, err := svcCtx.UserAccountModel.FindOne(ctx, id)
+	account, err := svcCtx.Models.Account.UserAccount.FindOne(ctx, id)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("账号不存在")
@@ -384,10 +384,10 @@ func updateAccountByAdmin(ctx context.Context, svcCtx *svc.ServiceContext, req *
 	if err := applyProfilePatch(profile, req.Nickname, req.Bio); err != nil {
 		return nil, err
 	}
-	if err := svcCtx.UserProfileModel.Update(ctx, profile); err != nil {
+	if err := svcCtx.Models.Profile.UserProfile.Update(ctx, profile); err != nil {
 		return nil, commonresponse.InternalServerError("更新用户资料失败")
 	}
-	if err := svcCtx.UserAccountModel.Update(ctx, account); err != nil {
+	if err := svcCtx.Models.Account.UserAccount.Update(ctx, account); err != nil {
 		return nil, commonresponse.InternalServerError("更新账号失败")
 	}
 	return loadDetailAccountResponse(ctx, svcCtx, account)

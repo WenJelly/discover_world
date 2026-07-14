@@ -36,7 +36,7 @@ func (l *CancelFollowLogic) CancelFollow(req *types.FollowTargetRequest) (*types
 	if err != nil {
 		return nil, err
 	}
-	if err := l.svcCtx.UserFollowModel.Unfollow(l.ctx, loginUser.Id, target.Id); err != nil {
+	if err := l.svcCtx.Models.Follow.UserFollow.Unfollow(l.ctx, loginUser.Id, target.Id); err != nil {
 		return nil, err
 	}
 	return buildFollowStatus(l.ctx, l.svcCtx, loginUser, target)

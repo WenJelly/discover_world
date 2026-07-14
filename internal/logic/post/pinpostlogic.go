@@ -42,7 +42,7 @@ func (l *PinPostLogic) PinPost(req *types.PinPostRequest) (*types.ProfilePostRes
 		return nil, err
 	}
 
-	post, err := l.svcCtx.PostModel.FindOneActive(l.ctx, postID)
+	post, err := l.svcCtx.Models.Post.Post.FindOneActive(l.ctx, postID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("post not found")
@@ -53,10 +53,10 @@ func (l *PinPostLogic) PinPost(req *types.PinPostRequest) (*types.ProfilePostRes
 		return nil, commonresponse.Forbidden("no permission to pin this post")
 	}
 
-	if err := l.svcCtx.PostModel.SetPinned(l.ctx, post.Id, true, time.Now()); err != nil {
+	if err := l.svcCtx.Models.Post.Post.SetPinned(l.ctx, post.Id, true, time.Now()); err != nil {
 		return nil, commonresponse.InternalServerError("pin post failed")
 	}
-	updated, err := l.svcCtx.PostModel.FindOneActive(l.ctx, post.Id)
+	updated, err := l.svcCtx.Models.Post.Post.FindOneActive(l.ctx, post.Id)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("load pinned post failed")
 	}

@@ -51,7 +51,7 @@ func (l *LoginAccountLogic) LoginAccount(req *types.LoginRequest) (resp *types.L
 		}
 	}
 
-	account, err := l.svcCtx.UserAccountModel.FindOneByEmailCaseSensitive(l.ctx, sql.NullString{String: email, Valid: true})
+	account, err := l.svcCtx.Models.Account.UserAccount.FindOneByEmailCaseSensitive(l.ctx, sql.NullString{String: email, Valid: true})
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.Unauthorized("邮箱或密码错误")
@@ -69,7 +69,7 @@ func (l *LoginAccountLogic) LoginAccount(req *types.LoginRequest) (resp *types.L
 	if err != nil {
 		return nil, commonresponse.InternalServerError("生成登录令牌失败")
 	}
-	_ = l.svcCtx.UserAccountModel.UpdateLastLogin(l.ctx, account.Id, time.Now())
+	_ = l.svcCtx.Models.Account.UserAccount.UpdateLastLogin(l.ctx, account.Id, time.Now())
 
 	detail, err := loadDetailAccountResponse(l.ctx, l.svcCtx, account)
 	if err != nil {

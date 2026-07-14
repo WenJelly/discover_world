@@ -307,7 +307,7 @@ func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*accountmod
 }
 
 func loadVisiblePost(ctx context.Context, svcCtx *svc.ServiceContext, postID uint64, viewer *accountmodel.UserAccount) (*postmodel.Post, error) {
-	post, err := svcCtx.PostModel.FindOneActive(ctx, postID)
+	post, err := svcCtx.Models.Post.Post.FindOneActive(ctx, postID)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("post not found")
@@ -346,7 +346,7 @@ func validatePostImages(ctx context.Context, svcCtx *svc.ServiceContext, ownerID
 		return commonresponse.BadRequest("image count cannot exceed 9")
 	}
 
-	assets, err := svcCtx.MediaAssetModel.FindByIDs(ctx, imageIDs)
+	assets, err := svcCtx.Models.Media.MediaAsset.FindByIDs(ctx, imageIDs)
 	if err != nil {
 		return commonresponse.InternalServerError("query images failed")
 	}
@@ -428,11 +428,11 @@ func buildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 			userIDs = append(userIDs, post.UserId)
 		}
 	}
-	accounts, err := svcCtx.UserAccountModel.FindByIDs(ctx, userIDs)
+	accounts, err := svcCtx.Models.Account.UserAccount.FindByIDs(ctx, userIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post authors failed")
 	}
-	profiles, err := svcCtx.UserProfileModel.FindByUserIDs(ctx, userIDs)
+	profiles, err := svcCtx.Models.Profile.UserProfile.FindByUserIDs(ctx, userIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post author profiles failed")
 	}
@@ -488,7 +488,7 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 		}
 	}
 
-	assetIDsByPost, err := svcCtx.AssetLinkModel.FindActiveAssetIDsByOwners(ctx, ownerTypePost, linkRoleAttachment, postIDs)
+	assetIDsByPost, err := svcCtx.Models.Media.AssetLink.FindActiveAssetIDsByOwners(ctx, ownerTypePost, linkRoleAttachment, postIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post images failed")
 	}
@@ -500,7 +500,7 @@ func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts [
 	if err != nil {
 		return nil, err
 	}
-	statsByPost, err := svcCtx.EntityStatModel.FindByTargetIDs(ctx, targetTypePost, postIDs)
+	statsByPost, err := svcCtx.Models.Statistics.EntityStat.FindByTargetIDs(ctx, targetTypePost, postIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post stats failed")
 	}
@@ -566,7 +566,7 @@ func nonNilAccountSummaries(list []types.AccountSummary) []types.AccountSummary 
 
 func loadPostLikedBySummaries(ctx context.Context, svcCtx *svc.ServiceContext, postIDs []uint64) (map[uint64][]types.AccountSummary, error) {
 	resp := make(map[uint64][]types.AccountSummary)
-	likedUserIDsByPost, err := svcCtx.ReactionModel.FindActiveUserIDsByTargets(ctx, targetTypePost, postIDs, defaultReaction, maxPostLikedByCount)
+	likedUserIDsByPost, err := svcCtx.Models.Interaction.Reaction.FindActiveUserIDsByTargets(ctx, targetTypePost, postIDs, defaultReaction, maxPostLikedByCount)
 	if err != nil {
 		return nil, err
 	}
@@ -578,11 +578,11 @@ func loadPostLikedBySummaries(ctx context.Context, svcCtx *svc.ServiceContext, p
 	for _, ids := range likedUserIDsByPost {
 		userIDs = append(userIDs, ids...)
 	}
-	accounts, err := svcCtx.UserAccountModel.FindByIDs(ctx, userIDs)
+	accounts, err := svcCtx.Models.Account.UserAccount.FindByIDs(ctx, userIDs)
 	if err != nil {
 		return nil, err
 	}
-	profiles, err := svcCtx.UserProfileModel.FindByUserIDs(ctx, userIDs)
+	profiles, err := svcCtx.Models.Profile.UserProfile.FindByUserIDs(ctx, userIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -619,11 +619,11 @@ func loadPostViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer
 		return state, nil
 	}
 
-	liked, err := svcCtx.ReactionModel.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs, defaultReaction)
+	liked, err := svcCtx.Models.Interaction.Reaction.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs, defaultReaction)
 	if err != nil {
 		return state, err
 	}
-	favorited, err := svcCtx.FavoriteModel.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs)
+	favorited, err := svcCtx.Models.Interaction.Favorite.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypePost, postIDs)
 	if err != nil {
 		return state, err
 	}
@@ -645,7 +645,7 @@ func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, asse
 	if len(assetIDs) == 0 {
 		return resp, nil
 	}
-	assetsByID, err := svcCtx.MediaAssetModel.FindByIDs(ctx, assetIDs)
+	assetsByID, err := svcCtx.Models.Media.MediaAsset.FindByIDs(ctx, assetIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query images failed")
 	}
@@ -713,11 +713,11 @@ func buildCommentResponses(ctx context.Context, svcCtx *svc.ServiceContext, comm
 			userIDs = append(userIDs, comment.UserId)
 		}
 	}
-	accounts, err := svcCtx.UserAccountModel.FindByIDs(ctx, userIDs)
+	accounts, err := svcCtx.Models.Account.UserAccount.FindByIDs(ctx, userIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query comment authors failed")
 	}
-	profiles, err := svcCtx.UserProfileModel.FindByUserIDs(ctx, userIDs)
+	profiles, err := svcCtx.Models.Profile.UserProfile.FindByUserIDs(ctx, userIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query comment author profiles failed")
 	}

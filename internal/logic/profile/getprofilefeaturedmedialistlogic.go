@@ -43,7 +43,7 @@ func (l *GetProfileFeaturedMediaListLogic) GetProfileFeaturedMediaList(req *type
 		return nil, err
 	}
 
-	userProfile, err := l.svcCtx.UserProfileModel.FindOneByUserId(l.ctx, target.Id)
+	userProfile, err := l.svcCtx.Models.Profile.UserProfile.FindOneByUserId(l.ctx, target.Id)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return emptyProfileFeaturedMediaPage(pageSize), nil
@@ -55,7 +55,7 @@ func (l *GetProfileFeaturedMediaListLogic) GetProfileFeaturedMediaList(req *type
 }
 
 func buildProfileFeaturedMediaPage(ctx context.Context, svcCtx *svc.ServiceContext, userProfileID uint64, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest, pageSize int64) (*types.MediaAssetPageResponse, error) {
-	assetIDs, err := svcCtx.AssetLinkModel.FindActiveAssetIDsByOwner(ctx, ownerTypeUserProfile, userProfileID, linkRoleFeaturedMedia, pageSize)
+	assetIDs, err := svcCtx.Models.Media.AssetLink.FindActiveAssetIDsByOwner(ctx, ownerTypeUserProfile, userProfileID, linkRoleFeaturedMedia, pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询精选图片失败")
 	}
@@ -80,7 +80,7 @@ func buildProfileFeaturedMediaPage(ctx context.Context, svcCtx *svc.ServiceConte
 }
 
 func buildPublishedProfileFeaturedMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest) (map[uint64]types.MediaAssetResponse, error) {
-	assetsByID, err := svcCtx.MediaAssetModel.FindPublicApprovedByIDs(ctx, assetIDs)
+	assetsByID, err := svcCtx.Models.Media.MediaAsset.FindPublicApprovedByIDs(ctx, assetIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")
 	}

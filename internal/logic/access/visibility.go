@@ -34,10 +34,10 @@ func ResolveViewerAccess(ctx context.Context, svcCtx *svc.ServiceContext, viewer
 	if viewer.Id == ownerID {
 		return ViewerAccessOwner, nil
 	}
-	if svcCtx == nil || svcCtx.UserFollowModel == nil {
+	if svcCtx == nil || svcCtx.Models.Follow.UserFollow == nil {
 		return ViewerAccessPublic, nil
 	}
-	isFollowing, err := svcCtx.UserFollowModel.IsFollowing(ctx, viewer.Id, ownerID)
+	isFollowing, err := svcCtx.Models.Follow.UserFollow.IsFollowing(ctx, viewer.Id, ownerID)
 	if err != nil {
 		return ViewerAccessPublic, err
 	}

@@ -43,7 +43,7 @@ func (l *GetFollowerListLogic) GetFollowerList(req *types.FollowListRequest) (*t
 		return nil, err
 	}
 	pageSize := normalizePageSize(req.PageSize)
-	refs, hasMore, err := l.svcCtx.UserFollowModel.ListFollowerRefs(l.ctx, targetID, cursor, pageSize)
+	refs, hasMore, err := l.svcCtx.Models.Follow.UserFollow.ListFollowerRefs(l.ctx, targetID, cursor, pageSize)
 	if err != nil {
 		return nil, err
 	}

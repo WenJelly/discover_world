@@ -53,7 +53,7 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 	}
 
 	if object == nil {
-		loaded, err := svcCtx.MediaObjectModel.FindOriginalByAssetID(ctx, asset.Id)
+		loaded, err := svcCtx.Models.Media.MediaObject.FindOriginalByAssetID(ctx, asset.Id)
 		if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 			return nil, err
 		}
@@ -62,7 +62,7 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 
 	if object != nil {
 		if bucket == nil {
-			loaded, err := svcCtx.StorageBucketModel.FindOne(ctx, object.BucketId)
+			loaded, err := svcCtx.Models.Media.StorageBucket.FindOne(ctx, object.BucketId)
 			if err == nil {
 				bucket = loaded
 			}
@@ -176,27 +176,27 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 		}
 	}
 
-	objects, err := svcCtx.MediaObjectModel.FindOriginalByAssetIDs(ctx, assetIDs)
+	objects, err := svcCtx.Models.Media.MediaObject.FindOriginalByAssetIDs(ctx, assetIDs)
 	if err != nil {
 		return nil, err
 	}
-	buckets, err := svcCtx.StorageBucketModel.FindByIDs(ctx, collectOriginalBucketIDs(assets, objects))
+	buckets, err := svcCtx.Models.Media.StorageBucket.FindByIDs(ctx, collectOriginalBucketIDs(assets, objects))
 	if err != nil {
 		return nil, err
 	}
-	stats, err := svcCtx.EntityStatModel.FindByTargetIDs(ctx, targetTypeMediaAsset, assetIDs)
+	stats, err := svcCtx.Models.Statistics.EntityStat.FindByTargetIDs(ctx, targetTypeMediaAsset, assetIDs)
 	if err != nil {
 		return nil, err
 	}
-	tags, err := svcCtx.TaggingModel.FindNamesByTargetIDs(ctx, targetTypeMediaAsset, assetIDs)
+	tags, err := svcCtx.Models.Taxonomy.Tagging.FindNamesByTargetIDs(ctx, targetTypeMediaAsset, assetIDs)
 	if err != nil {
 		return nil, err
 	}
-	owners, err := svcCtx.UserAccountModel.FindByIDs(ctx, ownerIDs)
+	owners, err := svcCtx.Models.Account.UserAccount.FindByIDs(ctx, ownerIDs)
 	if err != nil {
 		return nil, err
 	}
-	profiles, err := svcCtx.UserProfileModel.FindByUserIDs(ctx, ownerIDs)
+	profiles, err := svcCtx.Models.Profile.UserProfile.FindByUserIDs(ctx, ownerIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +255,7 @@ func loadMediaViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewe
 		return state, nil
 	}
 
-	liked, err := svcCtx.ReactionModel.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypeMediaAsset, assetIDs, defaultMediaReaction)
+	liked, err := svcCtx.Models.Interaction.Reaction.FindActiveTargetIDsByUser(ctx, viewer.Id, targetTypeMediaAsset, assetIDs, defaultMediaReaction)
 	if err != nil {
 		return state, err
 	}
@@ -331,11 +331,11 @@ func LoadAvatarURL(ctx context.Context, svcCtx *svc.ServiceContext, profile *pro
 		return ""
 	}
 
-	object, err := svcCtx.MediaObjectModel.FindOriginalByAssetID(ctx, uint64(profile.AvatarAssetId.Int64))
+	object, err := svcCtx.Models.Media.MediaObject.FindOriginalByAssetID(ctx, uint64(profile.AvatarAssetId.Int64))
 	if err != nil {
 		return ""
 	}
-	bucket, err := svcCtx.StorageBucketModel.FindOne(ctx, object.BucketId)
+	bucket, err := svcCtx.Models.Media.StorageBucket.FindOne(ctx, object.BucketId)
 	if err != nil {
 		return ""
 	}
@@ -375,7 +375,7 @@ func LoadAvatarURLsByOwner(ctx context.Context, svcCtx *svc.ServiceContext, prof
 		return out, nil
 	}
 
-	objects, err := svcCtx.MediaObjectModel.FindOriginalByAssetIDs(ctx, assetIDs)
+	objects, err := svcCtx.Models.Media.MediaObject.FindOriginalByAssetIDs(ctx, assetIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +392,7 @@ func LoadAvatarURLsByOwner(ctx context.Context, svcCtx *svc.ServiceContext, prof
 		bucketSeen[object.BucketId] = struct{}{}
 		bucketIDs = append(bucketIDs, object.BucketId)
 	}
-	buckets, err := svcCtx.StorageBucketModel.FindByIDs(ctx, bucketIDs)
+	buckets, err := svcCtx.Models.Media.StorageBucket.FindByIDs(ctx, bucketIDs)
 	if err != nil {
 		return nil, err
 	}
