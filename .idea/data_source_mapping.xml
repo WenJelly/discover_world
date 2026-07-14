@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/model/taxonomy/taggingmodel.go" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
     <file url="file://$PROJECT_DIR$/sql/create/admin_operation_log.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
     <file url="file://$PROJECT_DIR$/sql/create/admin_role_policy.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
     <file url="file://$PROJECT_DIR$/sql/create/album.sql" value="d12bde1c-0df9-44a2-89c1-39b3e27c429e" />
