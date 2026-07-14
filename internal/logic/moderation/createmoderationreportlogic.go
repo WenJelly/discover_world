@@ -6,12 +6,11 @@ package moderation
 import (
 	"context"
 	"database/sql"
+	moderationmodel "discover_world/model/moderation"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -54,7 +53,7 @@ func (l *CreateModerationReportLogic) CreateModerationReport(req *types.CreateMo
 		return nil, err
 	}
 
-	result, err := l.svcCtx.ModerationReportModel.Insert(l.ctx, &model.ModerationReport{
+	result, err := l.svcCtx.ModerationReportModel.Insert(l.ctx, &moderationmodel.ModerationReport{
 		ReporterUserId: loginUser.Id,
 		TargetType:     targetType,
 		TargetId:       targetID,

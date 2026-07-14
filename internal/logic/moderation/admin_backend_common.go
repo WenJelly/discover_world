@@ -3,13 +3,16 @@ package moderation
 import (
 	"context"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	moderationmodel "discover_world/model/moderation"
+	postmodel "discover_world/model/post"
+	profilemodel "discover_world/model/profile"
 	"strings"
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -20,7 +23,7 @@ const (
 	adminTargetForumPost     = "forum_post"
 )
 
-func buildAdminModerationReportResponse(row *model.ModerationReport) types.AdminModerationReportResponse {
+func buildAdminModerationReportResponse(row *moderationmodel.ModerationReport) types.AdminModerationReportResponse {
 	if row == nil {
 		return types.AdminModerationReportResponse{}
 	}
@@ -41,7 +44,7 @@ func buildAdminModerationReportResponse(row *model.ModerationReport) types.Admin
 	}
 }
 
-func buildAdminAccountSummary(account *model.UserAccount, profile *model.UserProfile) types.AccountSummary {
+func buildAdminAccountSummary(account *accountmodel.UserAccount, profile *profilemodel.UserProfile) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}
@@ -64,7 +67,7 @@ func buildAdminAccountSummary(account *model.UserAccount, profile *model.UserPro
 	}
 }
 
-func buildAdminPostContentResponse(post *model.Post, account *model.UserAccount, profile *model.UserProfile) types.AdminContentResponse {
+func buildAdminPostContentResponse(post *postmodel.Post, account *accountmodel.UserAccount, profile *profilemodel.UserProfile) types.AdminContentResponse {
 	if post == nil {
 		return types.AdminContentResponse{}
 	}
@@ -79,7 +82,7 @@ func buildAdminPostContentResponse(post *model.Post, account *model.UserAccount,
 	}
 }
 
-func buildAdminCommentContentResponse(comment *model.CommentRecord, account *model.UserAccount, profile *model.UserProfile) types.AdminContentResponse {
+func buildAdminCommentContentResponse(comment *postmodel.CommentRecord, account *accountmodel.UserAccount, profile *profilemodel.UserProfile) types.AdminContentResponse {
 	if comment == nil {
 		return types.AdminContentResponse{}
 	}
@@ -116,24 +119,24 @@ func parseOptionalTime(raw string) (time.Time, error) {
 	return time.Time{}, commonresponse.BadRequest("时间格式必须是 yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 或 RFC3339")
 }
 
-func buildModerationReportFilter(req *types.AdminModerationReportQueryRequest) (model.ModerationReportFilter, error) {
+func buildModerationReportFilter(req *types.AdminModerationReportQueryRequest) (moderationmodel.ModerationReportFilter, error) {
 	targetID, err := parseOptionalID(req.TargetId, "targetId")
 	if err != nil {
-		return model.ModerationReportFilter{}, err
+		return moderationmodel.ModerationReportFilter{}, err
 	}
 	reporterID, err := parseOptionalID(req.ReporterUserId, "reporterUserId")
 	if err != nil {
-		return model.ModerationReportFilter{}, err
+		return moderationmodel.ModerationReportFilter{}, err
 	}
 	start, err := parseOptionalTime(req.CreatedAtFrom)
 	if err != nil {
-		return model.ModerationReportFilter{}, err
+		return moderationmodel.ModerationReportFilter{}, err
 	}
 	end, err := parseOptionalTime(req.CreatedAtTo)
 	if err != nil {
-		return model.ModerationReportFilter{}, err
+		return moderationmodel.ModerationReportFilter{}, err
 	}
-	return model.ModerationReportFilter{
+	return moderationmodel.ModerationReportFilter{
 		Status:         req.Status,
 		TargetType:     req.TargetType,
 		TargetId:       targetID,

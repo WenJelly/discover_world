@@ -6,14 +6,14 @@ package forum
 import (
 	"context"
 	"database/sql"
+	postmodel "discover_world/model/post"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -44,7 +44,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 		return nil, err
 	}
 	if _, err := l.svcCtx.ForumBoardModel.FindOneActiveByID(l.ctx, boardID); err != nil {
-		if err == model.ErrNotFound {
+		if err == sqlx.ErrNotFound {
 			return nil, commonresponse.NotFound("forum board not found")
 		}
 		return nil, commonresponse.InternalServerError("query forum board failed")
@@ -70,7 +70,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 
 	var postID uint64
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		result, err := txSvc.PostModel.Insert(ctx, &model.Post{
+		result, err := txSvc.PostModel.Insert(ctx, &postmodel.Post{
 			UserId:     loginUser.Id,
 			Content:    optionalString(content),
 			PostType:   "daily",
@@ -91,7 +91,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 		if err := txSvc.AssetLinkModel.ReplaceActiveAssetIDsByOwner(ctx, ownerTypePost, postID, linkRoleAttachment, imageIDs); err != nil {
 			return err
 		}
-		if _, err := txSvc.PostDiscussionModel.Insert(ctx, &model.PostDiscussion{
+		if _, err := txSvc.PostDiscussionModel.Insert(ctx, &postmodel.PostDiscussion{
 			PostId:         postID,
 			BoardId:        boardID,
 			Title:          title,
@@ -116,7 +116,7 @@ func (l *CreateForumPostLogic) CreateForumPost(req *types.CreateForumPostRequest
 	if err != nil {
 		return nil, commonresponse.InternalServerError("load forum post failed")
 	}
-	list, err := buildForumPostResponses(l.ctx, l.svcCtx, []*model.PostDiscussion{discussion}, loginUser)
+	list, err := buildForumPostResponses(l.ctx, l.svcCtx, []*postmodel.PostDiscussion{discussion}, loginUser)
 	if err != nil {
 		return nil, err
 	}

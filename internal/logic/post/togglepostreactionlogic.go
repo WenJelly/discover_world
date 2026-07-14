@@ -6,12 +6,11 @@ package post
 import (
 	"context"
 	"database/sql"
+	notificationmodel "discover_world/model/notification"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -65,7 +64,7 @@ func (l *TogglePostReactionLogic) TogglePostReaction(req *types.TogglePostReacti
 			return err
 		}
 		if nextActive && post.UserId != loginUser.Id {
-			if _, err := txSvc.NotificationModel.Insert(ctx, &model.Notification{
+			if _, err := txSvc.NotificationModel.Insert(ctx, &notificationmodel.Notification{
 				RecipientUserId: post.UserId,
 				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
 				EventType:       "post_reaction",

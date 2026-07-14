@@ -4,14 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -39,7 +38,7 @@ func (l *UpdateAdminTagLogic) UpdateAdminTag(req *types.AdminTagUpdateRequest) (
 	}
 	tag, err := l.svcCtx.TagModel.FindOne(l.ctx, id)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("标签不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询标签失败")

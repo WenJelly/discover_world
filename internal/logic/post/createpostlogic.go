@@ -6,13 +6,12 @@ package post
 import (
 	"context"
 	"database/sql"
+	postmodel "discover_world/model/post"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -64,7 +63,7 @@ func (l *CreatePostLogic) CreatePost(req *types.CreatePostRequest) (*types.Profi
 
 	var postID uint64
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		data := &model.Post{
+		data := &postmodel.Post{
 			UserId:     loginUser.Id,
 			Content:    optionalString(content),
 			PostType:   postType,

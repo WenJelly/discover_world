@@ -2,7 +2,9 @@ package homepage
 
 import (
 	"context"
+	mediamodel "discover_world/model/media"
 	"encoding/json"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strconv"
 	"strings"
 
@@ -10,7 +12,6 @@ import (
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -86,7 +87,7 @@ func buildHeroConfig(ctx context.Context, svcCtx *svc.ServiceContext, variant ty
 		return types.HomepageHeroConfig{FocalX: 50, FocalY: 50}, nil
 	}
 
-	list, err := mediaLogic.BuildMediaAssetListResponse(ctx, svcCtx, []*model.MediaAsset{asset}, nil, variant)
+	list, err := mediaLogic.BuildMediaAssetListResponse(ctx, svcCtx, []*mediamodel.MediaAsset{asset}, nil, variant)
 	if err != nil {
 		return hero, commonresponse.InternalServerError("构造 Hero 图响应失败")
 	}
@@ -111,7 +112,7 @@ func buildFeaturedList(ctx context.Context, svcCtx *svc.ServiceContext, variant 
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")
 	}
 
-	assets := make([]*model.MediaAsset, 0, len(assetIDs))
+	assets := make([]*mediamodel.MediaAsset, 0, len(assetIDs))
 	for _, id := range assetIDs {
 		if asset := assetsByID[id]; asset != nil {
 			assets = append(assets, asset)
@@ -133,7 +134,7 @@ func buildFeaturedList(ctx context.Context, svcCtx *svc.ServiceContext, variant 
 func loadHeroPayload(ctx context.Context, svcCtx *svc.ServiceContext) (*heroConfigPayload, error) {
 	config, err := svcCtx.SiteConfigModel.GetByKey(ctx, SiteConfigKeyHero)
 	if err != nil {
-		if err == model.ErrNotFound {
+		if err == sqlx.ErrNotFound {
 			return nil, nil
 		}
 		return nil, commonresponse.InternalServerError("查询站点配置失败")

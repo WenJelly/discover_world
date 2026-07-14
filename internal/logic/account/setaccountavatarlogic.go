@@ -6,13 +6,13 @@ package account
 import (
 	"context"
 	"database/sql"
+	mediamodel "discover_world/model/media"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -46,7 +46,7 @@ func (l *SetAccountAvatarLogic) SetAccountAvatar(req *types.SetAccountAvatarRequ
 	}
 	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, assetID)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("头像资源不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询头像资源失败")
@@ -67,7 +67,7 @@ func (l *SetAccountAvatarLogic) SetAccountAvatar(req *types.SetAccountAvatarRequ
 	return loadDetailAccountResponse(l.ctx, l.svcCtx, loginUser)
 }
 
-func validateAvatarAssetForUser(asset *model.MediaAsset, userID uint64) error {
+func validateAvatarAssetForUser(asset *mediamodel.MediaAsset, userID uint64) error {
 	if asset == nil {
 		return commonresponse.NotFound("头像资源不存在")
 	}

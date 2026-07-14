@@ -2,13 +2,12 @@ package admin
 
 import (
 	"context"
+	taxonomymodel "discover_world/model/taxonomy"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -30,7 +29,7 @@ func (l *GetAdminTagListLogic) GetAdminTagList(req *types.AdminTagQueryRequest) 
 		return nil, err
 	}
 	pageNum, pageSize := adminsupport.NormalizePage(req.PageNum, req.PageSize)
-	filter := model.TagFilter{Name: req.Name, TagType: req.TagType, Status: req.Status}
+	filter := taxonomymodel.TagFilter{Name: req.Name, TagType: req.TagType, Status: req.Status}
 	total, err := l.svcCtx.TagModel.CountByFilter(l.ctx, filter)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询标签数量失败")

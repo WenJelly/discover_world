@@ -3,6 +3,8 @@ package adminsupport
 import (
 	"context"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	adminmodel "discover_world/model/admin"
 	"encoding/json"
 	"strings"
 	"unicode/utf8"
@@ -10,7 +12,6 @@ import (
 	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
-	"discover_world/model"
 )
 
 const (
@@ -58,7 +59,7 @@ func NormalizeReason(reason string) (string, error) {
 	return reason, nil
 }
 
-func RequireAdminCapability(ctx context.Context, svcCtx *svc.ServiceContext, capability string) (*model.UserAccount, error) {
+func RequireAdminCapability(ctx context.Context, svcCtx *svc.ServiceContext, capability string) (*accountmodel.UserAccount, error) {
 	if svcCtx == nil {
 		return nil, commonresponse.Forbidden("无后台权限")
 	}
@@ -124,7 +125,7 @@ func RecordOperation(ctx context.Context, svcCtx *svc.ServiceContext, input Oper
 		return commonresponse.InternalServerError("生成操作元数据失败")
 	}
 
-	_, err = svcCtx.AdminOperationLogModel.Insert(ctx, &model.AdminOperationLog{
+	_, err = svcCtx.AdminOperationLogModel.Insert(ctx, &adminmodel.AdminOperationLog{
 		OperatorUserId: input.OperatorUserID,
 		Action:         strings.TrimSpace(input.Action),
 		TargetType:     strings.TrimSpace(input.TargetType),

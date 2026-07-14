@@ -5,6 +5,9 @@ package search
 
 import (
 	"context"
+	mediamodel "discover_world/model/media"
+	postmodel "discover_world/model/post"
+	profilemodel "discover_world/model/profile"
 	"strconv"
 	"time"
 
@@ -13,8 +16,6 @@ import (
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -128,10 +129,10 @@ func (l *GlobalSearchLogic) searchUsers(req normalizedSearchRequest) ([]types.Ac
 		return nil, commonresponse.InternalServerError("查询用户搜索结果失败")
 	}
 
-	profiles := make(map[uint64]*model.UserProfile, len(users))
+	profiles := make(map[uint64]*profilemodel.UserProfile, len(users))
 	for _, user := range users {
 		if user != nil {
-			profiles[user.Id] = &model.UserProfile{AvatarAssetId: user.AvatarAssetId}
+			profiles[user.Id] = &profilemodel.UserProfile{AvatarAssetId: user.AvatarAssetId}
 		}
 	}
 	avatarURLs, err := mediaLogic.LoadAvatarURLsByOwner(l.ctx, l.svcCtx, profiles)
@@ -149,7 +150,7 @@ func (l *GlobalSearchLogic) searchUsers(req normalizedSearchRequest) ([]types.Ac
 	return resp, nil
 }
 
-func buildSearchPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*model.Post) ([]types.GlobalSearchPostResponse, error) {
+func buildSearchPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*postmodel.Post) ([]types.GlobalSearchPostResponse, error) {
 	if len(posts) == 0 {
 		return []types.GlobalSearchPostResponse{}, nil
 	}
@@ -198,7 +199,7 @@ func buildSearchPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 	return resp, nil
 }
 
-func buildSearchAlbumResponses(ctx context.Context, svcCtx *svc.ServiceContext, albums []*model.Album, variant types.MediaVariantRequest) ([]types.GlobalSearchAlbumResponse, error) {
+func buildSearchAlbumResponses(ctx context.Context, svcCtx *svc.ServiceContext, albums []*profilemodel.Album, variant types.MediaVariantRequest) ([]types.GlobalSearchAlbumResponse, error) {
 	if len(albums) == 0 {
 		return []types.GlobalSearchAlbumResponse{}, nil
 	}
@@ -289,7 +290,7 @@ func loadCoverResponses(ctx context.Context, svcCtx *svc.ServiceContext, coverID
 		return nil, commonresponse.InternalServerError("查询相册封面失败")
 	}
 
-	assets := make([]*model.MediaAsset, 0, len(coverIDs))
+	assets := make([]*mediamodel.MediaAsset, 0, len(coverIDs))
 	for _, id := range coverIDs {
 		if asset := assetsByID[id]; asset != nil {
 			assets = append(assets, asset)

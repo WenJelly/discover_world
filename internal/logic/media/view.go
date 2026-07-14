@@ -3,7 +3,12 @@ package media
 import (
 	"context"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	mediamodel "discover_world/model/media"
+	profilemodel "discover_world/model/profile"
+	statisticsmodel "discover_world/model/statistics"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 
 	commonresponse "discover_world/internal/common/response"
@@ -11,18 +16,17 @@ import (
 	"discover_world/internal/logic/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 type mediaViewerState struct {
 	liked map[uint64]bool
 }
 
-func BuildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext, assets []*model.MediaAsset, viewer *model.UserAccount, variant types.MediaVariantRequest) ([]types.MediaAssetResponse, error) {
+func BuildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext, assets []*mediamodel.MediaAsset, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest) ([]types.MediaAssetResponse, error) {
 	return buildMediaAssetListResponse(ctx, svcCtx, assets, viewer, variant)
 }
 
-func buildMediaAssetResponse(ctx context.Context, svcCtx *svc.ServiceContext, asset *model.MediaAsset, object *model.MediaObject, owner *model.UserAccount, profile *model.UserProfile, stat *model.EntityStat, tags []string, viewer *model.UserAccount, variant types.MediaVariantRequest) (*types.MediaAssetResponse, error) {
+func buildMediaAssetResponse(ctx context.Context, svcCtx *svc.ServiceContext, asset *mediamodel.MediaAsset, object *mediamodel.MediaObject, owner *accountmodel.UserAccount, profile *profilemodel.UserProfile, stat *statisticsmodel.EntityStat, tags []string, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest) (*types.MediaAssetResponse, error) {
 	resp, err := buildMediaAssetResponseWithBucket(ctx, svcCtx, asset, object, nil, owner, profile, stat, tags, viewer, variant)
 	if err != nil {
 		return nil, err
@@ -43,14 +47,14 @@ func buildMediaAssetResponse(ctx context.Context, svcCtx *svc.ServiceContext, as
 	return resp, nil
 }
 
-func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceContext, asset *model.MediaAsset, object *model.MediaObject, bucket *model.StorageBucket, owner *model.UserAccount, profile *model.UserProfile, stat *model.EntityStat, tags []string, viewer *model.UserAccount, variant types.MediaVariantRequest) (*types.MediaAssetResponse, error) {
+func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceContext, asset *mediamodel.MediaAsset, object *mediamodel.MediaObject, bucket *mediamodel.StorageBucket, owner *accountmodel.UserAccount, profile *profilemodel.UserProfile, stat *statisticsmodel.EntityStat, tags []string, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest) (*types.MediaAssetResponse, error) {
 	if asset == nil {
 		return nil, commonNotFound()
 	}
 
 	if object == nil {
 		loaded, err := svcCtx.MediaObjectModel.FindOriginalByAssetID(ctx, asset.Id)
-		if err != nil && !errors.Is(err, model.ErrNotFound) {
+		if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 			return nil, err
 		}
 		object = loaded
@@ -153,7 +157,7 @@ func buildMediaAssetResponseWithBucket(ctx context.Context, svcCtx *svc.ServiceC
 	}, nil
 }
 
-func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext, assets []*model.MediaAsset, viewer *model.UserAccount, variant types.MediaVariantRequest) ([]types.MediaAssetResponse, error) {
+func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext, assets []*mediamodel.MediaAsset, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest) ([]types.MediaAssetResponse, error) {
 	if len(assets) == 0 {
 		return []types.MediaAssetResponse{}, nil
 	}
@@ -197,7 +201,7 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 		return nil, err
 	}
 
-	ownerMap := make(map[uint64]*model.UserAccount, len(owners))
+	ownerMap := make(map[uint64]*accountmodel.UserAccount, len(owners))
 	for _, owner := range owners {
 		if owner != nil {
 			ownerMap[owner.Id] = owner
@@ -223,7 +227,7 @@ func buildMediaAssetListResponse(ctx context.Context, svcCtx *svc.ServiceContext
 			continue
 		}
 		object := objects[asset.Id]
-		var bucket *model.StorageBucket
+		var bucket *mediamodel.StorageBucket
 		if object != nil {
 			bucket = buckets[object.BucketId]
 		}
@@ -243,7 +247,7 @@ func loadIPRegionsByTarget(ctx context.Context, svcCtx *svc.ServiceContext, asse
 	return ipgeo.LoadRegionsByTarget(ctx, svcCtx, ipgeo.TargetTypeMediaAsset, assetIDs)
 }
 
-func loadMediaViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *model.UserAccount, assetIDs []uint64) (mediaViewerState, error) {
+func loadMediaViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *accountmodel.UserAccount, assetIDs []uint64) (mediaViewerState, error) {
 	state := mediaViewerState{
 		liked: map[uint64]bool{},
 	}
@@ -266,7 +270,7 @@ func applyMediaViewerState(resp *types.MediaAssetResponse, assetID uint64, state
 	resp.IsLiked = state.liked[assetID]
 }
 
-func collectOriginalBucketIDs(assets []*model.MediaAsset, objects map[uint64]*model.MediaObject) []uint64 {
+func collectOriginalBucketIDs(assets []*mediamodel.MediaAsset, objects map[uint64]*mediamodel.MediaObject) []uint64 {
 	if len(assets) == 0 || len(objects) == 0 {
 		return nil
 	}
@@ -290,7 +294,7 @@ func collectOriginalBucketIDs(assets []*model.MediaAsset, objects map[uint64]*mo
 	return ids
 }
 
-func buildAccountSummary(_ *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile) types.AccountSummary {
+func buildAccountSummary(_ *svc.ServiceContext, account *accountmodel.UserAccount, profile *profilemodel.UserProfile) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}
@@ -322,7 +326,7 @@ func buildAccountSummary(_ *svc.ServiceContext, account *model.UserAccount, prof
 
 // LoadAvatarURL resolves a user's avatar public URL from the avatar asset
 // referenced by their profile. Returns "" when the user has no avatar.
-func LoadAvatarURL(ctx context.Context, svcCtx *svc.ServiceContext, profile *model.UserProfile) string {
+func LoadAvatarURL(ctx context.Context, svcCtx *svc.ServiceContext, profile *profilemodel.UserProfile) string {
 	if profile == nil || !profile.AvatarAssetId.Valid || profile.AvatarAssetId.Int64 <= 0 {
 		return ""
 	}
@@ -340,7 +344,7 @@ func LoadAvatarURL(ctx context.Context, svcCtx *svc.ServiceContext, profile *mod
 
 // collectAvatarAssetIDs extracts the unique, valid avatar asset IDs from a set
 // of user profiles (keyed by owner user ID).
-func collectAvatarAssetIDs(profiles map[uint64]*model.UserProfile) []uint64 {
+func collectAvatarAssetIDs(profiles map[uint64]*profilemodel.UserProfile) []uint64 {
 	seen := make(map[uint64]struct{}, len(profiles))
 	ids := make([]uint64, 0, len(profiles))
 	for _, profile := range profiles {
@@ -360,7 +364,7 @@ func collectAvatarAssetIDs(profiles map[uint64]*model.UserProfile) []uint64 {
 // LoadAvatarURLsByOwner bulk-resolves avatar URLs for a set of user profiles
 // (keyed by owner user ID), so a page of N assets costs only two extra
 // queries regardless of how many distinct owners it has.
-func LoadAvatarURLsByOwner(ctx context.Context, svcCtx *svc.ServiceContext, profiles map[uint64]*model.UserProfile) (map[uint64]string, error) {
+func LoadAvatarURLsByOwner(ctx context.Context, svcCtx *svc.ServiceContext, profiles map[uint64]*profilemodel.UserProfile) (map[uint64]string, error) {
 	out := make(map[uint64]string, len(profiles))
 	if len(profiles) == 0 {
 		return out, nil
@@ -416,7 +420,7 @@ func LoadAvatarURLsByOwner(ctx context.Context, svcCtx *svc.ServiceContext, prof
 	return out, nil
 }
 
-func buildMediaStats(stat *model.EntityStat) types.MediaAssetStats {
+func buildMediaStats(stat *statisticsmodel.EntityStat) types.MediaAssetStats {
 	if stat == nil {
 		return types.MediaAssetStats{}
 	}
@@ -430,14 +434,14 @@ func buildMediaStats(stat *model.EntityStat) types.MediaAssetStats {
 	}
 }
 
-func canManageMediaAsset(asset *model.MediaAsset, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
+func canManageMediaAsset(asset *mediamodel.MediaAsset, user *accountmodel.UserAccount, svcCtx *svc.ServiceContext) bool {
 	if asset == nil || user == nil {
 		return false
 	}
 	return asset.OwnerUserId == user.Id || svcCtx.IsAdminAccount(user)
 }
 
-func canViewMediaAsset(ctx context.Context, asset *model.MediaAsset, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
+func canViewMediaAsset(ctx context.Context, asset *mediamodel.MediaAsset, user *accountmodel.UserAccount, svcCtx *svc.ServiceContext) bool {
 	if asset == nil || asset.Status != "active" || asset.DeletedAt.Valid {
 		return false
 	}
@@ -454,11 +458,11 @@ func canViewMediaAsset(ctx context.Context, asset *model.MediaAsset, user *model
 	return access.CanViewVisibility(asset.Visibility, level)
 }
 
-func canViewOriginal(ctx context.Context, asset *model.MediaAsset, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
+func canViewOriginal(ctx context.Context, asset *mediamodel.MediaAsset, user *accountmodel.UserAccount, svcCtx *svc.ServiceContext) bool {
 	return canViewMediaAsset(ctx, asset, user, svcCtx)
 }
 
-func accountRole(account *model.UserAccount) string {
+func accountRole(account *accountmodel.UserAccount) string {
 	if account == nil {
 		return "user"
 	}

@@ -2,7 +2,9 @@ package moderation
 
 import (
 	"context"
+	moderationmodel "discover_world/model/moderation"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 	"time"
 
@@ -10,8 +12,6 @@ import (
 	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -43,7 +43,7 @@ func (l *ResolveAdminModerationReportLogic) ResolveAdminModerationReport(req *ty
 	}
 	report, err := l.svcCtx.ModerationReportModel.FindOne(l.ctx, reportID)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("举报不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询举报失败")
@@ -73,7 +73,7 @@ func (l *ResolveAdminModerationReportLogic) ResolveAdminModerationReport(req *ty
 		if err := applyModerationAction(ctx, txSvcCtx, req.Action, targetType, targetID); err != nil {
 			return err
 		}
-		if err := txSvcCtx.ModerationReportModel.Resolve(ctx, model.ResolveModerationReportRequest{
+		if err := txSvcCtx.ModerationReportModel.Resolve(ctx, moderationmodel.ResolveModerationReportRequest{
 			Id:             reportID,
 			HandlerUserId:  adminUser.Id,
 			Status:         status,

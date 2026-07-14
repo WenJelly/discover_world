@@ -2,13 +2,12 @@ package admin
 
 import (
 	"context"
+	moderationmodel "discover_world/model/moderation"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -30,7 +29,7 @@ func (l *GetAdminOperationDashboardLogic) GetAdminOperationDashboard(_ *types.Ad
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询待审核媒体数失败")
 	}
-	openReports, err := l.svcCtx.ModerationReportModel.CountByFilter(l.ctx, model.ModerationReportFilter{Status: "open"})
+	openReports, err := l.svcCtx.ModerationReportModel.CountByFilter(l.ctx, moderationmodel.ModerationReportFilter{Status: "open"})
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询待处理举报数失败")
 	}

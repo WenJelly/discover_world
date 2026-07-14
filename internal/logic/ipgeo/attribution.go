@@ -3,6 +3,7 @@ package ipgeo
 import (
 	"context"
 	"database/sql"
+	moderationmodel "discover_world/model/moderation"
 	"strings"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	commonipgeo "discover_world/internal/common/ipgeo"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 	ActionTypeDirectUploadComplete = "direct_upload_complete"
 )
 
-func BuildAttributionRecord(ctx context.Context, resolver commonipgeo.Resolver, hashSecret string, targetType string, targetID uint64, actionType string, userID uint64) (*model.ContentIpAttribution, bool, error) {
+func BuildAttributionRecord(ctx context.Context, resolver commonipgeo.Resolver, hashSecret string, targetType string, targetID uint64, actionType string, userID uint64) (*moderationmodel.ContentIpAttribution, bool, error) {
 	targetType = strings.TrimSpace(targetType)
 	actionType = strings.TrimSpace(actionType)
 	if targetType == "" || targetID == 0 || actionType == "" || userID == 0 {
@@ -44,7 +44,7 @@ func BuildAttributionRecord(ctx context.Context, resolver commonipgeo.Resolver, 
 		}
 	}
 
-	record := &model.ContentIpAttribution{
+	record := &moderationmodel.ContentIpAttribution{
 		TargetType: targetType,
 		TargetId:   targetID,
 		ActionType: actionType,
@@ -114,7 +114,7 @@ func LoadRegionsByTarget(ctx context.Context, svcCtx *svc.ServiceContext, target
 	return resp, nil
 }
 
-func BuildRegionResponse(record *model.ContentIpAttribution) types.IpRegionResponse {
+func BuildRegionResponse(record *moderationmodel.ContentIpAttribution) types.IpRegionResponse {
 	if record == nil {
 		return types.IpRegionResponse{}
 	}

@@ -2,13 +2,12 @@ package admin
 
 import (
 	"context"
+	adminmodel "discover_world/model/admin"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -49,22 +48,22 @@ func (l *GetAdminOperationLogListLogic) GetAdminOperationLogList(req *types.Admi
 	return &types.AdminOperationLogPageResponse{PageNum: pageNum, PageSize: pageSize, Total: total, List: list}, nil
 }
 
-func buildOperationLogFilter(req *types.AdminOperationLogQueryRequest) (model.AdminOperationLogFilter, error) {
+func buildOperationLogFilter(req *types.AdminOperationLogQueryRequest) (adminmodel.AdminOperationLogFilter, error) {
 	operatorID, err := parseOptionalID(req.OperatorUserId, "operatorUserId")
 	if err != nil {
-		return model.AdminOperationLogFilter{}, err
+		return adminmodel.AdminOperationLogFilter{}, err
 	}
 	targetID, err := parseOptionalID(req.TargetId, "targetId")
 	if err != nil {
-		return model.AdminOperationLogFilter{}, err
+		return adminmodel.AdminOperationLogFilter{}, err
 	}
 	start, err := parseOptionalTime(req.CreatedAtFrom)
 	if err != nil {
-		return model.AdminOperationLogFilter{}, err
+		return adminmodel.AdminOperationLogFilter{}, err
 	}
 	end, err := parseOptionalTime(req.CreatedAtTo)
 	if err != nil {
-		return model.AdminOperationLogFilter{}, err
+		return adminmodel.AdminOperationLogFilter{}, err
 	}
-	return model.AdminOperationLogFilter{OperatorUserId: operatorID, Action: req.Action, TargetType: req.TargetType, TargetId: targetID, CreatedAtFrom: start, CreatedAtTo: end}, nil
+	return adminmodel.AdminOperationLogFilter{OperatorUserId: operatorID, Action: req.Action, TargetType: req.TargetType, TargetId: targetID, CreatedAtFrom: start, CreatedAtTo: end}, nil
 }

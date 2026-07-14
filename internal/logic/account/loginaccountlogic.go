@@ -7,14 +7,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/redisx"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -54,7 +53,7 @@ func (l *LoginAccountLogic) LoginAccount(req *types.LoginRequest) (resp *types.L
 
 	account, err := l.svcCtx.UserAccountModel.FindOneByEmailCaseSensitive(l.ctx, sql.NullString{String: email, Valid: true})
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.Unauthorized("邮箱或密码错误")
 		}
 		return nil, commonresponse.InternalServerError("查询账号失败")

@@ -5,6 +5,20 @@ package svc
 
 import (
 	"context"
+	accountmodel "discover_world/model/account"
+	adminmodel "discover_world/model/admin"
+	followmodel "discover_world/model/follow"
+	forummodel "discover_world/model/forum"
+	homepagemodel "discover_world/model/homepage"
+	interactionmodel "discover_world/model/interaction"
+	mediamodel "discover_world/model/media"
+	moderationmodel "discover_world/model/moderation"
+	notificationmodel "discover_world/model/notification"
+	postmodel "discover_world/model/post"
+	profilemodel "discover_world/model/profile"
+	searchmodel "discover_world/model/search"
+	statisticsmodel "discover_world/model/statistics"
+	taxonomymodel "discover_world/model/taxonomy"
 	"errors"
 	"strings"
 	"time"
@@ -13,8 +27,6 @@ import (
 	"discover_world/internal/config"
 	"discover_world/internal/middleware"
 	"discover_world/internal/redisx"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/rest"
@@ -38,35 +50,35 @@ type ServiceContext struct {
 	TokenRevocation   rest.Middleware
 	dbConn            sqlx.SqlConn
 
-	UserAccountModel          model.UserAccountModel
-	UserProfileModel          model.UserProfileModel
-	StorageProviderModel      model.StorageProviderModel
-	StorageBucketModel        model.StorageBucketModel
-	MediaAssetModel           model.MediaAssetModel
-	MediaObjectModel          model.MediaObjectModel
-	MediaUploadSessionModel   model.MediaUploadSessionModel
-	EntityStatModel           model.EntityStatModel
-	EntityStatHourlyModel     model.EntityStatHourlyModel
-	EntityRankingModel        model.EntityRankingModel
-	TagModel                  model.TagModel
-	TaggingModel              model.TaggingModel
-	AssetLinkModel            model.AssetLinkModel
-	PostModel                 model.PostModel
-	ForumBoardModel           model.ForumBoardModel
-	PostDiscussionModel       model.PostDiscussionModel
-	ModerationReportModel     model.ModerationReportModel
-	NotificationModel         model.NotificationModel
-	ContentIpAttributionModel model.ContentIpAttributionModel
-	AdminOperationLogModel    model.AdminOperationLogModel
-	AdminRolePolicyModel      model.AdminRolePolicyModel
-	AlbumModel                model.AlbumModel
-	UserFollowModel           model.UserFollowModel
-	ReactionModel             model.ReactionModel
-	FavoriteModel             model.FavoriteModel
-	CommentRecordModel        model.CommentRecordModel
-	SiteStatsModel            model.SiteStatsModel
-	SiteConfigModel           model.SiteConfigModel
-	SearchModel               model.SearchModel
+	UserAccountModel          accountmodel.UserAccountModel
+	UserProfileModel          profilemodel.UserProfileModel
+	StorageProviderModel      mediamodel.StorageProviderModel
+	StorageBucketModel        mediamodel.StorageBucketModel
+	MediaAssetModel           mediamodel.MediaAssetModel
+	MediaObjectModel          mediamodel.MediaObjectModel
+	MediaUploadSessionModel   mediamodel.MediaUploadSessionModel
+	EntityStatModel           statisticsmodel.EntityStatModel
+	EntityStatHourlyModel     statisticsmodel.EntityStatHourlyModel
+	EntityRankingModel        statisticsmodel.EntityRankingModel
+	TagModel                  taxonomymodel.TagModel
+	TaggingModel              taxonomymodel.TaggingModel
+	AssetLinkModel            mediamodel.AssetLinkModel
+	PostModel                 postmodel.PostModel
+	ForumBoardModel           forummodel.ForumBoardModel
+	PostDiscussionModel       postmodel.PostDiscussionModel
+	ModerationReportModel     moderationmodel.ModerationReportModel
+	NotificationModel         notificationmodel.NotificationModel
+	ContentIpAttributionModel moderationmodel.ContentIpAttributionModel
+	AdminOperationLogModel    adminmodel.AdminOperationLogModel
+	AdminRolePolicyModel      adminmodel.AdminRolePolicyModel
+	AlbumModel                profilemodel.AlbumModel
+	UserFollowModel           followmodel.UserFollowModel
+	ReactionModel             interactionmodel.ReactionModel
+	FavoriteModel             interactionmodel.FavoriteModel
+	CommentRecordModel        postmodel.CommentRecordModel
+	SiteStatsModel            statisticsmodel.SiteStatsModel
+	SiteConfigModel           homepagemodel.SiteConfigModel
+	SearchModel               searchmodel.SearchModel
 	IpGeoResolver             commonipgeo.Resolver
 }
 
@@ -88,35 +100,35 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Redis:  redisClient,
 		dbConn: conn,
 
-		UserAccountModel:          model.NewUserAccountModel(conn),
-		UserProfileModel:          model.NewUserProfileModel(conn),
-		StorageProviderModel:      model.NewStorageProviderModel(conn),
-		StorageBucketModel:        model.NewStorageBucketModel(conn),
-		MediaAssetModel:           model.NewMediaAssetModel(conn),
-		MediaObjectModel:          model.NewMediaObjectModel(conn),
-		MediaUploadSessionModel:   model.NewMediaUploadSessionModel(conn),
-		EntityStatModel:           model.NewEntityStatModel(conn),
-		EntityStatHourlyModel:     model.NewEntityStatHourlyModel(conn),
-		EntityRankingModel:        model.NewEntityRankingModel(conn),
-		TagModel:                  model.NewTagModel(conn),
-		TaggingModel:              model.NewTaggingModel(conn),
-		AssetLinkModel:            model.NewAssetLinkModel(conn),
-		PostModel:                 model.NewPostModel(conn),
-		ForumBoardModel:           model.NewForumBoardModel(conn),
-		PostDiscussionModel:       model.NewPostDiscussionModel(conn),
-		ModerationReportModel:     model.NewModerationReportModel(conn),
-		NotificationModel:         model.NewNotificationModel(conn),
-		ContentIpAttributionModel: model.NewContentIpAttributionModel(conn),
-		AdminOperationLogModel:    model.NewAdminOperationLogModel(conn),
-		AdminRolePolicyModel:      model.NewAdminRolePolicyModel(conn),
-		AlbumModel:                model.NewAlbumModel(conn),
-		UserFollowModel:           model.NewUserFollowModel(conn),
-		ReactionModel:             model.NewReactionModel(conn),
-		FavoriteModel:             model.NewFavoriteModel(conn),
-		CommentRecordModel:        model.NewCommentRecordModel(conn),
-		SiteStatsModel:            model.NewSiteStatsModel(conn),
-		SiteConfigModel:           model.NewSiteConfigModel(conn),
-		SearchModel:               model.NewSearchModel(conn),
+		UserAccountModel:          accountmodel.NewUserAccountModel(conn),
+		UserProfileModel:          profilemodel.NewUserProfileModel(conn),
+		StorageProviderModel:      mediamodel.NewStorageProviderModel(conn),
+		StorageBucketModel:        mediamodel.NewStorageBucketModel(conn),
+		MediaAssetModel:           mediamodel.NewMediaAssetModel(conn),
+		MediaObjectModel:          mediamodel.NewMediaObjectModel(conn),
+		MediaUploadSessionModel:   mediamodel.NewMediaUploadSessionModel(conn),
+		EntityStatModel:           statisticsmodel.NewEntityStatModel(conn),
+		EntityStatHourlyModel:     statisticsmodel.NewEntityStatHourlyModel(conn),
+		EntityRankingModel:        statisticsmodel.NewEntityRankingModel(conn),
+		TagModel:                  taxonomymodel.NewTagModel(conn),
+		TaggingModel:              taxonomymodel.NewTaggingModel(conn),
+		AssetLinkModel:            mediamodel.NewAssetLinkModel(conn),
+		PostModel:                 postmodel.NewPostModel(conn),
+		ForumBoardModel:           forummodel.NewForumBoardModel(conn),
+		PostDiscussionModel:       postmodel.NewPostDiscussionModel(conn),
+		ModerationReportModel:     moderationmodel.NewModerationReportModel(conn),
+		NotificationModel:         notificationmodel.NewNotificationModel(conn),
+		ContentIpAttributionModel: moderationmodel.NewContentIpAttributionModel(conn),
+		AdminOperationLogModel:    adminmodel.NewAdminOperationLogModel(conn),
+		AdminRolePolicyModel:      adminmodel.NewAdminRolePolicyModel(conn),
+		AlbumModel:                profilemodel.NewAlbumModel(conn),
+		UserFollowModel:           followmodel.NewUserFollowModel(conn),
+		ReactionModel:             interactionmodel.NewReactionModel(conn),
+		FavoriteModel:             interactionmodel.NewFavoriteModel(conn),
+		CommentRecordModel:        postmodel.NewCommentRecordModel(conn),
+		SiteStatsModel:            statisticsmodel.NewSiteStatsModel(conn),
+		SiteConfigModel:           homepagemodel.NewSiteConfigModel(conn),
+		SearchModel:               searchmodel.NewSearchModel(conn),
 		IpGeoResolver:             commonipgeo.NewResolver(c.IpGeo),
 	}
 	svcCtx.AdminCheck = middleware.NewAdminCheckMiddleware(svcCtx).Handle
@@ -168,35 +180,35 @@ func (s *ServiceContext) withSession(session sqlx.Session) *ServiceContext {
 		TokenRevocation:   s.TokenRevocation,
 		dbConn:            conn,
 
-		UserAccountModel:          model.NewUserAccountModel(conn),
-		UserProfileModel:          model.NewUserProfileModel(conn),
-		StorageProviderModel:      model.NewStorageProviderModel(conn),
-		StorageBucketModel:        model.NewStorageBucketModel(conn),
-		MediaAssetModel:           model.NewMediaAssetModel(conn),
-		MediaObjectModel:          model.NewMediaObjectModel(conn),
-		MediaUploadSessionModel:   model.NewMediaUploadSessionModel(conn),
-		EntityStatModel:           model.NewEntityStatModel(conn),
-		EntityStatHourlyModel:     model.NewEntityStatHourlyModel(conn),
-		EntityRankingModel:        model.NewEntityRankingModel(conn),
-		TagModel:                  model.NewTagModel(conn),
-		TaggingModel:              model.NewTaggingModel(conn),
-		AssetLinkModel:            model.NewAssetLinkModel(conn),
-		PostModel:                 model.NewPostModel(conn),
-		ForumBoardModel:           model.NewForumBoardModel(conn),
-		PostDiscussionModel:       model.NewPostDiscussionModel(conn),
-		ModerationReportModel:     model.NewModerationReportModel(conn),
-		NotificationModel:         model.NewNotificationModel(conn),
-		ContentIpAttributionModel: model.NewContentIpAttributionModel(conn),
-		AdminOperationLogModel:    model.NewAdminOperationLogModel(conn),
-		AdminRolePolicyModel:      model.NewAdminRolePolicyModel(conn),
-		AlbumModel:                model.NewAlbumModel(conn),
-		UserFollowModel:           model.NewUserFollowModel(conn),
-		ReactionModel:             model.NewReactionModel(conn),
-		FavoriteModel:             model.NewFavoriteModel(conn),
-		CommentRecordModel:        model.NewCommentRecordModel(conn),
-		SiteStatsModel:            model.NewSiteStatsModel(conn),
-		SiteConfigModel:           model.NewSiteConfigModel(conn),
-		SearchModel:               model.NewSearchModel(conn),
+		UserAccountModel:          accountmodel.NewUserAccountModel(conn),
+		UserProfileModel:          profilemodel.NewUserProfileModel(conn),
+		StorageProviderModel:      mediamodel.NewStorageProviderModel(conn),
+		StorageBucketModel:        mediamodel.NewStorageBucketModel(conn),
+		MediaAssetModel:           mediamodel.NewMediaAssetModel(conn),
+		MediaObjectModel:          mediamodel.NewMediaObjectModel(conn),
+		MediaUploadSessionModel:   mediamodel.NewMediaUploadSessionModel(conn),
+		EntityStatModel:           statisticsmodel.NewEntityStatModel(conn),
+		EntityStatHourlyModel:     statisticsmodel.NewEntityStatHourlyModel(conn),
+		EntityRankingModel:        statisticsmodel.NewEntityRankingModel(conn),
+		TagModel:                  taxonomymodel.NewTagModel(conn),
+		TaggingModel:              taxonomymodel.NewTaggingModel(conn),
+		AssetLinkModel:            mediamodel.NewAssetLinkModel(conn),
+		PostModel:                 postmodel.NewPostModel(conn),
+		ForumBoardModel:           forummodel.NewForumBoardModel(conn),
+		PostDiscussionModel:       postmodel.NewPostDiscussionModel(conn),
+		ModerationReportModel:     moderationmodel.NewModerationReportModel(conn),
+		NotificationModel:         notificationmodel.NewNotificationModel(conn),
+		ContentIpAttributionModel: moderationmodel.NewContentIpAttributionModel(conn),
+		AdminOperationLogModel:    adminmodel.NewAdminOperationLogModel(conn),
+		AdminRolePolicyModel:      adminmodel.NewAdminRolePolicyModel(conn),
+		AlbumModel:                profilemodel.NewAlbumModel(conn),
+		UserFollowModel:           followmodel.NewUserFollowModel(conn),
+		ReactionModel:             interactionmodel.NewReactionModel(conn),
+		FavoriteModel:             interactionmodel.NewFavoriteModel(conn),
+		CommentRecordModel:        postmodel.NewCommentRecordModel(conn),
+		SiteStatsModel:            statisticsmodel.NewSiteStatsModel(conn),
+		SiteConfigModel:           homepagemodel.NewSiteConfigModel(conn),
+		SearchModel:               searchmodel.NewSearchModel(conn),
 		IpGeoResolver:             s.IpGeoResolver,
 	}
 }
@@ -205,11 +217,11 @@ func (s *ServiceContext) AuthSecret() string {
 	return s.Config.Auth.AccessSecret
 }
 
-func (s *ServiceContext) FindActiveAccount(ctx context.Context, id uint64) (*model.UserAccount, error) {
+func (s *ServiceContext) FindActiveAccount(ctx context.Context, id uint64) (*accountmodel.UserAccount, error) {
 	return s.UserAccountModel.FindOneActive(ctx, id)
 }
 
-func (s *ServiceContext) IsAdminAccount(account *model.UserAccount) bool {
+func (s *ServiceContext) IsAdminAccount(account *accountmodel.UserAccount) bool {
 	if account == nil {
 		return false
 	}

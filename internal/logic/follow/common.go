@@ -3,7 +3,10 @@ package follow
 import (
 	"context"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	followmodel "discover_world/model/follow"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strconv"
 	"strings"
 
@@ -12,7 +15,6 @@ import (
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -20,7 +22,7 @@ const (
 	maxFollowPageSize     = 100
 )
 
-func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*model.UserAccount, error) {
+func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*accountmodel.UserAccount, error) {
 	return commonauth.LoadRequiredLoginUser(ctx, svcCtx, "")
 }
 
@@ -58,10 +60,10 @@ func nullStringValue(value sql.NullString) string {
 	return value.String
 }
 
-func loadFollowTarget(ctx context.Context, svcCtx *svc.ServiceContext, targetID uint64) (*model.UserAccount, error) {
+func loadFollowTarget(ctx context.Context, svcCtx *svc.ServiceContext, targetID uint64) (*accountmodel.UserAccount, error) {
 	target, err := svcCtx.UserAccountModel.FindOneActive(ctx, targetID)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("账号不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询账号失败")
@@ -69,7 +71,7 @@ func loadFollowTarget(ctx context.Context, svcCtx *svc.ServiceContext, targetID 
 	return target, nil
 }
 
-func validateFollowTarget(ctx context.Context, svcCtx *svc.ServiceContext, loginUser *model.UserAccount, targetID uint64) (*model.UserAccount, error) {
+func validateFollowTarget(ctx context.Context, svcCtx *svc.ServiceContext, loginUser *accountmodel.UserAccount, targetID uint64) (*accountmodel.UserAccount, error) {
 	if loginUser == nil {
 		return nil, commonresponse.Unauthorized("请先登录")
 	}
@@ -79,7 +81,7 @@ func validateFollowTarget(ctx context.Context, svcCtx *svc.ServiceContext, login
 	return loadFollowTarget(ctx, svcCtx, targetID)
 }
 
-func buildFollowStatus(ctx context.Context, svcCtx *svc.ServiceContext, loginUser *model.UserAccount, target *model.UserAccount) (*types.FollowStatusResponse, error) {
+func buildFollowStatus(ctx context.Context, svcCtx *svc.ServiceContext, loginUser *accountmodel.UserAccount, target *accountmodel.UserAccount) (*types.FollowStatusResponse, error) {
 	if target == nil {
 		return &types.FollowStatusResponse{}, nil
 	}
@@ -148,7 +150,7 @@ func buildPublicAccountSummaries(ctx context.Context, svcCtx *svc.ServiceContext
 		return nil, commonresponse.InternalServerError("查询账号头像失败")
 	}
 
-	accountByID := make(map[uint64]*model.UserAccount, len(accounts))
+	accountByID := make(map[uint64]*accountmodel.UserAccount, len(accounts))
 	for _, account := range accounts {
 		if account != nil && strings.EqualFold(strings.TrimSpace(account.Status), "active") && !account.DeletedAt.Valid {
 			accountByID[account.Id] = account
@@ -185,7 +187,7 @@ func buildPublicAccountSummaries(ctx context.Context, svcCtx *svc.ServiceContext
 	return resp, nil
 }
 
-func refUserIDs(refs []model.FollowUserRef) []uint64 {
+func refUserIDs(refs []followmodel.FollowUserRef) []uint64 {
 	ids := make([]uint64, 0, len(refs))
 	for _, ref := range refs {
 		ids = append(ids, ref.UserID)
@@ -193,7 +195,7 @@ func refUserIDs(refs []model.FollowUserRef) []uint64 {
 	return ids
 }
 
-func nextCursor(refs []model.FollowUserRef, hasMore bool) string {
+func nextCursor(refs []followmodel.FollowUserRef, hasMore bool) string {
 	if !hasMore || len(refs) == 0 {
 		return ""
 	}

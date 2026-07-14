@@ -3,13 +3,12 @@ package admin
 import (
 	"context"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -40,7 +39,7 @@ func (l *FeatureAdminContentLogic) FeatureAdminContent(req *types.AdminFeatureCo
 	}
 	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, targetID)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return commonresponse.NotFound("媒体资源不存在")
 		}
 		return commonresponse.InternalServerError("查询媒体资源失败")

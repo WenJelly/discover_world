@@ -5,8 +5,10 @@ package media
 
 import (
 	"context"
+	mediamodel "discover_world/model/media"
 	"errors"
 	"fmt"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 	"time"
 
@@ -14,8 +16,6 @@ import (
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -58,7 +58,7 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 
 	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, assetID)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("媒体资源不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")
@@ -72,7 +72,7 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 
 	object, err := l.svcCtx.MediaObjectModel.FindOriginalByAssetID(l.ctx, asset.Id)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("原图不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询原图失败")
@@ -80,7 +80,7 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 
 	bucket, err := l.svcCtx.StorageBucketModel.FindOne(l.ctx, object.BucketId)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("原图存储桶不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询原图存储桶失败")
@@ -102,7 +102,7 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 	refreshMediaRanking(l.ctx, l.svcCtx, asset.Id)
 
 	stat, err := l.svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(l.ctx, targetTypeMediaAsset, asset.Id)
-	if err != nil && !errors.Is(err, model.ErrNotFound) {
+	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, commonresponse.InternalServerError("查询下载量失败")
 	}
 
@@ -114,7 +114,7 @@ func (l *DownloadMediaAssetLogic) DownloadMediaAsset(req *types.DownloadMediaAss
 	}, nil
 }
 
-func mediaDownloadFilename(asset *model.MediaAsset, object *model.MediaObject) string {
+func mediaDownloadFilename(asset *mediamodel.MediaAsset, object *mediamodel.MediaObject) string {
 	if asset != nil {
 		if name := strings.TrimSpace(nullStringValue(asset.OriginalFilename)); name != "" {
 			return name

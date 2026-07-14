@@ -6,7 +6,9 @@ package media
 import (
 	"context"
 	"database/sql"
+	notificationmodel "discover_world/model/notification"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 	"time"
 
@@ -14,8 +16,6 @@ import (
 	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -57,7 +57,7 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 
 	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, id)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("媒体资源不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")
@@ -102,7 +102,7 @@ func (l *ReviewMediaAssetLogic) ReviewMediaAsset(req *types.ReviewMediaAssetRequ
 		} else if auditStatus == "rejected" {
 			title = "作品审核未通过"
 		}
-		if _, err := l.svcCtx.NotificationModel.Insert(l.ctx, &model.Notification{
+		if _, err := l.svcCtx.NotificationModel.Insert(l.ctx, &notificationmodel.Notification{
 			RecipientUserId: asset.OwnerUserId,
 			ActorUserId:     sql.NullInt64{Int64: int64(adminUser.Id), Valid: true},
 			EventType:       "media_review",

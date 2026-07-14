@@ -2,13 +2,13 @@ package feed
 
 import (
 	"context"
+	accountmodel "discover_world/model/account"
 	"strconv"
 	"strings"
 
 	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
-	"discover_world/model"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 	maxFollowingSourceUsers      = 100
 )
 
-func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*model.UserAccount, error) {
+func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*accountmodel.UserAccount, error) {
 	return commonauth.LoadRequiredLoginUser(ctx, svcCtx, "")
 }
 

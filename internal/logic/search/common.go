@@ -2,13 +2,16 @@ package search
 
 import (
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	profilemodel "discover_world/model/profile"
+	searchmodel "discover_world/model/search"
+	statisticsmodel "discover_world/model/statistics"
 	"strconv"
 	"strings"
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -125,7 +128,7 @@ func normalizePostTypeValue(postType string) string {
 	}
 }
 
-func buildAccountSummary(account *model.UserAccount, profile *model.UserProfile, avatarURL string) types.AccountSummary {
+func buildAccountSummary(account *accountmodel.UserAccount, profile *profilemodel.UserProfile, avatarURL string) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}
@@ -152,7 +155,7 @@ func buildAccountSummary(account *model.UserAccount, profile *model.UserProfile,
 	}
 }
 
-func buildSearchUserSummary(user *model.SearchUser, avatarURL string) types.AccountSummary {
+func buildSearchUserSummary(user *searchmodel.SearchUser, avatarURL string) types.AccountSummary {
 	if user == nil {
 		return types.AccountSummary{}
 	}
@@ -174,7 +177,7 @@ func buildSearchUserSummary(user *model.SearchUser, avatarURL string) types.Acco
 	}
 }
 
-func buildStats(stat *model.EntityStat) types.MediaAssetStats {
+func buildStats(stat *statisticsmodel.EntityStat) types.MediaAssetStats {
 	if stat == nil {
 		return types.MediaAssetStats{}
 	}
@@ -216,7 +219,7 @@ func uint64ToInt64(value uint64) int64 {
 	return int64(value)
 }
 
-func accountRole(account *model.UserAccount) string {
+func accountRole(account *accountmodel.UserAccount) string {
 	if account == nil {
 		return "user"
 	}

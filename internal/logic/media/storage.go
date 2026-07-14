@@ -5,9 +5,11 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha1"
+	mediamodel "discover_world/model/media"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"io"
 	"net/http"
 	"net/url"
@@ -19,14 +21,12 @@ import (
 	"discover_world/internal/config"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
 type storageTarget struct {
-	Bucket    *model.StorageBucket
-	Provider  *model.StorageProvider
+	Bucket    *mediamodel.StorageBucket
+	Provider  *mediamodel.StorageProvider
 	Secret    config.StorageSecretConfig
 	UploadURL string
 }
@@ -40,14 +40,14 @@ type objectStorageMetadata struct {
 var cosHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
 func loadStorageTarget(ctx context.Context, svcCtx *svc.ServiceContext, usageType string) (*storageTarget, error) {
-	var bucket *model.StorageBucket
+	var bucket *mediamodel.StorageBucket
 	var err error
 	for _, candidate := range storageUsageCandidates(usageType) {
 		bucket, err = svcCtx.StorageBucketModel.FindDefaultActiveByUsage(ctx, candidate)
 		if err == nil {
 			break
 		}
-		if !errors.Is(err, model.ErrNotFound) {
+		if !errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.InternalServerError("查询存储桶失败")
 		}
 	}
@@ -57,7 +57,7 @@ func loadStorageTarget(ctx context.Context, svcCtx *svc.ServiceContext, usageTyp
 
 	provider, err := svcCtx.StorageProviderModel.FindOne(ctx, bucket.ProviderId)
 	if err != nil || provider.Status != 1 {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.InternalServerError("存储服务商不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询存储服务商失败")
@@ -88,7 +88,7 @@ func loadStorageTargetByIDs(ctx context.Context, svcCtx *svc.ServiceContext, pro
 
 	bucket, err := svcCtx.StorageBucketModel.FindOne(ctx, bucketID)
 	if err != nil || bucket.ProviderId != providerID || bucket.Status != 1 {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.InternalServerError("存储桶不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询存储桶失败")
@@ -96,7 +96,7 @@ func loadStorageTargetByIDs(ctx context.Context, svcCtx *svc.ServiceContext, pro
 
 	provider, err := svcCtx.StorageProviderModel.FindOne(ctx, providerID)
 	if err != nil || provider.Status != 1 {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.InternalServerError("存储服务商不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询存储服务商失败")
@@ -124,7 +124,7 @@ func storageUsageCandidates(usageType string) []string {
 	return []string{normalizeUsageType(usageType)}
 }
 
-func buildPublicObjectURL(bucket *model.StorageBucket, objectKey string) string {
+func buildPublicObjectURL(bucket *mediamodel.StorageBucket, objectKey string) string {
 	if bucket == nil {
 		return ""
 	}
@@ -142,7 +142,7 @@ func buildPublicObjectURL(bucket *model.StorageBucket, objectKey string) string 
 	return buildObjectURL(host, objectKey)
 }
 
-func BuildPublicObjectURL(bucket *model.StorageBucket, objectKey string) string {
+func BuildPublicObjectURL(bucket *mediamodel.StorageBucket, objectKey string) string {
 	return buildPublicObjectURL(bucket, objectKey)
 }
 
@@ -386,7 +386,7 @@ func hasCompleteStorageConfig(target *storageTarget) bool {
 		strings.TrimSpace(target.Secret.SecretKey) != ""
 }
 
-func buildStorageURI(provider *model.StorageProvider, bucket *model.StorageBucket, objectKey string) string {
+func buildStorageURI(provider *mediamodel.StorageProvider, bucket *mediamodel.StorageBucket, objectKey string) string {
 	if provider == nil || bucket == nil {
 		return objectKey
 	}

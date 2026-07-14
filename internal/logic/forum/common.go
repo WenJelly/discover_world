@@ -3,6 +3,10 @@ package forum
 import (
 	"context"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	forummodel "discover_world/model/forum"
+	postmodel "discover_world/model/post"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strconv"
 	"strings"
 	"time"
@@ -13,7 +17,6 @@ import (
 	postlogic "discover_world/internal/logic/post"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -30,7 +33,7 @@ const (
 	targetTypePost        = "post"
 )
 
-func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*model.UserAccount, error) {
+func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*accountmodel.UserAccount, error) {
 	return commonauth.LoadRequiredLoginUser(ctx, svcCtx, "")
 }
 
@@ -164,7 +167,7 @@ func formatTime(value time.Time) string {
 	return value.Format("2006-01-02 15:04:05")
 }
 
-func buildForumBoardResponse(board *model.ForumBoard) types.ForumBoardResponse {
+func buildForumBoardResponse(board *forummodel.ForumBoard) types.ForumBoardResponse {
 	if board == nil {
 		return types.ForumBoardResponse{}
 	}
@@ -180,7 +183,7 @@ func buildForumBoardResponse(board *model.ForumBoard) types.ForumBoardResponse {
 	}
 }
 
-func buildForumPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, discussions []*model.PostDiscussion, viewer *model.UserAccount) ([]types.ForumPostResponse, error) {
+func buildForumPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, discussions []*postmodel.PostDiscussion, viewer *accountmodel.UserAccount) ([]types.ForumPostResponse, error) {
 	if len(discussions) == 0 {
 		return []types.ForumPostResponse{}, nil
 	}
@@ -196,8 +199,8 @@ func buildForumPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, di
 		return nil, commonresponse.InternalServerError("query forum posts failed")
 	}
 
-	orderedPosts := make([]*model.Post, 0, len(discussions))
-	orderedDiscussions := make([]*model.PostDiscussion, 0, len(discussions))
+	orderedPosts := make([]*postmodel.Post, 0, len(discussions))
+	orderedDiscussions := make([]*postmodel.PostDiscussion, 0, len(discussions))
 	for _, discussion := range discussions {
 		if discussion == nil {
 			continue
@@ -223,7 +226,7 @@ func buildForumPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, di
 		discussion := orderedDiscussions[index]
 		board, err := svcCtx.ForumBoardModel.FindOneActiveByID(ctx, discussion.BoardId)
 		if err != nil {
-			if err == model.ErrNotFound {
+			if err == sqlx.ErrNotFound {
 				continue
 			}
 			return nil, commonresponse.InternalServerError("query forum board failed")

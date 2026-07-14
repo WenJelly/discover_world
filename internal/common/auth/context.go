@@ -2,13 +2,12 @@ package auth
 
 import (
 	"context"
-
-	"discover_world/model"
+	accountmodel "discover_world/model/account"
 )
 
 type loginUserContextKey struct{}
 
-func WithLoginUser(ctx context.Context, user *model.UserAccount) context.Context {
+func WithLoginUser(ctx context.Context, user *accountmodel.UserAccount) context.Context {
 	if ctx == nil || user == nil {
 		return ctx
 	}
@@ -16,11 +15,11 @@ func WithLoginUser(ctx context.Context, user *model.UserAccount) context.Context
 	return context.WithValue(ctx, loginUserContextKey{}, user)
 }
 
-func LoginUserFromContext(ctx context.Context) (*model.UserAccount, bool) {
+func LoginUserFromContext(ctx context.Context) (*accountmodel.UserAccount, bool) {
 	if ctx == nil {
 		return nil, false
 	}
 
-	user, ok := ctx.Value(loginUserContextKey{}).(*model.UserAccount)
+	user, ok := ctx.Value(loginUserContextKey{}).(*accountmodel.UserAccount)
 	return user, ok && user != nil
 }

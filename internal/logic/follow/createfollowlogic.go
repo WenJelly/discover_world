@@ -3,12 +3,11 @@ package follow
 import (
 	"context"
 	"database/sql"
+	notificationmodel "discover_world/model/notification"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -47,7 +46,7 @@ func (l *CreateFollowLogic) CreateFollow(req *types.FollowTargetRequest) (*types
 		return nil, err
 	}
 	if !wasFollowing {
-		if _, err := l.svcCtx.NotificationModel.Insert(l.ctx, &model.Notification{
+		if _, err := l.svcCtx.NotificationModel.Insert(l.ctx, &notificationmodel.Notification{
 			RecipientUserId: target.Id,
 			ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
 			EventType:       "follow",

@@ -3,13 +3,12 @@ package moderation
 import (
 	"context"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -36,7 +35,7 @@ func (l *GetAdminModerationReportDetailLogic) GetAdminModerationReportDetail(req
 	}
 	row, err := l.svcCtx.ModerationReportModel.FindOne(l.ctx, id)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("举报不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询举报失败")

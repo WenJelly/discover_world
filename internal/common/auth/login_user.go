@@ -2,23 +2,23 @@ package auth
 
 import (
 	"context"
+	accountmodel "discover_world/model/account"
 	"encoding/json"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"math"
 	"strconv"
 	"strings"
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
-	"discover_world/model"
-
 	"github.com/golang-jwt/jwt/v4"
 )
 
 type AccountProvider interface {
 	AuthSecret() string
-	FindActiveAccount(ctx context.Context, id uint64) (*model.UserAccount, error)
-	IsAdminAccount(account *model.UserAccount) bool
+	FindActiveAccount(ctx context.Context, id uint64) (*accountmodel.UserAccount, error)
+	IsAdminAccount(account *accountmodel.UserAccount) bool
 }
 
 type TokenMetadata struct {
@@ -119,7 +119,7 @@ func ExtractUserIDFromContext(ctx context.Context) (uint64, error) {
 	return 0, errors.New("missing userId claim")
 }
 
-func LoadRequiredLoginUser(ctx context.Context, provider AccountProvider, authorization string) (*model.UserAccount, error) {
+func LoadRequiredLoginUser(ctx context.Context, provider AccountProvider, authorization string) (*accountmodel.UserAccount, error) {
 	if loginUser, ok := LoginUserFromContext(ctx); ok {
 		return loginUser, nil
 	}
@@ -134,7 +134,7 @@ func LoadRequiredLoginUser(ctx context.Context, provider AccountProvider, author
 
 	loginUser, err := provider.FindActiveAccount(ctx, userID)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.Unauthorized("登录用户不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询登录用户失败")
@@ -143,7 +143,7 @@ func LoadRequiredLoginUser(ctx context.Context, provider AccountProvider, author
 	return loginUser, nil
 }
 
-func LoadRequiredAdminUser(ctx context.Context, provider AccountProvider, authorization string) (*model.UserAccount, error) {
+func LoadRequiredAdminUser(ctx context.Context, provider AccountProvider, authorization string) (*accountmodel.UserAccount, error) {
 	loginUser, err := LoadRequiredLoginUser(ctx, provider, authorization)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func LoadRequiredAdminUser(ctx context.Context, provider AccountProvider, author
 	return loginUser, nil
 }
 
-func LoadOptionalLoginUser(ctx context.Context, provider AccountProvider, authorization string) (*model.UserAccount, error) {
+func LoadOptionalLoginUser(ctx context.Context, provider AccountProvider, authorization string) (*accountmodel.UserAccount, error) {
 	if strings.TrimSpace(authorization) == "" {
 		if _, err := ExtractUserIDFromContext(ctx); err != nil {
 			return nil, nil

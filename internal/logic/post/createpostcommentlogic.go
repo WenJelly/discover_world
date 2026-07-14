@@ -6,15 +6,16 @@ package post
 import (
 	"context"
 	"database/sql"
+	notificationmodel "discover_world/model/notification"
+	postmodel "discover_world/model/post"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -53,7 +54,7 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 		return nil, err
 	}
 	discussion, err := l.svcCtx.PostDiscussionModel.FindByPostID(l.ctx, post.Id)
-	if err != nil && !errors.Is(err, model.ErrNotFound) {
+	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, commonresponse.InternalServerError("query forum post failed")
 	}
 	if discussion != nil && discussion.IsLocked == 1 {
@@ -63,7 +64,7 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 	var commentID uint64
 	notificationCreated := false
 	err = l.svcCtx.Transact(l.ctx, func(ctx context.Context, txSvc *svc.ServiceContext) error {
-		result, err := txSvc.CommentRecordModel.Insert(ctx, &model.CommentRecord{
+		result, err := txSvc.CommentRecordModel.Insert(ctx, &postmodel.CommentRecord{
 			UserId:     loginUser.Id,
 			TargetType: targetTypePost,
 			TargetId:   post.Id,
@@ -91,7 +92,7 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 			return err
 		}
 		if post.UserId != loginUser.Id {
-			if _, err := txSvc.NotificationModel.Insert(ctx, &model.Notification{
+			if _, err := txSvc.NotificationModel.Insert(ctx, &notificationmodel.Notification{
 				RecipientUserId: post.UserId,
 				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
 				EventType:       "post_comment",
@@ -120,7 +121,7 @@ func (l *CreatePostCommentLogic) CreatePostComment(req *types.CreatePostCommentR
 	if err != nil {
 		return nil, commonresponse.InternalServerError("load post comment failed")
 	}
-	list, err := buildCommentResponses(l.ctx, l.svcCtx, []*model.CommentRecord{comment})
+	list, err := buildCommentResponses(l.ctx, l.svcCtx, []*postmodel.CommentRecord{comment})
 	if err != nil {
 		return nil, err
 	}

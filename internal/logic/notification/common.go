@@ -3,6 +3,9 @@ package notification
 import (
 	"context"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	notificationmodel "discover_world/model/notification"
+	profilemodel "discover_world/model/profile"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +15,6 @@ import (
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -20,7 +22,7 @@ const (
 	maxNotificationPageSize     = 100
 )
 
-func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*model.UserAccount, error) {
+func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*accountmodel.UserAccount, error) {
 	return commonauth.LoadRequiredLoginUser(ctx, svcCtx, "")
 }
 
@@ -79,7 +81,7 @@ func formatTime(value time.Time) string {
 	return value.Format(time.RFC3339)
 }
 
-func buildNotificationResponses(ctx context.Context, svcCtx *svc.ServiceContext, rows []*model.Notification) ([]types.NotificationResponse, error) {
+func buildNotificationResponses(ctx context.Context, svcCtx *svc.ServiceContext, rows []*notificationmodel.Notification) ([]types.NotificationResponse, error) {
 	if len(rows) == 0 {
 		return []types.NotificationResponse{}, nil
 	}
@@ -104,7 +106,7 @@ func buildNotificationResponses(ctx context.Context, svcCtx *svc.ServiceContext,
 		return nil, commonresponse.InternalServerError("query notification actor avatars failed")
 	}
 
-	accountByID := make(map[uint64]*model.UserAccount, len(accounts))
+	accountByID := make(map[uint64]*accountmodel.UserAccount, len(accounts))
 	for _, account := range accounts {
 		if account != nil && strings.EqualFold(strings.TrimSpace(account.Status), "active") && !account.DeletedAt.Valid {
 			accountByID[account.Id] = account
@@ -137,7 +139,7 @@ func buildNotificationResponses(ctx context.Context, svcCtx *svc.ServiceContext,
 	return resp, nil
 }
 
-func buildAccountSummary(account *model.UserAccount, profile *model.UserProfile, avatarURL string) types.AccountSummary {
+func buildAccountSummary(account *accountmodel.UserAccount, profile *profilemodel.UserProfile, avatarURL string) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}

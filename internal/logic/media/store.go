@@ -2,11 +2,12 @@ package media
 
 import (
 	"context"
+	statisticsmodel "discover_world/model/statistics"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 
 	"discover_world/internal/svc"
-	"discover_world/model"
 )
 
 func replaceAssetTags(ctx context.Context, svcCtx *svc.ServiceContext, assetID uint64, tags []string) error {
@@ -24,8 +25,8 @@ func replaceAssetTags(ctx context.Context, svcCtx *svc.ServiceContext, assetID u
 
 func ensureEntityStat(ctx context.Context, svcCtx *svc.ServiceContext, assetID uint64) {
 	_, err := svcCtx.EntityStatModel.FindOneByTargetTypeTargetId(ctx, targetTypeMediaAsset, assetID)
-	if errors.Is(err, model.ErrNotFound) {
-		_, _ = svcCtx.EntityStatModel.Insert(ctx, &model.EntityStat{
+	if errors.Is(err, sqlx.ErrNotFound) {
+		_, _ = svcCtx.EntityStatModel.Insert(ctx, &statisticsmodel.EntityStat{
 			TargetType: targetTypeMediaAsset,
 			TargetId:   assetID,
 		})

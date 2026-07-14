@@ -3,9 +3,15 @@ package profile
 import (
 	"context"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	mediamodel "discover_world/model/media"
+	postmodel "discover_world/model/post"
+	profilemodel "discover_world/model/profile"
+	statisticsmodel "discover_world/model/statistics"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +22,6 @@ import (
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -60,7 +65,7 @@ func normalizePostTypeValue(postType string) string {
 	}
 }
 
-func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserID string) (*model.UserAccount, *model.UserAccount, access.ViewerAccessLevel, error) {
+func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserID string) (*accountmodel.UserAccount, *accountmodel.UserAccount, access.ViewerAccessLevel, error) {
 	loginUser, err := commonauth.LoadRequiredLoginUser(ctx, svcCtx, "")
 	if err != nil {
 		return nil, nil, access.ViewerAccessPublic, err
@@ -78,7 +83,7 @@ func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserI
 	if targetID != loginUser.Id {
 		target, err = svcCtx.UserAccountModel.FindOneActive(ctx, targetID)
 		if err != nil {
-			if errors.Is(err, model.ErrNotFound) {
+			if errors.Is(err, sqlx.ErrNotFound) {
 				return nil, nil, access.ViewerAccessPublic, commonresponse.NotFound("账号不存在")
 			}
 			return nil, nil, access.ViewerAccessPublic, commonresponse.InternalServerError("查询账号失败")
@@ -92,7 +97,7 @@ func loadProfileTarget(ctx context.Context, svcCtx *svc.ServiceContext, rawUserI
 	return loginUser, target, accessLevel, nil
 }
 
-func ensureProfileForAccount(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount) (*model.UserProfile, error) {
+func ensureProfileForAccount(ctx context.Context, svcCtx *svc.ServiceContext, account *accountmodel.UserAccount) (*profilemodel.UserProfile, error) {
 	if account == nil || account.Id == 0 {
 		return nil, commonresponse.BadRequest("账号不存在")
 	}
@@ -100,11 +105,11 @@ func ensureProfileForAccount(ctx context.Context, svcCtx *svc.ServiceContext, ac
 	if err == nil {
 		return profile, nil
 	}
-	if !errors.Is(err, model.ErrNotFound) {
+	if !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, commonresponse.InternalServerError("查询用户资料失败")
 	}
 
-	if _, err := svcCtx.UserProfileModel.Insert(ctx, &model.UserProfile{
+	if _, err := svcCtx.UserProfileModel.Insert(ctx, &profilemodel.UserProfile{
 		UserId:   account.Id,
 		Nickname: optionalString(account.Username),
 	}); err != nil {
@@ -160,7 +165,7 @@ func parseProfileFeaturedMediaAssetIDs(raw []string) ([]uint64, error) {
 	return uniqueIDs(ids), nil
 }
 
-func encodeProfileCursor(post *model.Post) (string, error) {
+func encodeProfileCursor(post *postmodel.Post) (string, error) {
 	if post == nil {
 		return "", nil
 	}
@@ -194,30 +199,30 @@ func decodeProfileCursor(raw string) (uint64, error) {
 	return payload.ID, nil
 }
 
-func decodeProfilePinCursor(raw string) (model.PostPinCursor, error) {
+func decodeProfilePinCursor(raw string) (postmodel.PostPinCursor, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return model.PostPinCursor{}, nil
+		return postmodel.PostPinCursor{}, nil
 	}
 
 	data, err := base64.RawURLEncoding.DecodeString(raw)
 	if err != nil {
-		return model.PostPinCursor{}, commonresponse.BadRequest("cursor invalid")
+		return postmodel.PostPinCursor{}, commonresponse.BadRequest("cursor invalid")
 	}
 
 	var payload profileCursorPayload
 	if err := json.Unmarshal(data, &payload); err != nil || payload.ID == 0 {
-		return model.PostPinCursor{}, commonresponse.BadRequest("cursor invalid")
+		return postmodel.PostPinCursor{}, commonresponse.BadRequest("cursor invalid")
 	}
 
-	cursor := model.PostPinCursor{
+	cursor := postmodel.PostPinCursor{
 		ID:       payload.ID,
 		IsPinned: payload.IsPinned,
 	}
 	if strings.TrimSpace(payload.PinnedAt) != "" {
 		pinnedAt, err := time.ParseInLocation("2006-01-02 15:04:05", payload.PinnedAt, time.Local)
 		if err != nil {
-			return model.PostPinCursor{}, commonresponse.BadRequest("cursor invalid")
+			return postmodel.PostPinCursor{}, commonresponse.BadRequest("cursor invalid")
 		}
 		cursor.PinnedAt = sql.NullTime{Time: pinnedAt, Valid: true}
 	}
@@ -265,7 +270,7 @@ func formatTime(value time.Time) string {
 	return value.Format("2006-01-02 15:04:05")
 }
 
-func buildStats(stat *model.EntityStat) types.MediaAssetStats {
+func buildStats(stat *statisticsmodel.EntityStat) types.MediaAssetStats {
 	if stat == nil {
 		return types.MediaAssetStats{}
 	}
@@ -279,14 +284,14 @@ func buildStats(stat *model.EntityStat) types.MediaAssetStats {
 	}
 }
 
-func buildPostPinState(post *model.Post) (bool, string) {
+func buildPostPinState(post *postmodel.Post) (bool, string) {
 	if post == nil || post.IsPinned != 1 {
 		return false, ""
 	}
 	return true, formatTime(post.PinnedAt.Time)
 }
 
-func loadPostViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *model.UserAccount, postIDs []uint64) (postViewerState, error) {
+func loadPostViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *accountmodel.UserAccount, postIDs []uint64) (postViewerState, error) {
 	state := postViewerState{
 		liked:     map[uint64]bool{},
 		favorited: map[uint64]bool{},
@@ -339,7 +344,7 @@ func uniqueIDs(ids []uint64) []uint64 {
 	return resp
 }
 
-func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, viewer *model.UserAccount, variant types.MediaVariantRequest) (map[uint64]types.MediaAssetResponse, error) {
+func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest) (map[uint64]types.MediaAssetResponse, error) {
 	resp := make(map[uint64]types.MediaAssetResponse)
 	assetIDs = uniqueIDs(assetIDs)
 	if len(assetIDs) == 0 {
@@ -353,14 +358,14 @@ func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, asse
 	return buildMediaResponseMapFromAssets(ctx, svcCtx, assetIDs, assetsByID, viewer, variant)
 }
 
-func buildMediaResponseMapFromAssets(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, assetsByID map[uint64]*model.MediaAsset, viewer *model.UserAccount, variant types.MediaVariantRequest) (map[uint64]types.MediaAssetResponse, error) {
+func buildMediaResponseMapFromAssets(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, assetsByID map[uint64]*mediamodel.MediaAsset, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest) (map[uint64]types.MediaAssetResponse, error) {
 	resp := make(map[uint64]types.MediaAssetResponse)
 	assetIDs = uniqueIDs(assetIDs)
 	if len(assetIDs) == 0 {
 		return resp, nil
 	}
 
-	assets := make([]*model.MediaAsset, 0, len(assetIDs))
+	assets := make([]*mediamodel.MediaAsset, 0, len(assetIDs))
 	orderedIDs := make([]uint64, 0, len(assetIDs))
 	for _, id := range assetIDs {
 		if asset := assetsByID[id]; asset != nil {

@@ -6,13 +6,12 @@ package media
 import (
 	"context"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
 	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -47,7 +46,7 @@ func (l *GetMediaAssetLogic) GetMediaAsset(req *types.GetMediaAssetRequest) (res
 
 	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, id)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("媒体资源不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")

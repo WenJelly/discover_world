@@ -4,8 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	mediamodel "discover_world/model/media"
+	profilemodel "discover_world/model/profile"
 	"encoding/hex"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"net/mail"
 	"strconv"
 	"strings"
@@ -17,8 +21,6 @@ import (
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -32,12 +34,12 @@ const (
 	defaultRole       = "user"
 )
 
-func buildDetailAccountResponse(_ *svc.ServiceContext, account *model.UserAccount, profile *model.UserProfile, stats *model.MediaAssetOwnerStats, publicMediaAssetCount int64) *types.DetailAccountResponse {
+func buildDetailAccountResponse(_ *svc.ServiceContext, account *accountmodel.UserAccount, profile *profilemodel.UserProfile, stats *mediamodel.MediaAssetOwnerStats, publicMediaAssetCount int64) *types.DetailAccountResponse {
 	if account == nil {
 		return &types.DetailAccountResponse{}
 	}
 	if stats == nil {
-		stats = &model.MediaAssetOwnerStats{}
+		stats = &mediamodel.MediaAssetOwnerStats{}
 	}
 
 	nickname := ""
@@ -71,7 +73,7 @@ func buildDetailAccountResponse(_ *svc.ServiceContext, account *model.UserAccoun
 	}
 }
 
-func loadDetailAccountResponse(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount) (*types.DetailAccountResponse, error) {
+func loadDetailAccountResponse(ctx context.Context, svcCtx *svc.ServiceContext, account *accountmodel.UserAccount) (*types.DetailAccountResponse, error) {
 	profile, err := ensureUserProfile(ctx, svcCtx, account)
 	if err != nil {
 		return nil, err
@@ -108,7 +110,7 @@ func applyFollowState(resp *types.DetailAccountResponse, followerCount, followin
 	resp.IsFollowing = isFollowing
 }
 
-func canViewAccountDetail(svcCtx *svc.ServiceContext, viewer, target *model.UserAccount) bool {
+func canViewAccountDetail(svcCtx *svc.ServiceContext, viewer, target *accountmodel.UserAccount) bool {
 	if viewer == nil || target == nil {
 		return false
 	}
@@ -118,7 +120,7 @@ func canViewAccountDetail(svcCtx *svc.ServiceContext, viewer, target *model.User
 	return strings.EqualFold(strings.TrimSpace(target.Status), "active") && !target.DeletedAt.Valid
 }
 
-func maskDetailAccountForViewer(svcCtx *svc.ServiceContext, viewer, target *model.UserAccount, resp *types.DetailAccountResponse) {
+func maskDetailAccountForViewer(svcCtx *svc.ServiceContext, viewer, target *accountmodel.UserAccount, resp *types.DetailAccountResponse) {
 	if resp == nil || viewer == nil || target == nil {
 		return
 	}
@@ -134,23 +136,23 @@ func maskDetailAccountForViewer(svcCtx *svc.ServiceContext, viewer, target *mode
 	resp.RejectedMediaAssetCount = 0
 }
 
-func isAdminAccountForDetail(svcCtx *svc.ServiceContext, account *model.UserAccount) bool {
+func isAdminAccountForDetail(svcCtx *svc.ServiceContext, account *accountmodel.UserAccount) bool {
 	if svcCtx != nil {
 		return svcCtx.IsAdminAccount(account)
 	}
 	return account != nil && strings.EqualFold(strings.TrimSpace(account.Role), "admin")
 }
 
-func ensureUserProfile(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount) (*model.UserProfile, error) {
+func ensureUserProfile(ctx context.Context, svcCtx *svc.ServiceContext, account *accountmodel.UserAccount) (*profilemodel.UserProfile, error) {
 	profile, err := svcCtx.UserProfileModel.FindOneByUserId(ctx, account.Id)
 	if err == nil {
 		return profile, nil
 	}
-	if !errors.Is(err, model.ErrNotFound) {
+	if !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, commonresponse.InternalServerError("查询用户资料失败")
 	}
 
-	profile = &model.UserProfile{
+	profile = &profilemodel.UserProfile{
 		UserId:   account.Id,
 		Nickname: optionalString(account.Username),
 	}
@@ -180,7 +182,7 @@ func buildLoginResponse(token string, detail *types.DetailAccountResponse) *type
 	}
 }
 
-func createToken(svcCtx *svc.ServiceContext, account *model.UserAccount) (string, error) {
+func createToken(svcCtx *svc.ServiceContext, account *accountmodel.UserAccount) (string, error) {
 	now := time.Now().Unix()
 	tokenIDBytes := make([]byte, 16)
 	if _, err := rand.Read(tokenIDBytes); err != nil {
@@ -266,7 +268,7 @@ func normalizePassword(password string) (string, error) {
 	return password, nil
 }
 
-func accountRole(account *model.UserAccount) string {
+func accountRole(account *accountmodel.UserAccount) string {
 	if account == nil {
 		return defaultRole
 	}
@@ -308,7 +310,7 @@ func ensureEmailAvailable(ctx context.Context, svcCtx *svc.ServiceContext, accou
 	}
 	existing, err := svcCtx.UserAccountModel.FindOneByEmail(ctx, sql.NullString{String: email, Valid: true})
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil
 		}
 		return commonresponse.InternalServerError("查询邮箱失败")
@@ -325,7 +327,7 @@ func ensureUsernameAvailable(ctx context.Context, svcCtx *svc.ServiceContext, ac
 	}
 	existing, err := svcCtx.UserAccountModel.FindOneByUsername(ctx, username)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil
 		}
 		return commonresponse.InternalServerError("查询用户名失败")
@@ -336,11 +338,11 @@ func ensureUsernameAvailable(ctx context.Context, svcCtx *svc.ServiceContext, ac
 	return nil
 }
 
-func loadLoginAccount(ctx context.Context, svcCtx *svc.ServiceContext) (*model.UserAccount, error) {
+func loadLoginAccount(ctx context.Context, svcCtx *svc.ServiceContext) (*accountmodel.UserAccount, error) {
 	return commonauth.LoadRequiredLoginUser(ctx, svcCtx, "")
 }
 
-func applyProfilePatch(profile *model.UserProfile, nickname, bio string) error {
+func applyProfilePatch(profile *profilemodel.UserProfile, nickname, bio string) error {
 	if value := strings.TrimSpace(nickname); value != "" {
 		if utf8.RuneCountInString(value) > maxNicknameLength {
 			return commonresponse.BadRequest("nickname 长度不能超过 100")
@@ -366,7 +368,7 @@ func updateAccountByAdmin(ctx context.Context, svcCtx *svc.ServiceContext, req *
 	}
 	account, err := svcCtx.UserAccountModel.FindOne(ctx, id)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("账号不存在")
 		}
 		return nil, commonresponse.InternalServerError("查询账号失败")
@@ -395,7 +397,7 @@ func UpdateAccountByAdmin(ctx context.Context, svcCtx *svc.ServiceContext, req *
 	return updateAccountByAdmin(ctx, svcCtx, req)
 }
 
-func applyAccountPatch(ctx context.Context, svcCtx *svc.ServiceContext, account *model.UserAccount, username, email, password, role, status string, allowRole, allowStatus bool) error {
+func applyAccountPatch(ctx context.Context, svcCtx *svc.ServiceContext, account *accountmodel.UserAccount, username, email, password, role, status string, allowRole, allowStatus bool) error {
 	if value := strings.TrimSpace(username); value != "" {
 		username, err := normalizeUsername(value, nullStringValue(account.Email))
 		if err != nil {

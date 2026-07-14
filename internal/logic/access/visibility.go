@@ -2,10 +2,10 @@ package access
 
 import (
 	"context"
+	accountmodel "discover_world/model/account"
 	"strings"
 
 	"discover_world/internal/svc"
-	"discover_world/model"
 )
 
 const (
@@ -24,7 +24,7 @@ const (
 	ViewerAccessAdmin    ViewerAccessLevel = "admin"
 )
 
-func ResolveViewerAccess(ctx context.Context, svcCtx *svc.ServiceContext, viewer *model.UserAccount, ownerID uint64) (ViewerAccessLevel, error) {
+func ResolveViewerAccess(ctx context.Context, svcCtx *svc.ServiceContext, viewer *accountmodel.UserAccount, ownerID uint64) (ViewerAccessLevel, error) {
 	if viewer == nil || viewer.Id == 0 || ownerID == 0 {
 		return ViewerAccessPublic, nil
 	}

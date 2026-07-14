@@ -2,13 +2,16 @@ package admin
 
 import (
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	adminmodel "discover_world/model/admin"
+	profilemodel "discover_world/model/profile"
+	taxonomymodel "discover_world/model/taxonomy"
 	"strconv"
 	"strings"
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -89,7 +92,7 @@ func formatNullTime(value sql.NullTime) string {
 	return formatTime(value.Time)
 }
 
-func buildAdminAccountSummary(account *model.UserAccount, profile *model.UserProfile) types.AccountSummary {
+func buildAdminAccountSummary(account *accountmodel.UserAccount, profile *profilemodel.UserProfile) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}
@@ -111,7 +114,7 @@ func buildAdminAccountSummary(account *model.UserAccount, profile *model.UserPro
 	}
 }
 
-func buildAdminTagResponse(tag *model.Tag) types.AdminTagResponse {
+func buildAdminTagResponse(tag *taxonomymodel.Tag) types.AdminTagResponse {
 	if tag == nil {
 		return types.AdminTagResponse{}
 	}
@@ -125,7 +128,7 @@ func buildAdminTagResponse(tag *model.Tag) types.AdminTagResponse {
 	}
 }
 
-func buildAdminOperationLogResponse(row *model.AdminOperationLog) types.AdminOperationLogResponse {
+func buildAdminOperationLogResponse(row *adminmodel.AdminOperationLog) types.AdminOperationLogResponse {
 	if row == nil {
 		return types.AdminOperationLogResponse{}
 	}

@@ -6,14 +6,14 @@ package media
 import (
 	"context"
 	"database/sql"
+	notificationmodel "discover_world/model/notification"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
 	commonauth "discover_world/internal/common/auth"
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -45,7 +45,7 @@ func (l *ToggleMediaReactionLogic) ToggleMediaReaction(req *types.ToggleMediaRea
 	}
 	asset, err := l.svcCtx.MediaAssetModel.FindOneActive(l.ctx, assetID)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("media asset not found")
 		}
 		return nil, commonresponse.InternalServerError("query media asset failed")
@@ -76,7 +76,7 @@ func (l *ToggleMediaReactionLogic) ToggleMediaReaction(req *types.ToggleMediaRea
 		}
 		refreshMediaRanking(ctx, txSvc, asset.Id)
 		if nextActive && asset.OwnerUserId != loginUser.Id {
-			if _, err := txSvc.NotificationModel.Insert(ctx, &model.Notification{
+			if _, err := txSvc.NotificationModel.Insert(ctx, &notificationmodel.Notification{
 				RecipientUserId: asset.OwnerUserId,
 				ActorUserId:     sql.NullInt64{Int64: int64(loginUser.Id), Valid: true},
 				EventType:       "media_reaction",

@@ -5,13 +5,13 @@ package profile
 
 import (
 	"context"
+	accountmodel "discover_world/model/account"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -45,7 +45,7 @@ func (l *GetProfileFeaturedMediaListLogic) GetProfileFeaturedMediaList(req *type
 
 	userProfile, err := l.svcCtx.UserProfileModel.FindOneByUserId(l.ctx, target.Id)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return emptyProfileFeaturedMediaPage(pageSize), nil
 		}
 		return nil, commonresponse.InternalServerError("查询用户资料失败")
@@ -54,7 +54,7 @@ func (l *GetProfileFeaturedMediaListLogic) GetProfileFeaturedMediaList(req *type
 	return buildProfileFeaturedMediaPage(l.ctx, l.svcCtx, userProfile.Id, loginUser, req.Variant, pageSize)
 }
 
-func buildProfileFeaturedMediaPage(ctx context.Context, svcCtx *svc.ServiceContext, userProfileID uint64, viewer *model.UserAccount, variant types.MediaVariantRequest, pageSize int64) (*types.MediaAssetPageResponse, error) {
+func buildProfileFeaturedMediaPage(ctx context.Context, svcCtx *svc.ServiceContext, userProfileID uint64, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest, pageSize int64) (*types.MediaAssetPageResponse, error) {
 	assetIDs, err := svcCtx.AssetLinkModel.FindActiveAssetIDsByOwner(ctx, ownerTypeUserProfile, userProfileID, linkRoleFeaturedMedia, pageSize)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询精选图片失败")
@@ -79,7 +79,7 @@ func buildProfileFeaturedMediaPage(ctx context.Context, svcCtx *svc.ServiceConte
 	}, nil
 }
 
-func buildPublishedProfileFeaturedMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, viewer *model.UserAccount, variant types.MediaVariantRequest) (map[uint64]types.MediaAssetResponse, error) {
+func buildPublishedProfileFeaturedMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, viewer *accountmodel.UserAccount, variant types.MediaVariantRequest) (map[uint64]types.MediaAssetResponse, error) {
 	assetsByID, err := svcCtx.MediaAssetModel.FindPublicApprovedByIDs(ctx, assetIDs)
 	if err != nil {
 		return nil, commonresponse.InternalServerError("查询媒体资源失败")

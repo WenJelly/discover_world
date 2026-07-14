@@ -3,9 +3,15 @@ package post
 import (
 	"context"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	mediamodel "discover_world/model/media"
+	postmodel "discover_world/model/post"
+	profilemodel "discover_world/model/profile"
+	statisticsmodel "discover_world/model/statistics"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strconv"
 	"strings"
 	"time"
@@ -18,7 +24,6 @@ import (
 	mediaLogic "discover_world/internal/logic/media"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
 )
 
 const (
@@ -234,7 +239,7 @@ func decodeCursor(raw string) (uint64, error) {
 	return payload.ID, nil
 }
 
-func encodePublicPostCursor(post *model.Post) (string, error) {
+func encodePublicPostCursor(post *postmodel.Post) (string, error) {
 	if post == nil || post.Id == 0 {
 		return "", nil
 	}
@@ -245,20 +250,20 @@ func encodePublicPostCursor(post *model.Post) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(data), nil
 }
 
-func decodePublicPostCursor(raw string) (model.PublicPostCursor, error) {
+func decodePublicPostCursor(raw string) (postmodel.PublicPostCursor, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return model.PublicPostCursor{}, nil
+		return postmodel.PublicPostCursor{}, nil
 	}
 	data, err := base64.RawURLEncoding.DecodeString(raw)
 	if err != nil {
-		return model.PublicPostCursor{}, commonresponse.BadRequest("cursor is invalid")
+		return postmodel.PublicPostCursor{}, commonresponse.BadRequest("cursor is invalid")
 	}
 	var payload publicPostCursorPayload
 	if err := json.Unmarshal(data, &payload); err != nil || payload.ID == 0 {
-		return model.PublicPostCursor{}, commonresponse.BadRequest("cursor is invalid")
+		return postmodel.PublicPostCursor{}, commonresponse.BadRequest("cursor is invalid")
 	}
-	return model.PublicPostCursor{ID: payload.ID, Score: payload.Score}, nil
+	return postmodel.PublicPostCursor{ID: payload.ID, Score: payload.Score}, nil
 }
 
 func optionalString(value string) sql.NullString {
@@ -297,14 +302,14 @@ func uint64ToInt64(value uint64) int64 {
 	return int64(value)
 }
 
-func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*model.UserAccount, error) {
+func loadLoginUser(ctx context.Context, svcCtx *svc.ServiceContext) (*accountmodel.UserAccount, error) {
 	return commonauth.LoadRequiredLoginUser(ctx, svcCtx, "")
 }
 
-func loadVisiblePost(ctx context.Context, svcCtx *svc.ServiceContext, postID uint64, viewer *model.UserAccount) (*model.Post, error) {
+func loadVisiblePost(ctx context.Context, svcCtx *svc.ServiceContext, postID uint64, viewer *accountmodel.UserAccount) (*postmodel.Post, error) {
 	post, err := svcCtx.PostModel.FindOneActive(ctx, postID)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("post not found")
 		}
 		return nil, commonresponse.InternalServerError("query post failed")
@@ -315,14 +320,14 @@ func loadVisiblePost(ctx context.Context, svcCtx *svc.ServiceContext, postID uin
 	return post, nil
 }
 
-func canManagePost(post *model.Post, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
+func canManagePost(post *postmodel.Post, user *accountmodel.UserAccount, svcCtx *svc.ServiceContext) bool {
 	if post == nil || user == nil {
 		return false
 	}
 	return post.UserId == user.Id || svcCtx.IsAdminAccount(user)
 }
 
-func canViewPost(ctx context.Context, post *model.Post, user *model.UserAccount, svcCtx *svc.ServiceContext) bool {
+func canViewPost(ctx context.Context, post *postmodel.Post, user *accountmodel.UserAccount, svcCtx *svc.ServiceContext) bool {
 	if post == nil || post.Status != postStatusActive || post.DeletedAt.Valid {
 		return false
 	}
@@ -371,7 +376,7 @@ func validatePostImages(ctx context.Context, svcCtx *svc.ServiceContext, ownerID
 	return nil
 }
 
-func buildStats(stat *model.EntityStat) types.MediaAssetStats {
+func buildStats(stat *statisticsmodel.EntityStat) types.MediaAssetStats {
 	if stat == nil {
 		return types.MediaAssetStats{}
 	}
@@ -385,15 +390,15 @@ func buildStats(stat *model.EntityStat) types.MediaAssetStats {
 	}
 }
 
-func buildPostPinState(post *model.Post) (bool, string) {
+func buildPostPinState(post *postmodel.Post) (bool, string) {
 	if post == nil || post.IsPinned != 1 {
 		return false, ""
 	}
 	return true, formatTime(post.PinnedAt.Time)
 }
 
-func buildPostResponse(ctx context.Context, svcCtx *svc.ServiceContext, post *model.Post, viewer *model.UserAccount) (*types.ProfilePostResponse, error) {
-	list, err := buildPostResponses(ctx, svcCtx, []*model.Post{post}, viewer)
+func buildPostResponse(ctx context.Context, svcCtx *svc.ServiceContext, post *postmodel.Post, viewer *accountmodel.UserAccount) (*types.ProfilePostResponse, error) {
+	list, err := buildPostResponses(ctx, svcCtx, []*postmodel.Post{post}, viewer)
 	if err != nil {
 		return nil, err
 	}
@@ -403,11 +408,11 @@ func buildPostResponse(ctx context.Context, svcCtx *svc.ServiceContext, post *mo
 	return &list[0], nil
 }
 
-func BuildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*model.Post, viewer *model.UserAccount) ([]types.PublicPostResponse, error) {
+func BuildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*postmodel.Post, viewer *accountmodel.UserAccount) ([]types.PublicPostResponse, error) {
 	return buildPublicPostResponses(ctx, svcCtx, posts, viewer)
 }
 
-func buildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*model.Post, viewer *model.UserAccount) ([]types.PublicPostResponse, error) {
+func buildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*postmodel.Post, viewer *accountmodel.UserAccount) ([]types.PublicPostResponse, error) {
 	if len(posts) == 0 {
 		return []types.PublicPostResponse{}, nil
 	}
@@ -435,7 +440,7 @@ func buildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query post author avatars failed")
 	}
-	accountByID := make(map[uint64]*model.UserAccount, len(accounts))
+	accountByID := make(map[uint64]*accountmodel.UserAccount, len(accounts))
 	for _, account := range accounts {
 		if account != nil {
 			accountByID[account.Id] = account
@@ -471,7 +476,7 @@ func buildPublicPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, p
 	return resp, nil
 }
 
-func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*model.Post, viewer *model.UserAccount) ([]types.ProfilePostResponse, error) {
+func buildPostResponses(ctx context.Context, svcCtx *svc.ServiceContext, posts []*postmodel.Post, viewer *accountmodel.UserAccount) ([]types.ProfilePostResponse, error) {
 	if len(posts) == 0 {
 		return []types.ProfilePostResponse{}, nil
 	}
@@ -586,7 +591,7 @@ func loadPostLikedBySummaries(ctx context.Context, svcCtx *svc.ServiceContext, p
 		return nil, commonresponse.InternalServerError("query post like avatars failed")
 	}
 
-	accountsByID := make(map[uint64]*model.UserAccount, len(accounts))
+	accountsByID := make(map[uint64]*accountmodel.UserAccount, len(accounts))
 	for _, account := range accounts {
 		if account != nil {
 			accountsByID[account.Id] = account
@@ -605,7 +610,7 @@ func loadPostLikedBySummaries(ctx context.Context, svcCtx *svc.ServiceContext, p
 	return resp, nil
 }
 
-func loadPostViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *model.UserAccount, postIDs []uint64) (postViewerState, error) {
+func loadPostViewerState(ctx context.Context, svcCtx *svc.ServiceContext, viewer *accountmodel.UserAccount, postIDs []uint64) (postViewerState, error) {
 	state := postViewerState{
 		liked:     map[uint64]bool{},
 		favorited: map[uint64]bool{},
@@ -635,7 +640,7 @@ func applyPostViewerState(resp *types.ProfilePostResponse, postID uint64, state 
 	resp.IsFavorited = state.favorited[postID]
 }
 
-func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, viewer *model.UserAccount) (map[uint64]types.MediaAssetResponse, error) {
+func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, assetIDs []uint64, viewer *accountmodel.UserAccount) (map[uint64]types.MediaAssetResponse, error) {
 	resp := make(map[uint64]types.MediaAssetResponse)
 	if len(assetIDs) == 0 {
 		return resp, nil
@@ -644,7 +649,7 @@ func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, asse
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query images failed")
 	}
-	assets := make([]*model.MediaAsset, 0, len(assetIDs))
+	assets := make([]*mediamodel.MediaAsset, 0, len(assetIDs))
 	orderedIDs := make([]uint64, 0, len(assetIDs))
 	seen := make(map[uint64]struct{}, len(assetIDs))
 	for _, id := range assetIDs {
@@ -669,7 +674,7 @@ func buildMediaResponseMap(ctx context.Context, svcCtx *svc.ServiceContext, asse
 	return resp, nil
 }
 
-func buildAccountSummary(account *model.UserAccount, profile *model.UserProfile, avatarURL string) types.AccountSummary {
+func buildAccountSummary(account *accountmodel.UserAccount, profile *profilemodel.UserProfile, avatarURL string) types.AccountSummary {
 	if account == nil {
 		return types.AccountSummary{}
 	}
@@ -698,7 +703,7 @@ func buildAccountSummary(account *model.UserAccount, profile *model.UserProfile,
 	}
 }
 
-func buildCommentResponses(ctx context.Context, svcCtx *svc.ServiceContext, comments []*model.CommentRecord) ([]types.PostCommentResponse, error) {
+func buildCommentResponses(ctx context.Context, svcCtx *svc.ServiceContext, comments []*postmodel.CommentRecord) ([]types.PostCommentResponse, error) {
 	if len(comments) == 0 {
 		return []types.PostCommentResponse{}, nil
 	}
@@ -720,7 +725,7 @@ func buildCommentResponses(ctx context.Context, svcCtx *svc.ServiceContext, comm
 	if err != nil {
 		return nil, commonresponse.InternalServerError("query comment author avatars failed")
 	}
-	accountByID := make(map[uint64]*model.UserAccount, len(accounts))
+	accountByID := make(map[uint64]*accountmodel.UserAccount, len(accounts))
 	for _, account := range accounts {
 		if account != nil {
 			accountByID[account.Id] = account

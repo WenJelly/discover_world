@@ -5,11 +5,10 @@ package media
 
 import (
 	"context"
+	mediamodel "discover_world/model/media"
 
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -47,7 +46,7 @@ func (l *GetMediaAssetCursorListLogic) GetMediaAssetCursorList(req *types.Cursor
 		return nil, err
 	}
 
-	var assets []*model.MediaAsset
+	var assets []*mediamodel.MediaAsset
 	switch sort {
 	case mediaCursorSortHot:
 		cursor, err := decodeHotMediaCursor(req.Cursor)

@@ -7,13 +7,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -45,7 +44,7 @@ func (l *DetailAccountLogic) DetailAccount(req *types.DetailAccountRequest) (res
 		}
 		target, err = l.svcCtx.UserAccountModel.FindOne(l.ctx, id)
 		if err != nil {
-			if errors.Is(err, model.ErrNotFound) {
+			if errors.Is(err, sqlx.ErrNotFound) {
 				return nil, commonresponse.NotFound("账号不存在")
 			}
 			return nil, commonresponse.InternalServerError("查询账号失败")
@@ -63,7 +62,7 @@ func (l *DetailAccountLogic) DetailAccount(req *types.DetailAccountRequest) (res
 		}
 		target, err = l.svcCtx.UserAccountModel.FindOneByEmail(l.ctx, sql.NullString{String: email, Valid: true})
 		if err != nil {
-			if errors.Is(err, model.ErrNotFound) {
+			if errors.Is(err, sqlx.ErrNotFound) {
 				return nil, commonresponse.NotFound("账号不存在")
 			}
 			return nil, commonresponse.InternalServerError("查询账号失败")

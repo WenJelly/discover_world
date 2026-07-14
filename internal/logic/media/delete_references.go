@@ -1,10 +1,10 @@
 package media
 
 import (
+	mediamodel "discover_world/model/media"
+	profilemodel "discover_world/model/profile"
 	"fmt"
 	"strings"
-
-	"discover_world/model"
 )
 
 const (
@@ -24,7 +24,7 @@ type mediaDeleteReferenceSummary struct {
 	blockingLabels []string
 }
 
-func buildMediaDeleteReferenceSummary(links []*model.AssetLink) mediaDeleteReferenceSummary {
+func buildMediaDeleteReferenceSummary(links []*mediamodel.AssetLink) mediaDeleteReferenceSummary {
 	summary := mediaDeleteReferenceSummary{}
 	seen := make(map[string]struct{}, len(links))
 
@@ -86,11 +86,11 @@ func (s mediaDeleteReferenceSummary) blockingMessage() string {
 	return "该媒体正在被以下位置引用，不能直接删除：" + strings.Join(labels, "、") + "。请先到对应位置取消精选、相册、头像等引用后再删除。"
 }
 
-func isPostAttachmentReference(link *model.AssetLink) bool {
+func isPostAttachmentReference(link *mediamodel.AssetLink) bool {
 	return link != nil && link.OwnerType == deleteReferenceOwnerPost && link.LinkRole == deleteReferenceRoleAttachment
 }
 
-func mediaDeleteReferenceLabel(link *model.AssetLink) string {
+func mediaDeleteReferenceLabel(link *mediamodel.AssetLink) string {
 	if link == nil {
 		return "未知引用"
 	}
@@ -111,7 +111,7 @@ func mediaDeleteReferenceLabel(link *model.AssetLink) string {
 	}
 }
 
-func buildDirectMediaDeleteReferenceLabels(profiles []*model.UserProfile, albums []*model.Album) []string {
+func buildDirectMediaDeleteReferenceLabels(profiles []*profilemodel.UserProfile, albums []*profilemodel.Album) []string {
 	labels := make([]string, 0, len(profiles)+len(albums))
 	for _, profile := range profiles {
 		if profile == nil || profile.UserId == 0 {

@@ -6,13 +6,13 @@ package account
 import (
 	"context"
 	"database/sql"
+	accountmodel "discover_world/model/account"
+	profilemodel "discover_world/model/profile"
 	"strings"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -63,7 +63,7 @@ func (l *RegisterAccountLogic) RegisterAccount(req *types.RegisterRequest) (resp
 		return nil, commonresponse.InternalServerError("密码加密失败")
 	}
 
-	account := &model.UserAccount{
+	account := &accountmodel.UserAccount{
 		Username:     username,
 		Email:        sql.NullString{String: email, Valid: true},
 		PasswordHash: sql.NullString{String: string(hash), Valid: true},
@@ -80,7 +80,7 @@ func (l *RegisterAccountLogic) RegisterAccount(req *types.RegisterRequest) (resp
 	}
 	account.Id = uint64(id)
 
-	_, _ = l.svcCtx.UserProfileModel.Insert(l.ctx, &model.UserProfile{
+	_, _ = l.svcCtx.UserProfileModel.Insert(l.ctx, &profilemodel.UserProfile{
 		UserId:   account.Id,
 		Nickname: optionalString(username),
 	})

@@ -6,13 +6,12 @@ package post
 import (
 	"context"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"time"
 
 	commonresponse "discover_world/internal/common/response"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -45,7 +44,7 @@ func (l *UnpinPostLogic) UnpinPost(req *types.UnpinPostRequest) (*types.ProfileP
 
 	post, err := l.svcCtx.PostModel.FindOneActive(l.ctx, postID)
 	if err != nil {
-		if errors.Is(err, model.ErrNotFound) {
+		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, commonresponse.NotFound("post not found")
 		}
 		return nil, commonresponse.InternalServerError("query post failed")

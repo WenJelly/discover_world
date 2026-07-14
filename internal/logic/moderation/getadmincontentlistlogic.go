@@ -2,6 +2,9 @@ package moderation
 
 import (
 	"context"
+	accountmodel "discover_world/model/account"
+	postmodel "discover_world/model/post"
+	profilemodel "discover_world/model/profile"
 	"sort"
 	"strings"
 
@@ -9,8 +12,6 @@ import (
 	"discover_world/internal/logic/adminsupport"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -66,7 +67,7 @@ func normalizeAdminContentTargetType(raw string) (string, error) {
 }
 
 func (l *GetAdminContentListLogic) listAdminPostContent(req *types.AdminContentQueryRequest, userID uint64, pageNum, pageSize int64) (*types.AdminContentPageResponse, error) {
-	filter := model.PostAdminFilter{
+	filter := postmodel.PostAdminFilter{
 		Status:     req.Status,
 		UserId:     userID,
 		SearchText: req.SearchText,
@@ -94,7 +95,7 @@ func (l *GetAdminContentListLogic) listAdminPostContent(req *types.AdminContentQ
 }
 
 func (l *GetAdminContentListLogic) listAdminCommentContent(req *types.AdminContentQueryRequest, userID uint64, pageNum, pageSize int64) (*types.AdminContentPageResponse, error) {
-	filter := model.CommentRecordFilter{
+	filter := postmodel.CommentRecordFilter{
 		Status:     req.Status,
 		UserId:     userID,
 		SearchText: req.SearchText,
@@ -122,12 +123,12 @@ func (l *GetAdminContentListLogic) listAdminCommentContent(req *types.AdminConte
 }
 
 func (l *GetAdminContentListLogic) listMixedAdminContent(req *types.AdminContentQueryRequest, userID uint64, pageNum, pageSize int64) (*types.AdminContentPageResponse, error) {
-	postFilter := model.PostAdminFilter{
+	postFilter := postmodel.PostAdminFilter{
 		Status:     req.Status,
 		UserId:     userID,
 		SearchText: req.SearchText,
 	}
-	commentFilter := model.CommentRecordFilter{
+	commentFilter := postmodel.CommentRecordFilter{
 		Status:     req.Status,
 		UserId:     userID,
 		SearchText: req.SearchText,
@@ -207,11 +208,11 @@ type adminContentEntry struct {
 	response      types.AdminContentResponse
 }
 
-func (l *GetAdminContentListLogic) loadAdminContentAuthors(userIDs []uint64) (map[uint64]*model.UserAccount, map[uint64]*model.UserProfile, error) {
+func (l *GetAdminContentListLogic) loadAdminContentAuthors(userIDs []uint64) (map[uint64]*accountmodel.UserAccount, map[uint64]*profilemodel.UserProfile, error) {
 	userIDs = uniquePositiveModerationIDs(userIDs)
-	accountsByID := make(map[uint64]*model.UserAccount)
+	accountsByID := make(map[uint64]*accountmodel.UserAccount)
 	if len(userIDs) == 0 {
-		return accountsByID, map[uint64]*model.UserProfile{}, nil
+		return accountsByID, map[uint64]*profilemodel.UserProfile{}, nil
 	}
 	accounts, err := l.svcCtx.UserAccountModel.FindByIDs(l.ctx, userIDs)
 	if err != nil {
@@ -229,7 +230,7 @@ func (l *GetAdminContentListLogic) loadAdminContentAuthors(userIDs []uint64) (ma
 	return accountsByID, profiles, nil
 }
 
-func collectPostAuthorIDs(rows []*model.Post) []uint64 {
+func collectPostAuthorIDs(rows []*postmodel.Post) []uint64 {
 	ids := make([]uint64, 0, len(rows))
 	for _, row := range rows {
 		if row != nil {
@@ -239,7 +240,7 @@ func collectPostAuthorIDs(rows []*model.Post) []uint64 {
 	return ids
 }
 
-func collectCommentAuthorIDs(rows []*model.CommentRecord) []uint64 {
+func collectCommentAuthorIDs(rows []*postmodel.CommentRecord) []uint64 {
 	ids := make([]uint64, 0, len(rows))
 	for _, row := range rows {
 		if row != nil {

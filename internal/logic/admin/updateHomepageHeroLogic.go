@@ -6,6 +6,7 @@ package admin
 import (
 	"context"
 	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"strings"
 
 	commonresponse "discover_world/internal/common/response"
@@ -13,8 +14,6 @@ import (
 	homepageLogic "discover_world/internal/logic/homepage"
 	"discover_world/internal/svc"
 	"discover_world/internal/types"
-	"discover_world/model"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -65,7 +64,7 @@ func (l *UpdateHomepageHeroLogic) UpdateHomepageHero(req *types.UpdateHomepageHe
 
 	previousValue := ""
 	current, err := l.svcCtx.SiteConfigModel.GetByKey(l.ctx, homepageLogic.SiteConfigKeyHero)
-	if err != nil && !errors.Is(err, model.ErrNotFound) {
+	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, commonresponse.InternalServerError("查询 Hero 配置失败")
 	}
 	if current != nil && current.ConfigValue.Valid {
