@@ -31,9 +31,3 @@ CREATE TABLE `moderation_report`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='内容举报表';
-
-ALTER TABLE `moderation_report`
-    ADD COLUMN `handler_user_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '处理管理员用户ID' AFTER `status`,
-    ADD COLUMN `resolution` VARCHAR(30) DEFAULT NULL COMMENT '处理结论：accepted / rejected / resolved' AFTER `handler_user_id`,
-    ADD COLUMN `resolution_note` TEXT DEFAULT NULL COMMENT '处理说明' AFTER `resolution`,
-    ADD KEY `idx_moderation_report_handler` (`handler_user_id`, `resolved_at`);

@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -62,33 +61,23 @@ func (m *customFavoriteModel) FindActiveTargetIDsByUser(ctx context.Context, use
 }
 
 func (m *customFavoriteModel) ToggleStatus(ctx context.Context, userID uint64, targetType string, targetID uint64) (bool, int64, error) {
-	favorite, err := m.FindOneByUserIdTargetTypeTargetId(ctx, userID, targetType, targetID)
-	if err != nil {
-		if !errors.Is(err, ErrNotFound) {
-			return false, 0, err
-		}
-		if _, err := m.Insert(ctx, &Favorite{
-			UserId:     userID,
-			TargetType: targetType,
-			TargetId:   targetID,
-			Status:     1,
-		}); err != nil {
-			return false, 0, err
-		}
-		return true, 1, nil
-	}
-
-	if favorite.Status == 1 {
-		favorite.Status = 0
-		if err := m.Update(ctx, favorite); err != nil {
-			return false, 0, err
-		}
-		return false, -1, nil
-	}
-
-	favorite.Status = 1
-	if err := m.Update(ctx, favorite); err != nil {
+	// The unique-key upsert is the serialization point; callers apply the returned delta in the same transaction.
+	query := fmt.Sprintf("insert into %s (`user_id`,`target_type`,`target_id`,`status`) values (?, ?, ?, 1) on duplicate key update `status` = 1 - `status`", m.table)
+	if _, err := m.conn.ExecCtx(ctx, query, userID, targetType, targetID); err != nil {
 		return false, 0, err
 	}
-	return true, 1, nil
+
+	var status int64
+	query = fmt.Sprintf("select `status` from %s where `user_id` = ? and `target_type` = ? and `target_id` = ? for update", m.table)
+	err := m.conn.QueryRowCtx(ctx, &status, query, userID, targetType, targetID)
+	if err != nil {
+		return false, 0, err
+	}
+	if status == 1 {
+		return true, 1, nil
+	}
+	if status == 0 {
+		return false, -1, nil
+	}
+	return false, 0, fmt.Errorf("unexpected favorite status after toggle: %d", status)
 }

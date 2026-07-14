@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -103,34 +102,23 @@ func (m *customReactionModel) FindActiveUserIDsByTargets(ctx context.Context, ta
 }
 
 func (m *customReactionModel) ToggleStatus(ctx context.Context, userID uint64, targetType string, targetID uint64, reactionType string) (bool, int64, error) {
-	reaction, err := m.FindOneByUserIdTargetTypeTargetIdReactionType(ctx, userID, targetType, targetID, reactionType)
-	if err != nil {
-		if !errors.Is(err, ErrNotFound) {
-			return false, 0, err
-		}
-		if _, err := m.Insert(ctx, &Reaction{
-			UserId:       userID,
-			TargetType:   targetType,
-			TargetId:     targetID,
-			ReactionType: reactionType,
-			Status:       1,
-		}); err != nil {
-			return false, 0, err
-		}
-		return true, 1, nil
-	}
-
-	if reaction.Status == 1 {
-		reaction.Status = 0
-		if err := m.Update(ctx, reaction); err != nil {
-			return false, 0, err
-		}
-		return false, -1, nil
-	}
-
-	reaction.Status = 1
-	if err := m.Update(ctx, reaction); err != nil {
+	// The unique-key upsert is the serialization point; callers apply the returned delta in the same transaction.
+	query := fmt.Sprintf("insert into %s (`user_id`,`target_type`,`target_id`,`reaction_type`,`status`) values (?, ?, ?, ?, 1) on duplicate key update `status` = 1 - `status`", m.table)
+	if _, err := m.conn.ExecCtx(ctx, query, userID, targetType, targetID, reactionType); err != nil {
 		return false, 0, err
 	}
-	return true, 1, nil
+
+	var status int64
+	query = fmt.Sprintf("select `status` from %s where `user_id` = ? and `target_type` = ? and `target_id` = ? and `reaction_type` = ? for update", m.table)
+	err := m.conn.QueryRowCtx(ctx, &status, query, userID, targetType, targetID, reactionType)
+	if err != nil {
+		return false, 0, err
+	}
+	if status == 1 {
+		return true, 1, nil
+	}
+	if status == 0 {
+		return false, -1, nil
+	}
+	return false, 0, fmt.Errorf("unexpected reaction status after toggle: %d", status)
 }
