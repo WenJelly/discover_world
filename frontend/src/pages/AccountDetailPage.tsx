@@ -803,14 +803,11 @@ export default function AccountDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
+      {/* Profile Header */}
       <div className="border-b border-border">
-        {/* Cover — calm, structural neutral contour. No brand gradient. */}
-        <div className="profile-cover h-40 sm:h-48" aria-hidden="true" />
-
         {/* Profile Info */}
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <div className="relative">
+        <div className="mx-auto flex min-h-[24rem] max-w-3xl items-end px-4 sm:min-h-[26rem] sm:px-6">
+          <div className="relative w-full">
             {/* Avatar */}
             <div className="absolute -top-12 sm:-top-14">
               <Avatar className="size-24 border-4 border-background shadow-sm ring-1 ring-border sm:size-28">

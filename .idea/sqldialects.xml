@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/docs/database/database.md" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/sql/create/admin_operation_log.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/sql/create/admin_role_policy.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/sql/create/album.sql" dialect="MySQL" />
@@ -22,6 +23,5 @@
     <file url="file://$PROJECT_DIR$/sql/create/tagging.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/sql/create/user_follow.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/sql/create/user_profile.sql" dialect="MySQL" />
-    <file url="file://$PROJECT_DIR$/sql/database.md" dialect="MySQL" />
   </component>
 </project>

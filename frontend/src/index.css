@@ -633,54 +633,6 @@
   font-size: 13px;
 }
 
-/* ── Profile cover ───────────────────────────────────────────────
-   A quiet, structural cover for the personal profile. No brand
-   gradient, no decoration — just neutral token-driven contour lines
-   and a soft top-light, so the page reads as a calm workspace, not a
-   social-app banner. Adapts to dark mode automatically via tokens. */
-.profile-cover {
-  position: relative;
-  isolation: isolate;
-  background-color: var(--muted);
-  background-image:
-    radial-gradient(
-      120% 140% at 0% 0%,
-      color-mix(in oklch, var(--foreground) 5%, transparent) 0%,
-      transparent 55%
-    ),
-    radial-gradient(
-      100% 120% at 100% 0%,
-      color-mix(in oklch, var(--foreground) 3%, transparent) 0%,
-      transparent 60%
-    ),
-    repeating-linear-gradient(
-      28deg,
-      transparent 0 26px,
-      color-mix(in oklch, var(--foreground) 4%, transparent) 26px 27px
-    );
-}
-
-/* Faint vignette toward the bottom so the overlapping avatar/name
-   stay legible without leaning on a heavy color band. */
-.profile-cover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(
-    180deg,
-    transparent 40%,
-    color-mix(in oklch, var(--background) 55%, transparent) 100%
-  );
-  pointer-events: none;
-}
-
-@media (prefers-contrast: more) {
-  .profile-cover {
-    background-image: none;
-  }
-}
-
 @media only screen and (max-width: 1024px) {
   .discover-page {
     --discover-content-edge: 20px;
