@@ -33,7 +33,7 @@ function DiscoverPictureCardImpl({ picture, onOpen }: DiscoverPictureCardProps) 
         onClick={() => onOpen?.(picture)}
         className={cn(
           interactiveSurfaceClassName,
-          "photo_link block h-full w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+          "photo_link block h-full w-full cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:ring-inset"
         )}
         aria-label={`查看发现图片: ${picture.name || "未命名作品"}, 作者 ${authorName}`}
       >

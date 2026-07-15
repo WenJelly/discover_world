@@ -51,6 +51,7 @@ function assertMarkedNativeSurfaces(relativePath, expectedCount) {
   assert.equal(tags.length, expectedCount, relativePath)
   for (const tag of tags) {
     assert.match(tag, /data-slot="interactive-surface"/, `${relativePath}: ${tag}`)
+    assert.match(tag, /interactiveSurfaceClassName/, `${relativePath}: ${tag}`)
   }
 }
 
@@ -87,4 +88,8 @@ test("public discovery and search keep only registered native interaction surfac
   assertMarkedNativeSurfaces("pages/CommunityPage.tsx", 2)
   assertMarkedNativeSurfaces("components/home/InfiniteGallery.tsx", 0)
   assertMarkedNativeSurfaces("components/discover/DiscoverPictureCard.tsx", 1)
+  assert.match(
+    readSource("components/discover/DiscoverPictureCard.tsx"),
+    /focus-visible:ring-inset/
+  )
 })
