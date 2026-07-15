@@ -587,19 +587,50 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
     const legacyLoaders = []
     const spinners = []
 
-    function visit(node) {
-      if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-        const tagName = node.tagName.getText(sourceFile)
-        if (tagName === "Loader2" || tagName === "LoaderCircle") {
-          legacyLoaders.push(tagName)
-        } else if (tagName === "Spinner") {
-          spinners.push(node)
-        }
+    function inspectLoader(element, loadingExpression) {
+      const tagName = element.tagName.getText(sourceFile)
+      if (tagName === "Loader2" || tagName === "LoaderCircle") {
+        legacyLoaders.push(tagName)
+      } else if (tagName === "Spinner") {
+        spinners.push({ element, loadingExpression })
       }
-      ts.forEachChild(node, visit)
     }
 
-    ts.forEachChild(buttonElement, visit)
+    function visitContent(node, loadingExpression = "") {
+      if (ts.isJsxElement(node)) {
+        inspectLoader(node.openingElement, loadingExpression)
+        node.children.forEach((child) => visitContent(child, loadingExpression))
+        return
+      }
+      if (ts.isJsxSelfClosingElement(node)) {
+        inspectLoader(node, loadingExpression)
+        return
+      }
+      if (ts.isJsxFragment(node)) {
+        node.children.forEach((child) => visitContent(child, loadingExpression))
+        return
+      }
+      if (ts.isJsxExpression(node)) {
+        if (node.expression) visitContent(node.expression, loadingExpression)
+        return
+      }
+      if (ts.isConditionalExpression(node)) {
+        const condition = normalizeLoadingExpression(node.condition, sourceFile)
+        visitContent(node.whenTrue, condition)
+        visitContent(node.whenFalse, `!(${condition})`)
+        return
+      }
+      if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+      ) {
+        visitContent(node.right, normalizeLoadingExpression(node.left, sourceFile))
+        return
+      }
+      ts.forEachChild(node, (child) => visitContent(child, loadingExpression))
+    }
+
+    buttonElement.children.forEach(visitContent)
 
     if (legacyLoaders.length > 0) {
       violations.push(
@@ -611,17 +642,43 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
 
     if (spinners.length === 0) continue
 
-    if (jsxAttributes(openingElement, sourceFile, "disabled").length === 0) {
+    const disabledAttributes = jsxAttributes(openingElement, sourceFile, "disabled")
+    const ariaBusyAttributes = jsxAttributes(openingElement, sourceFile, "aria-busy")
+
+    if (disabledAttributes.length === 0) {
       violations.push(
         `${relativePath}: Spinner Button requires direct disabled state: ${openingElement.getText(sourceFile)}`
       )
     }
-    if (jsxAttributes(openingElement, sourceFile, "aria-busy").length === 0) {
+    if (ariaBusyAttributes.length === 0) {
       violations.push(
         `${relativePath}: Spinner Button requires direct aria-busy state: ${openingElement.getText(sourceFile)}`
       )
     }
-    for (const spinner of spinners) {
+    if (disabledAttributes.length > 0 && ariaBusyAttributes.length > 0) {
+      const disabledState = resolveLoadingState(disabledAttributes[0], sourceFile)
+      const ariaBusyState = resolveLoadingState(ariaBusyAttributes[0], sourceFile)
+      const conditionalLoadingStates = [
+        ...new Set(spinners.map(({ loadingExpression }) => loadingExpression).filter(Boolean)),
+      ]
+      const sharesLoadingState = conditionalLoadingStates.length > 0
+        ? disabledState.kind !== "invalid" &&
+          ariaBusyState.kind === "expression" &&
+          conditionalLoadingStates.every(
+            (loadingExpression) => loadingExpression === ariaBusyState.expression
+          )
+        : (disabledState.kind === "true" && ariaBusyState.kind === "true") ||
+          (disabledState.kind === "expression" &&
+            ariaBusyState.kind === "expression" &&
+            disabledState.expression === ariaBusyState.expression)
+
+      if (!sharesLoadingState) {
+        violations.push(
+          `${relativePath}: Spinner Button disabled and aria-busy must be true or use the same loading state expression: ${openingElement.getText(sourceFile)}`
+        )
+      }
+    }
+    for (const { element: spinner } of spinners) {
       if (!hasStaticJsxAttribute(spinner, sourceFile, "aria-label", "加载中")) {
         violations.push(
           `${relativePath}: Spinner inside Button requires aria-label="加载中": ${spinner.getText(sourceFile)}`
@@ -631,6 +688,38 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
   }
 
   return violations
+}
+
+function normalizeLoadingExpression(expression, sourceFile) {
+  return unwrapExpression(expression).getText(sourceFile).replace(/\s+/g, "")
+}
+
+function resolveLoadingState(attribute, sourceFile) {
+  if (!attribute.initializer) return { kind: "true", expression: "true" }
+  if (ts.isStringLiteral(attribute.initializer)) {
+    return attribute.initializer.text === "true"
+      ? { kind: "true", expression: "true" }
+      : { kind: "invalid", expression: attribute.initializer.text }
+  }
+  if (!ts.isJsxExpression(attribute.initializer) || !attribute.initializer.expression) {
+    return { kind: "invalid", expression: attribute.getText(sourceFile) }
+  }
+
+  const expression = unwrapExpression(attribute.initializer.expression)
+  if (expression.kind === ts.SyntaxKind.TrueKeyword) {
+    return { kind: "true", expression: "true" }
+  }
+  if (
+    expression.kind === ts.SyntaxKind.FalseKeyword ||
+    expression.kind === ts.SyntaxKind.NullKeyword ||
+    (ts.isIdentifier(expression) && expression.text === "undefined")
+  ) {
+    return { kind: "invalid", expression: expression.getText(sourceFile) }
+  }
+  return {
+    kind: "expression",
+    expression: normalizeLoadingExpression(expression, sourceFile),
+  }
 }
 
 function hasStaticJsxAttribute(element, sourceFile, attributeName, expectedValue) {
@@ -801,6 +890,41 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
     inspectBusinessButtonLoadingStates(
       "fixtures/ValidSpinner.tsx",
       '<Button disabled={loading} aria-busy={loading}><Spinner aria-label="加载中" />加载中</Button>'
+    ),
+    []
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/FalseLoadingSemantics.tsx",
+      '<Button disabled={false} aria-busy={false}><Spinner aria-label="加载中" />加载中</Button>'
+    ).join("\n"),
+    /must be true or use the same loading state expression/
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/MismatchedLoadingSemantics.tsx",
+      '<Button disabled={loading} aria-busy={saving}>{loading ? <Spinner aria-label="加载中" /> : null}加载中</Button>'
+    ).join("\n"),
+    /must be true or use the same loading state expression/
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/ValidCompositeDisabledState.tsx",
+      '<Button disabled={!canSubmit || loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}加载中</Button>'
+    ),
+    []
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/AttributeSpinner.tsx",
+      '<Button tooltip={<Spinner />} aria-description={<Spinner aria-label="加载中" />}>操作</Button>'
+    ),
+    []
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/ExplicitTrueSpinner.tsx",
+      '<Button disabled aria-busy={true}><Spinner aria-label="加载中" />加载中</Button>'
     ),
     []
   )
