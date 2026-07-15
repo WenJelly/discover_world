@@ -23,6 +23,7 @@ import {
   fetchAdminOperationLogList,
 } from "@/lib/api";
 import { formatRelativeTime, getAvatarFallback } from "@/lib/format";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import {
   formatAdminOperationJson,
   getAdminOperationLabel,
@@ -217,7 +218,7 @@ export function AdminAuditPanel({
             查询管理员操作记录，核对变更前后快照和请求来源。
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={() => void loadLogs()}>
+        <Button type="button" variant="outline" aria-busy={listLoading} onClick={() => void loadLogs()}>
           <RefreshCw className={cn("size-4", listLoading && "animate-spin")} />
           刷新
         </Button>
@@ -274,7 +275,7 @@ export function AdminAuditPanel({
               </div>
             ) : listError && logs.length === 0 ? (
               <div className="flex min-h-[22rem] flex-col items-center justify-center px-6 text-center">
-                <ScrollText className="size-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">操作日志加载失败</p><p className="mt-1 text-sm text-muted-foreground">{listError}</p><Button type="button" variant="outline" className="mt-4" onClick={() => void loadLogs()}>重新加载</Button>
+                <ScrollText className="size-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">操作日志加载失败</p><p className="mt-1 text-sm text-muted-foreground">{listError}</p><Button type="button" variant="outline" className="mt-4" aria-busy={listLoading} onClick={() => void loadLogs()}>重新加载</Button>
               </div>
             ) : logs.length === 0 ? (
               <div className="flex min-h-[22rem] flex-col items-center justify-center px-6 text-center">
@@ -285,7 +286,7 @@ export function AdminAuditPanel({
                 {logs.map((log) => {
                   const selected = log.id === selectedId;
                   return (
-                    <button key={log.id} type="button" aria-pressed={selected} onClick={() => onSelectedIdChange(log.id)} className={cn("w-full border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring", selected && "bg-muted")}>
+                    <button key={log.id} data-slot="interactive-surface" type="button" aria-pressed={selected} onClick={() => onSelectedIdChange(log.id)} className={cn(interactiveSurfaceClassName, "w-full border-b border-border px-4 py-3 text-left hover:bg-muted/45 focus-visible:ring-inset", selected && "bg-muted")}>
                       <div className="flex items-start justify-between gap-3"><span className="line-clamp-1 text-sm font-medium text-foreground">{getAdminOperationLabel(log.action)}</span><time dateTime={log.createdAt} className="shrink-0 text-xs text-muted-foreground">{formatRelativeTime(log.createdAt)}</time></div>
                       <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{log.targetType || "未知目标"} #{log.targetId || "-"}</p>
                       <p className="mt-2 line-clamp-1 text-xs text-muted-foreground">{operatorName(log)}{log.reason ? ` · ${log.reason}` : ""}</p>
@@ -296,9 +297,9 @@ export function AdminAuditPanel({
             )}
           </div>
           <div className="flex items-center justify-between border-t border-border px-3 py-2">
-            <Button type="button" variant="ghost" size="sm" disabled={pageNum <= 1 || listLoading} onClick={() => changePage(pageNum - 1)}><ChevronLeft className="size-4" />上一页</Button>
+            <Button type="button" variant="ghost" size="sm" disabled={pageNum <= 1 || listLoading} aria-busy={listLoading} onClick={() => changePage(pageNum - 1)}><ChevronLeft className="size-4" />上一页</Button>
             <span className="text-xs text-muted-foreground">{pageNum} / {pageCount}</span>
-            <Button type="button" variant="ghost" size="sm" disabled={pageNum >= pageCount || listLoading} onClick={() => changePage(pageNum + 1)}>下一页<ChevronRight className="size-4" /></Button>
+            <Button type="button" variant="ghost" size="sm" disabled={pageNum >= pageCount || listLoading} aria-busy={listLoading} onClick={() => changePage(pageNum + 1)}>下一页<ChevronRight className="size-4" /></Button>
           </div>
         </div>
 

@@ -3,6 +3,7 @@ import { toast as sonner } from "sonner";
 import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   ApiError,
   fetchAdminMediaAssetList,
@@ -87,6 +88,8 @@ export function AdminMediaReviewPanel() {
         <Button
           type="button"
           variant="outline"
+          disabled={mediaReviewLoading}
+          aria-busy={mediaReviewLoading}
           onClick={() => void loadPendingMedia()}
         >
           <RefreshCw className="size-4" aria-hidden="true" />
@@ -146,12 +149,13 @@ export function AdminMediaReviewPanel() {
                       type="button"
                       size="sm"
                       disabled={reviewingMediaId === asset.id}
+                      aria-busy={reviewingMediaId === asset.id}
                       onClick={() =>
                         void handleReviewMedia(asset, "approved")
                       }
                     >
                       {reviewingMediaId === asset.id ? (
-                        <Loader2 className="size-4 animate-spin" />
+                        <Spinner aria-label="加载中" />
                       ) : null}
                       通过
                     </Button>
@@ -160,6 +164,7 @@ export function AdminMediaReviewPanel() {
                       size="sm"
                       variant="destructive"
                       disabled={reviewingMediaId === asset.id}
+                      aria-busy={reviewingMediaId === asset.id}
                       onClick={() =>
                         void handleReviewMedia(asset, "rejected")
                       }

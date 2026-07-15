@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
-  Loader2,
   MessageSquare,
   Newspaper,
   RefreshCw,
@@ -23,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -39,6 +39,7 @@ import {
   fetchAdminContentList,
 } from "@/lib/api";
 import { formatRelativeTime, getAvatarFallback } from "@/lib/format";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import {
   getAdminContentKey,
   updateAdminContentStatus,
@@ -198,7 +199,7 @@ export function AdminContentModerationPanel() {
           </p>
         </div>
         {view === "content" ? (
-          <Button type="button" variant="outline" onClick={() => void loadContent()}>
+          <Button type="button" variant="outline" aria-busy={loading} onClick={() => void loadContent()}>
             <RefreshCw className={cn("size-4", loading && "animate-spin")} />
             刷新
           </Button>
@@ -207,12 +208,14 @@ export function AdminContentModerationPanel() {
 
       <div className="flex gap-1 border-b border-border" role="tablist" aria-label="治理内容类型">
         <button
+          data-slot="interactive-surface"
           type="button"
           role="tab"
           aria-selected={view === "content"}
           onClick={() => setView("content")}
           className={cn(
-            "flex h-10 items-center gap-2 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            interactiveSurfaceClassName,
+            "flex h-10 items-center gap-2 border-b-2 px-3 text-sm font-medium",
             view === "content"
               ? "border-foreground text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -222,12 +225,14 @@ export function AdminContentModerationPanel() {
           动态与评论
         </button>
         <button
+          data-slot="interactive-surface"
           type="button"
           role="tab"
           aria-selected={view === "forum"}
           onClick={() => setView("forum")}
           className={cn(
-            "flex h-10 items-center gap-2 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            interactiveSurfaceClassName,
+            "flex h-10 items-center gap-2 border-b-2 px-3 text-sm font-medium",
             view === "forum"
               ? "border-foreground text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -326,7 +331,7 @@ export function AdminContentModerationPanel() {
                     <EyeOff className="size-6 text-muted-foreground" />
                     <p className="mt-3 text-sm font-medium text-foreground">内容加载失败</p>
                     <p className="mt-1 text-sm text-muted-foreground">{error}</p>
-                    <Button type="button" variant="outline" className="mt-4" onClick={() => void loadContent()}>重新加载</Button>
+                    <Button type="button" variant="outline" className="mt-4" aria-busy={loading} onClick={() => void loadContent()}>重新加载</Button>
                   </div>
                 ) : items.length === 0 ? (
                   <div className="flex min-h-[20rem] flex-col items-center justify-center px-6 text-center">
@@ -341,10 +346,12 @@ export function AdminContentModerationPanel() {
                       return (
                       <button
                         key={itemKey}
+                        data-slot="interactive-surface"
                         type="button"
                         onClick={() => setSelectedKey(itemKey)}
                         className={cn(
-                          "w-full border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                          interactiveSurfaceClassName,
+                          "w-full border-b border-border px-4 py-3 text-left hover:bg-muted/50 focus-visible:ring-inset",
                           selectedKey === itemKey && "bg-muted"
                         )}
                       >
@@ -369,11 +376,11 @@ export function AdminContentModerationPanel() {
                 )}
               </div>
               <div className="flex items-center justify-between border-t border-border px-3 py-2">
-                <Button type="button" variant="ghost" size="sm" disabled={pageNum <= 1 || loading} onClick={() => setPageNum((current) => Math.max(1, current - 1))}>
+                <Button type="button" variant="ghost" size="sm" disabled={pageNum <= 1 || loading} aria-busy={loading} onClick={() => setPageNum((current) => Math.max(1, current - 1))}>
                   <ChevronLeft className="size-4" />上一页
                 </Button>
                 <span className="text-xs text-muted-foreground">{pageNum} / {pageCount}</span>
-                <Button type="button" variant="ghost" size="sm" disabled={pageNum >= pageCount || loading} onClick={() => setPageNum((current) => Math.min(pageCount, current + 1))}>
+                <Button type="button" variant="ghost" size="sm" disabled={pageNum >= pageCount || loading} aria-busy={loading} onClick={() => setPageNum((current) => Math.min(pageCount, current + 1))}>
                   下一页<ChevronRight className="size-4" />
                 </Button>
               </div>
@@ -422,9 +429,10 @@ export function AdminContentModerationPanel() {
                       type="button"
                       variant={selected.status === "hidden" ? "outline" : "destructive"}
                       disabled={!reason.trim() || acting}
+                      aria-busy={acting}
                       onClick={() => void handleModerate()}
                     >
-                      {acting ? <Loader2 className="size-4 animate-spin" /> : null}
+                      {acting ? <Spinner aria-label="加载中" /> : null}
                       {selected.status === "hidden" ? "恢复内容" : "隐藏内容"}
                     </Button>
                   </div>

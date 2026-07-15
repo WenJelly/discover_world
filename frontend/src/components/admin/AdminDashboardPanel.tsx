@@ -18,6 +18,7 @@ import {
   fetchAdminOperationLogList,
 } from "@/lib/api";
 import { formatRelativeTime, getAvatarFallback } from "@/lib/format";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import type { AdminTab } from "@/lib/admin-navigation";
 import { getAdminOperationLabel } from "@/lib/admin-operation";
 import type {
@@ -147,9 +148,13 @@ export function AdminDashboardPanel({
               ) : (
                 <>
                   <button
+                    data-slot="interactive-surface"
                     type="button"
                     onClick={() => onNavigate("media-review")}
-                    className="flex w-full items-center gap-4 border-b border-border px-4 py-5 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    className={cn(
+                      interactiveSurfaceClassName,
+                      "flex w-full items-center gap-4 border-b border-border px-4 py-5 text-left hover:bg-muted/45 focus-visible:ring-inset"
+                    )}
                   >
                     <span className="flex size-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300">
                       <Images className="size-5" aria-hidden="true" />
@@ -164,9 +169,13 @@ export function AdminDashboardPanel({
                     <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />
                   </button>
                   <button
+                    data-slot="interactive-surface"
                     type="button"
                     onClick={() => onNavigate("reports")}
-                    className="flex w-full items-center gap-4 px-4 py-5 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    className={cn(
+                      interactiveSurfaceClassName,
+                      "flex w-full items-center gap-4 px-4 py-5 text-left hover:bg-muted/45 focus-visible:ring-inset"
+                    )}
                   >
                     <span className="flex size-10 items-center justify-center rounded-lg bg-rose-500/10 text-rose-700 dark:text-rose-300">
                       <Flag className="size-5" aria-hidden="true" />
@@ -263,9 +272,13 @@ export function AdminDashboardPanel({
                   return (
                     <button
                       key={log.id}
+                      data-slot="interactive-surface"
                       type="button"
                       onClick={() => onOpenAuditLog(log.id)}
-                      className="flex w-full gap-3 border-b border-border px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                      className={cn(
+                        interactiveSurfaceClassName,
+                        "flex w-full gap-3 border-b border-border px-4 py-4 text-left last:border-b-0 hover:bg-muted/45 focus-visible:ring-inset"
+                      )}
                     >
                       <Avatar className="size-9">
                         {log.operator?.avatarUrl ? <AvatarImage src={log.operator.avatarUrl} alt="" /> : null}

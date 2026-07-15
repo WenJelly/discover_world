@@ -10,7 +10,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Flag,
-  Loader2,
   RefreshCw,
   RotateCcw,
 } from "lucide-react";
@@ -20,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -34,6 +34,7 @@ import {
   resolveAdminModerationReport,
 } from "@/lib/api";
 import { formatRelativeTime, getAvatarFallback } from "@/lib/format";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import type { AdminModerationReportResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -276,7 +277,7 @@ export function AdminReportsPanel() {
             查看举报上下文，记录结论，并按需同步治理目标内容。
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={() => void loadReports()}>
+        <Button type="button" variant="outline" aria-busy={listLoading} onClick={() => void loadReports()}>
           <RefreshCw className={cn("size-4", listLoading && "animate-spin")} />
           刷新
         </Button>
@@ -391,7 +392,7 @@ export function AdminReportsPanel() {
                 <Flag className="size-6 text-muted-foreground" />
                 <p className="mt-3 text-sm font-medium text-foreground">工单加载失败</p>
                 <p className="mt-1 text-sm text-muted-foreground">{listError}</p>
-                <Button type="button" variant="outline" className="mt-4" onClick={() => void loadReports()}>
+                <Button type="button" variant="outline" className="mt-4" aria-busy={listLoading} onClick={() => void loadReports()}>
                   重新加载
                 </Button>
               </div>
@@ -411,10 +412,12 @@ export function AdminReportsPanel() {
                   return (
                     <button
                       key={report.id}
+                      data-slot="interactive-surface"
                       type="button"
                       onClick={() => selectReport(report.id)}
                       className={cn(
-                        "w-full border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        interactiveSurfaceClassName,
+                        "w-full border-b border-border px-4 py-3 text-left hover:bg-muted/50 focus-visible:ring-inset",
                         selected && "bg-muted"
                       )}
                       aria-pressed={selected}
@@ -435,12 +438,12 @@ export function AdminReportsPanel() {
             )}
           </div>
           <div className="flex items-center justify-between border-t border-border px-3 py-2">
-            <Button type="button" variant="ghost" size="sm" disabled={pageNum <= 1 || listLoading} onClick={() => setPageNum((current) => Math.max(1, current - 1))}>
+            <Button type="button" variant="ghost" size="sm" disabled={pageNum <= 1 || listLoading} aria-busy={listLoading} onClick={() => setPageNum((current) => Math.max(1, current - 1))}>
               <ChevronLeft className="size-4" />
               上一页
             </Button>
             <span className="text-xs text-muted-foreground">{pageNum} / {pageCount}</span>
-            <Button type="button" variant="ghost" size="sm" disabled={pageNum >= pageCount || listLoading} onClick={() => setPageNum((current) => Math.min(pageCount, current + 1))}>
+            <Button type="button" variant="ghost" size="sm" disabled={pageNum >= pageCount || listLoading} aria-busy={listLoading} onClick={() => setPageNum((current) => Math.min(pageCount, current + 1))}>
               下一页
               <ChevronRight className="size-4" />
             </Button>
@@ -550,8 +553,8 @@ export function AdminReportsPanel() {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <Button type="button" disabled={!canResolve} onClick={() => void handleResolve()}>
-                      {resolving ? <Loader2 className="size-4 animate-spin" /> : null}
+                    <Button type="button" disabled={!canResolve} aria-busy={resolving} onClick={() => void handleResolve()}>
+                      {resolving ? <Spinner aria-label="加载中" /> : null}
                       提交处理结果
                     </Button>
                   </div>

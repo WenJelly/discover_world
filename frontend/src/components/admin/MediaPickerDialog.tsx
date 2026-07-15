@@ -17,8 +17,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { ApiError, fetchMediaAssetCursorList } from "@/lib/api";
 import { getMediaUrl } from "@/lib/format";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import type { MediaAssetResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -249,14 +251,16 @@ export function MediaPickerDialog({
               )}
             />
             {searchInput ? (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 onClick={clearSearch}
                 aria-label="清空搜索"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
               >
                 <X className="size-4" strokeWidth={2.5} />
-              </button>
+              </Button>
             ) : null}
           </form>
         </div>
@@ -323,6 +327,7 @@ export function MediaPickerDialog({
                   return (
                     <li key={asset.id}>
                       <button
+                        data-slot="interactive-surface"
                         type="button"
                         onClick={() => toggleAsset(asset)}
                         disabled={disabled}
@@ -333,7 +338,8 @@ export function MediaPickerDialog({
                             : `${isSelected ? "取消选择" : "选择"}作品「${asset.title}」${ownerName ? `，作者 ${ownerName}` : ""}`
                         }
                         className={cn(
-                          "group relative block w-full cursor-pointer overflow-hidden rounded-lg border-2 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900",
+                          interactiveSurfaceClassName,
+                          "group relative block w-full cursor-pointer overflow-hidden rounded-lg border-2 text-left duration-200 focus-visible:ring-inset",
                           isSelected
                             ? "border-indigo-500 shadow-md shadow-indigo-500/10"
                             : "border-transparent hover:border-slate-300 dark:hover:border-slate-600",
@@ -446,10 +452,11 @@ export function MediaPickerDialog({
             <Button
               type="button"
               disabled={confirming || (selected.size === 0 && !isManaged)}
+              aria-busy={confirming}
               onClick={handleConfirm}
             >
               {confirming ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                <Spinner aria-label="加载中" />
               ) : null}
               {confirmLabel}
             </Button>

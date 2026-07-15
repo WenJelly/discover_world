@@ -13,7 +13,6 @@ import {
   Crosshair,
   ImagePlus,
   LayoutGrid,
-  Loader2,
   Plus,
   RefreshCw,
   Replace,
@@ -24,6 +23,7 @@ import {
 
 import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   ApiError,
   fetchHomepageConfig,
@@ -449,10 +449,11 @@ export function AdminHomepagePanel() {
                   <Button
                     type="button"
                     disabled={!heroDirty || savingHero}
+                    aria-busy={savingHero}
                     onClick={handleSaveHero}
                   >
                     {savingHero ? (
-                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                      <Spinner aria-label="加载中" />
                     ) : null}
                     保存 Hero 配置
                   </Button>
@@ -546,33 +547,36 @@ export function AdminHomepagePanel() {
                           <p className="min-w-0 truncate text-xs font-medium text-white">
                             {asset.title}
                           </p>
-                          <div className="flex shrink-0 items-center gap-1">
-                            <button
+                          <div className="dark flex shrink-0 items-center gap-1">
+                            <Button
                               type="button"
+                              variant="secondary"
+                              size="icon-sm"
                               disabled={index === 0}
                               onClick={() => moveFeatured(index, -1)}
                               aria-label={`将「${asset.title}」前移`}
-                              className="flex size-7 cursor-pointer items-center justify-center rounded-md bg-white/15 text-white backdrop-blur-sm transition-colors hover:bg-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               <ArrowLeft className="size-3.5" strokeWidth={2.5} />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               type="button"
+                              variant="secondary"
+                              size="icon-sm"
                               disabled={index === featuredDraft.length - 1}
                               onClick={() => moveFeatured(index, 1)}
                               aria-label={`将「${asset.title}」后移`}
-                              className="flex size-7 cursor-pointer items-center justify-center rounded-md bg-white/15 text-white backdrop-blur-sm transition-colors hover:bg-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               <ArrowRight className="size-3.5" strokeWidth={2.5} />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               type="button"
+                              variant="destructive"
+                              size="icon-sm"
                               onClick={() => removeFeatured(asset.id)}
                               aria-label={`将「${asset.title}」移出精选`}
-                              className="flex size-7 cursor-pointer items-center justify-center rounded-md bg-white/15 text-white backdrop-blur-sm transition-colors hover:bg-red-500/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                             >
                               <X className="size-3.5" strokeWidth={2.5} />
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       </li>
@@ -593,10 +597,11 @@ export function AdminHomepagePanel() {
                   <Button
                     type="button"
                     disabled={!featuredDirty || savingFeatured}
+                    aria-busy={savingFeatured}
                     onClick={handleSaveFeatured}
                   >
                     {savingFeatured ? (
-                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                      <Spinner aria-label="加载中" />
                     ) : null}
                     保存精选列表
                   </Button>

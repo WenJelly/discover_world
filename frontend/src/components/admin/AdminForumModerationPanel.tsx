@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Loader2,
   MessageSquare,
   Pin,
   RefreshCw,
@@ -10,6 +9,7 @@ import { toast as sonner } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -27,6 +27,7 @@ import {
   fetchForumPostCursorList,
 } from "@/lib/api";
 import { formatRelativeTime } from "@/lib/format";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import type { ForumBoardResponse, ForumPostResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -152,7 +153,7 @@ export function AdminForumModerationPanel() {
               <p className="text-sm font-medium text-foreground">论坛帖子</p>
               <p className="text-xs text-muted-foreground">按分区查看并执行锁定或置顶。</p>
             </div>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="刷新论坛帖子" onClick={() => void loadPosts("reset")}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label="刷新论坛帖子" aria-busy={loading} onClick={() => void loadPosts("reset")}>
               <RefreshCw className={cn("size-4", loading && "animate-spin")} />
             </Button>
           </div>
@@ -195,7 +196,7 @@ export function AdminForumModerationPanel() {
               <MessageSquare className="size-6 text-muted-foreground" />
               <p className="mt-3 text-sm font-medium text-foreground">论坛帖子加载失败</p>
               <p className="mt-1 text-sm text-muted-foreground">{error}</p>
-              <Button type="button" variant="outline" className="mt-4" onClick={() => void loadPosts("reset")}>重新加载</Button>
+              <Button type="button" variant="outline" className="mt-4" aria-busy={loading} onClick={() => void loadPosts("reset")}>重新加载</Button>
             </div>
           ) : posts.length === 0 ? (
             <div className="flex min-h-[20rem] items-center justify-center px-6 text-sm text-muted-foreground">当前分区暂无帖子</div>
@@ -203,13 +204,15 @@ export function AdminForumModerationPanel() {
             posts.map((item) => (
               <button
                 key={item.post.id}
+                data-slot="interactive-surface"
                 type="button"
                 onClick={() => {
                   setSelectedId(item.post.id);
                   setReason("");
                 }}
                 className={cn(
-                  "w-full border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  interactiveSurfaceClassName,
+                  "w-full border-b border-border px-4 py-3 text-left hover:bg-muted/50 focus-visible:ring-inset",
                   selectedId === item.post.id && "bg-muted"
                 )}
               >
@@ -231,8 +234,8 @@ export function AdminForumModerationPanel() {
         </div>
         {hasMore ? (
           <div className="border-t border-border p-2 text-center">
-            <Button type="button" variant="ghost" size="sm" disabled={loadingMore} onClick={() => void loadPosts("append")}>
-              {loadingMore ? <Loader2 className="size-4 animate-spin" /> : null}
+            <Button type="button" variant="ghost" size="sm" disabled={loadingMore} aria-busy={loadingMore} onClick={() => void loadPosts("append")}>
+              {loadingMore ? <Spinner aria-label="加载中" /> : null}
               加载更多
             </Button>
           </div>
@@ -280,10 +283,10 @@ export function AdminForumModerationPanel() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" disabled={!reason.trim() || acting} onClick={() => void applyAction(selected.isLocked ? "unlock" : "lock")}>
+              <Button type="button" variant="outline" disabled={!reason.trim() || acting} aria-busy={acting} onClick={() => void applyAction(selected.isLocked ? "unlock" : "lock")}>
                 {selected.isLocked ? "解锁帖子" : "锁定帖子"}
               </Button>
-              <Button type="button" variant="outline" disabled={!reason.trim() || acting} onClick={() => void applyAction(selected.isBoardPinned ? "unpin" : "pin")}>
+              <Button type="button" variant="outline" disabled={!reason.trim() || acting} aria-busy={acting} onClick={() => void applyAction(selected.isBoardPinned ? "unpin" : "pin")}>
                 {selected.isBoardPinned ? "取消分区置顶" : "分区置顶"}
               </Button>
             </div>

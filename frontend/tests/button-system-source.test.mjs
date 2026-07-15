@@ -187,3 +187,33 @@ test("account post upload and media actions use Button while semantic surfaces r
     /data-slot="interactive-surface"\s+role="button"|role="button"\s+data-slot="interactive-surface"/
   )
 })
+
+test("admin actions use Button and admin rows remain registered surfaces", () => {
+  const taskFiles = [
+    "components/admin/AdminHomepagePanel.tsx",
+    "components/admin/AdminDashboardPanel.tsx",
+    "components/admin/AdminForumModerationPanel.tsx",
+    "components/admin/AdminReportsPanel.tsx",
+    "components/admin/AdminContentModerationPanel.tsx",
+    "components/admin/AdminTagManagementPanel.tsx",
+    "components/admin/AdminAuditPanel.tsx",
+    "components/admin/MediaPickerDialog.tsx",
+    "components/admin/AdminMediaReviewPanel.tsx",
+  ]
+
+  for (const relativePath of taskFiles) {
+    assertUsesShadcnButton(relativePath)
+    for (const tag of openingTags(readSource(relativePath), "Spinner")) {
+      assert.match(tag, /aria-label="加载中"/, `${relativePath}: ${tag}`)
+    }
+  }
+
+  assertMarkedNativeSurfaces("components/admin/AdminHomepagePanel.tsx", 0)
+  assertMarkedNativeSurfaces("components/admin/AdminDashboardPanel.tsx", 3)
+  assertMarkedNativeSurfaces("components/admin/AdminForumModerationPanel.tsx", 1)
+  assertMarkedNativeSurfaces("components/admin/AdminReportsPanel.tsx", 1)
+  assertMarkedNativeSurfaces("components/admin/AdminContentModerationPanel.tsx", 3)
+  assertMarkedNativeSurfaces("components/admin/AdminTagManagementPanel.tsx", 1)
+  assertMarkedNativeSurfaces("components/admin/AdminAuditPanel.tsx", 1)
+  assertMarkedNativeSurfaces("components/admin/MediaPickerDialog.tsx", 1)
+})
