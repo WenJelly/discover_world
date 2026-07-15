@@ -647,6 +647,8 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
 
     buttonElement.children.forEach((child) => visitContent(child))
 
+    const ariaBusyAttributes = jsxAttributes(openingElement, sourceFile, "aria-busy")
+
     if (legacyLoaders.length > 0) {
       violations.push(
         `${relativePath}: Button must use Spinner instead of ${[
@@ -663,10 +665,15 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
       )
     }
 
+    if (ariaBusyAttributes.length > 0 && spinners.length === 0) {
+      violations.push(
+        `${relativePath}: aria-busy Button requires Spinner from @/components/ui/spinner: ${openingElement.getText(sourceFile)}`
+      )
+    }
+
     if (spinners.length === 0) continue
 
     const disabledAttributes = jsxAttributes(openingElement, sourceFile, "disabled")
-    const ariaBusyAttributes = jsxAttributes(openingElement, sourceFile, "aria-busy")
 
     if (disabledAttributes.length === 0) {
       violations.push(
@@ -1258,6 +1265,13 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
     ).join("\n"),
     /requires direct disabled state[\s\S]*requires direct aria-busy state[\s\S]*aria-label="加载中"/
   )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/BusyWithoutSpinner.tsx",
+      '<Button disabled={loading} aria-busy={loading}>加载中</Button>'
+    ).join("\n"),
+    /aria-busy Button requires Spinner from @\/components\/ui\/spinner/
+  )
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
       "fixtures/ValidSpinner.tsx",
@@ -1605,6 +1619,54 @@ test("business Button calls do not recreate visual systems", () => {
   )
 
   assert.deepEqual(violations, [])
+})
+
+test("dialog close actions render through shadcn Button without business visual overrides", () => {
+  const dialog = readSource("components/ui/dialog.tsx")
+  const composer = readSource("components/post/PostComposerDialog.tsx")
+
+  assert.match(dialog, /import \{ Button \} from "@\/components\/ui\/button"/)
+  assert.match(
+    dialog,
+    /function DialogClose\([\s\S]*data-slot="dialog-close"[\s\S]*render=\{<Button variant="ghost" size="icon-sm" \/>\}/
+  )
+  assert.match(dialog, /<span className="sr-only">关闭<\/span>/)
+
+  const businessFiles = tsxInventory.filter(
+    ({ relativePath }) => !relativePath.startsWith("components/ui/")
+  )
+  const violations = businessFiles.flatMap(({ relativePath, sourceFile }) =>
+    jsxOpeningElements(sourceFile, "DialogClose")
+      .filter((element) => jsxAttributes(element, sourceFile, "className").length > 0)
+      .map(
+        (element) =>
+          `${relativePath}: business DialogClose must not override the shared Button visual system: ${element.getText(sourceFile)}`
+      )
+  )
+
+  assert.deepEqual(violations, [])
+  assert.equal(openingTags(composer, "DialogClose").length, 1)
+})
+
+test("selection controls expose their current state to assistive technology", () => {
+  const account = readSource("pages/AccountDetailPage.tsx")
+  const community = readSource("pages/CommunityPage.tsx")
+  const contentModeration = readSource("components/admin/AdminContentModerationPanel.tsx")
+  const forumModeration = readSource("components/admin/AdminForumModerationPanel.tsx")
+  const tags = readSource("components/admin/AdminTagManagementPanel.tsx")
+
+  assert.match(account, /role="tablist"/)
+  assert.match(account, /role="tab"/)
+  assert.match(account, /aria-selected=\{activeTab === tab\.id\}/)
+  assert.match(account, /aria-controls=\{`account-tabpanel-\$\{tab\.id\}`\}/)
+  assert.match(account, /role="tabpanel"/)
+  assert.match(account, /aria-labelledby=\{`account-tab-\$\{activeTab\}`\}/)
+  assert.match(account, /aria-pressed=\{profile\.isFollowing\}/)
+
+  assert.match(community, /aria-pressed=\{selectedBoard\?\.id === board\.id\}/)
+  assert.match(contentModeration, /aria-pressed=\{selectedKey === itemKey\}/)
+  assert.match(forumModeration, /aria-pressed=\{selectedId === item\.post\.id\}/)
+  assert.match(tags, /aria-pressed=\{mergeTarget\?\.id === tag\.id\}/)
 })
 
 test("business loading Buttons use Spinner with disabled and busy semantics", () => {

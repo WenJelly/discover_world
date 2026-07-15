@@ -484,13 +484,19 @@ export function PostCard({
               aria-busy={togglingLike}
               aria-pressed={liked}
             >
-              <Heart
-                className={cn("size-4", liked && "fill-current")}
-                aria-hidden
-              />
-              <span className="tabular-nums">
-                {formatCount(stats.reactionCount)}
-              </span>
+              {togglingLike ? (
+                <><Spinner aria-label="加载中" />点赞中</>
+              ) : (
+                <>
+                  <Heart
+                    className={cn("size-4", liked && "fill-current")}
+                    aria-hidden
+                  />
+                  <span className="tabular-nums">
+                    {formatCount(stats.reactionCount)}
+                  </span>
+                </>
+              )}
             </Button>
 
             <Button
@@ -514,13 +520,19 @@ export function PostCard({
               aria-busy={togglingFav}
               aria-pressed={favorited}
             >
-              <Bookmark
-                className={cn("size-4", favorited && "fill-current")}
-                aria-hidden
-              />
-              <span className="tabular-nums">
-                {formatCount(stats.favoriteCount)}
-              </span>
+              {togglingFav ? (
+                <><Spinner aria-label="加载中" />收藏中</>
+              ) : (
+                <>
+                  <Bookmark
+                    className={cn("size-4", favorited && "fill-current")}
+                    aria-hidden
+                  />
+                  <span className="tabular-nums">
+                    {formatCount(stats.favoriteCount)}
+                  </span>
+                </>
+              )}
             </Button>
 
             <Button

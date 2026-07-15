@@ -48,12 +48,16 @@ export function AdminForumModerationPanel() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
-  const [acting, setActing] = useState(false);
+  const [actingAction, setActingAction] = useState<"lock" | "unlock" | "pin" | "unpin" | "">("");
   const [resetRequestVersion, setResetRequestVersion] = useState(0);
   const loadPostsInFlightRef = useRef(false);
   const queueResetPostsRef = useRef(false);
 
   const selected = posts.find((item) => item.post.id === selectedId) ?? null;
+  const lockAction = selected?.isLocked ? "unlock" : "lock";
+  const pinAction = selected?.isBoardPinned ? "unpin" : "pin";
+  const lockActing = actingAction === "lock" || actingAction === "unlock";
+  const pinActing = actingAction === "pin" || actingAction === "unpin";
 
   useEffect(() => {
     fetchForumBoardList({ pageSize: 50 })
@@ -116,8 +120,8 @@ export function AdminForumModerationPanel() {
   }, [resetRequestVersion, selectedBoardId]);
 
   const applyAction = async (action: "lock" | "unlock" | "pin" | "unpin") => {
-    if (!selected || !reason.trim() || acting) return;
-    setActing(true);
+    if (!selected || !reason.trim() || actingAction) return;
+    setActingAction(action);
     try {
       const request = { id: selected.post.id, reason: reason.trim() };
       if (action === "lock") await adminLockForumPost(request);
@@ -153,7 +157,7 @@ export function AdminForumModerationPanel() {
         description: errorMessage(actionError, "请稍后重试。"),
       });
     } finally {
-      setActing(false);
+      setActingAction("");
     }
   };
 
@@ -219,6 +223,7 @@ export function AdminForumModerationPanel() {
                 key={item.post.id}
                 data-slot="interactive-surface"
                 type="button"
+                aria-pressed={selectedId === item.post.id}
                 onClick={() => {
                   setSelectedId(item.post.id);
                   setReason("");
@@ -296,11 +301,11 @@ export function AdminForumModerationPanel() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" disabled={!reason.trim() || acting} aria-busy={acting} onClick={() => void applyAction(selected.isLocked ? "unlock" : "lock")}>
-                {selected.isLocked ? "解锁帖子" : "锁定帖子"}
+              <Button type="button" variant="outline" disabled={!reason.trim() || lockActing || pinActing} aria-busy={lockActing} onClick={() => void applyAction(lockAction)}>
+                {lockActing ? <><Spinner aria-label="加载中" />{actingAction === "unlock" ? "解锁中" : "锁定中"}</> : selected.isLocked ? "解锁帖子" : "锁定帖子"}
               </Button>
-              <Button type="button" variant="outline" disabled={!reason.trim() || acting} aria-busy={acting} onClick={() => void applyAction(selected.isBoardPinned ? "unpin" : "pin")}>
-                {selected.isBoardPinned ? "取消分区置顶" : "分区置顶"}
+              <Button type="button" variant="outline" disabled={!reason.trim() || lockActing || pinActing} aria-busy={pinActing} onClick={() => void applyAction(pinAction)}>
+                {pinActing ? <><Spinner aria-label="加载中" />{actingAction === "unpin" ? "取消置顶中" : "置顶中"}</> : selected.isBoardPinned ? "取消分区置顶" : "分区置顶"}
               </Button>
             </div>
           </div>

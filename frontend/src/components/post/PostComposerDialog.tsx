@@ -194,9 +194,9 @@ export function PostComposerDialog({
           <DialogClose
             aria-label="关闭弹窗"
             disabled={submitting}
-            className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:pointer-events-none disabled:opacity-50"
           >
             <X className="size-4" />
+            <span className="sr-only">关闭</span>
           </DialogClose>
         </DialogHeader>
 

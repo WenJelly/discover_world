@@ -899,6 +899,7 @@ export default function AccountDetailPage() {
                     className="w-24 shrink-0"
                     disabled={followPending}
                     aria-busy={followPending}
+                    aria-pressed={profile.isFollowing}
                     onClick={() => void handleToggleProfileFollow()}
                   >
                     {followPending ? (
@@ -917,7 +918,11 @@ export default function AccountDetailPage() {
 
         {/* Tabs */}
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <div className="flex gap-8 border-b border-border">
+          <div
+            className="flex gap-8 border-b border-border"
+            role="tablist"
+            aria-label="账户内容"
+          >
             {TAB_ITEMS.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -925,6 +930,10 @@ export default function AccountDetailPage() {
                   key={tab.id}
                   type="button"
                   data-slot="interactive-surface"
+                  id={`account-tab-${tab.id}`}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  aria-controls={`account-tabpanel-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     "group relative flex items-center gap-2 px-1 py-3 text-[15px] font-medium",
@@ -947,7 +956,12 @@ export default function AccountDetailPage() {
       </div>
 
       {/* Content */}
-      <main className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
+      <main
+        id={`account-tabpanel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`account-tab-${activeTab}`}
+        className="mx-auto max-w-3xl px-4 py-4 sm:px-6"
+      >
         {activeTab === "posts" ? (
           <>
             {isOwnProfile ? (

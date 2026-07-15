@@ -2,6 +2,7 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { X } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -9,8 +10,22 @@ function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
 }
 
 const DialogTrigger = DialogPrimitive.Trigger
-const DialogClose = DialogPrimitive.Close
 const DialogPortal = DialogPrimitive.Portal
+
+type DialogCloseProps = Omit<
+  React.ComponentProps<typeof DialogPrimitive.Close>,
+  "render"
+>
+
+function DialogClose(props: DialogCloseProps) {
+  return (
+    <DialogPrimitive.Close
+      {...props}
+      data-slot="dialog-close"
+      render={<Button variant="ghost" size="icon-sm" />}
+    />
+  )
+}
 
 function DialogOverlay({
   className,
@@ -51,12 +66,13 @@ function DialogContent({
       >
         {children}
         {showCloseButton ? (
-          <DialogPrimitive.Close
+          <DialogClose
             aria-label="关闭弹窗"
-            className="absolute right-4 top-4 inline-flex size-8 items-center justify-center rounded-full text-muted-foreground opacity-80 transition hover:bg-muted hover:text-foreground hover:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:pointer-events-none"
+            className="absolute right-4 top-4"
           >
             <X className="size-4" />
-          </DialogPrimitive.Close>
+            <span className="sr-only">关闭</span>
+          </DialogClose>
         ) : null}
       </DialogPrimitive.Popup>
     </DialogPortal>

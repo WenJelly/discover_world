@@ -320,9 +320,9 @@ export function AdminAuditPanel({
             )}
           </div>
           <div className="flex items-center justify-between border-t border-border px-3 py-2">
-            <Button type="button" variant="ghost" size="sm" disabled={pageNum <= 1 || listLoading} aria-busy={listLoading} onClick={() => changePage(pageNum - 1)}><ChevronLeft className="size-4" />上一页</Button>
+            <Button type="button" variant="ghost" size="sm" disabled={pageNum <= 1 || listLoading} onClick={() => changePage(pageNum - 1)}><ChevronLeft className="size-4" />上一页</Button>
             <span className="text-xs text-muted-foreground">{pageNum} / {pageCount}</span>
-            <Button type="button" variant="ghost" size="sm" disabled={pageNum >= pageCount || listLoading} aria-busy={listLoading} onClick={() => changePage(pageNum + 1)}>下一页<ChevronRight className="size-4" /></Button>
+            <Button type="button" variant="ghost" size="sm" disabled={pageNum >= pageCount || listLoading} onClick={() => changePage(pageNum + 1)}>下一页<ChevronRight className="size-4" /></Button>
           </div>
         </div>
 

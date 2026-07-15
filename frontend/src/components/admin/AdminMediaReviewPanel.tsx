@@ -101,8 +101,11 @@ export function AdminMediaReviewPanel() {
           aria-busy={mediaReviewLoading}
           onClick={() => void loadPendingMedia()}
         >
-          <RefreshCw className="size-4" aria-hidden="true" />
-          刷新
+          {mediaReviewLoading ? (
+            <><Spinner aria-label="加载中" />加载中</>
+          ) : (
+            <><RefreshCw className="size-4" aria-hidden="true" />刷新</>
+          )}
         </Button>
       </div>
       <div className="space-y-4 px-6 py-6">

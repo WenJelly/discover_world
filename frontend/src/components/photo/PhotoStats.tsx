@@ -4,6 +4,7 @@ import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { formatCount } from "@/lib/format";
 import type { MediaAssetStats } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -120,7 +121,7 @@ export function PhotoStats({
               aria-pressed={isLiked}
               aria-label={isLiked ? "取消点赞" : "点赞"}
             >
-              {content}
+              {likePending ? <><Spinner aria-label="加载中" />点赞中</> : content}
             </Button>
           );
         }

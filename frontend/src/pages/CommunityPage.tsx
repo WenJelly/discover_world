@@ -885,6 +885,7 @@ export default function CommunityPage() {
                   key={board.id}
                   data-slot="interactive-surface"
                   type="button"
+                  aria-pressed={selectedBoard?.id === board.id}
                   onClick={() => handleBoardChange(board.id)}
                   className={cn(
                     interactiveSurfaceClassName,
