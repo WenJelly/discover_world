@@ -33,6 +33,13 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 
+type ForumModerationAction = "lock" | "unlock" | "pin" | "unpin";
+
+type PendingForumAction = {
+  postId: string;
+  action: ForumModerationAction;
+};
+
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
@@ -48,7 +55,7 @@ export function AdminForumModerationPanel() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
-  const [actingAction, setActingAction] = useState<"lock" | "unlock" | "pin" | "unpin" | "">("");
+  const [pendingAction, setPendingAction] = useState<PendingForumAction | null>(null);
   const [resetRequestVersion, setResetRequestVersion] = useState(0);
   const loadPostsInFlightRef = useRef(false);
   const queueResetPostsRef = useRef(false);
@@ -56,8 +63,13 @@ export function AdminForumModerationPanel() {
   const selected = posts.find((item) => item.post.id === selectedId) ?? null;
   const lockAction = selected?.isLocked ? "unlock" : "lock";
   const pinAction = selected?.isBoardPinned ? "unpin" : "pin";
-  const lockActing = actingAction === "lock" || actingAction === "unlock";
-  const pinActing = actingAction === "pin" || actingAction === "unpin";
+  const selectedPendingAction =
+    pendingAction && pendingAction.postId === selected?.post.id
+      ? pendingAction.action
+      : null;
+  const lockActing = selectedPendingAction === "lock" || selectedPendingAction === "unlock";
+  const pinActing = selectedPendingAction === "pin" || selectedPendingAction === "unpin";
+  const actionPending = Boolean(pendingAction);
 
   useEffect(() => {
     fetchForumBoardList({ pageSize: 50 })
@@ -119,11 +131,12 @@ export function AdminForumModerationPanel() {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [resetRequestVersion, selectedBoardId]);
 
-  const applyAction = async (action: "lock" | "unlock" | "pin" | "unpin") => {
-    if (!selected || !reason.trim() || actingAction) return;
-    setActingAction(action);
+  const applyAction = async (action: ForumModerationAction) => {
+    if (!selected || !reason.trim() || pendingAction) return;
+    const postId = selected.post.id;
+    setPendingAction({ postId, action });
     try {
-      const request = { id: selected.post.id, reason: reason.trim() };
+      const request = { id: postId, reason: reason.trim() };
       if (action === "lock") await adminLockForumPost(request);
       if (action === "unlock") await adminUnlockForumPost(request);
       if (action === "pin") await adminPinForumPost(request);
@@ -131,7 +144,7 @@ export function AdminForumModerationPanel() {
 
       setPosts((current) =>
         current.map((item) =>
-          item.post.id === selected.post.id
+          item.post.id === postId
             ? {
                 ...item,
                 isLocked:
@@ -157,7 +170,9 @@ export function AdminForumModerationPanel() {
         description: errorMessage(actionError, "请稍后重试。"),
       });
     } finally {
-      setActingAction("");
+      setPendingAction((current) =>
+        current?.postId === postId && current.action === action ? null : current
+      );
     }
   };
 
@@ -301,11 +316,11 @@ export function AdminForumModerationPanel() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" disabled={!reason.trim() || lockActing || pinActing} aria-busy={lockActing} onClick={() => void applyAction(lockAction)}>
-                {lockActing ? <><Spinner aria-label="加载中" />{actingAction === "unlock" ? "解锁中" : "锁定中"}</> : selected.isLocked ? "解锁帖子" : "锁定帖子"}
+              <Button type="button" variant="outline" disabled={!reason.trim() || actionPending || lockActing} aria-busy={lockActing} onClick={() => void applyAction(lockAction)}>
+                {lockActing ? <><Spinner aria-label="加载中" />{selectedPendingAction === "unlock" ? "解锁中" : "锁定中"}</> : selected.isLocked ? "解锁帖子" : "锁定帖子"}
               </Button>
-              <Button type="button" variant="outline" disabled={!reason.trim() || lockActing || pinActing} aria-busy={pinActing} onClick={() => void applyAction(pinAction)}>
-                {pinActing ? <><Spinner aria-label="加载中" />{actingAction === "unpin" ? "取消置顶中" : "置顶中"}</> : selected.isBoardPinned ? "取消分区置顶" : "分区置顶"}
+              <Button type="button" variant="outline" disabled={!reason.trim() || actionPending || pinActing} aria-busy={pinActing} onClick={() => void applyAction(pinAction)}>
+                {pinActing ? <><Spinner aria-label="加载中" />{selectedPendingAction === "unpin" ? "取消置顶中" : "置顶中"}</> : selected.isBoardPinned ? "取消分区置顶" : "分区置顶"}
               </Button>
             </div>
           </div>

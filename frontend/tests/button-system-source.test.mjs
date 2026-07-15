@@ -1560,7 +1560,7 @@ test("all business native buttons and role buttons use the registered interactio
 
   assert.equal(
     nativeButtons.length,
-    23,
+    22,
     nativeButtons.map(({ relativePath, tag }) => `${relativePath}: ${tag}`).join("\n")
   )
   for (const { relativePath, sourceFile, element, tag } of nativeButtons) {
@@ -1583,8 +1583,8 @@ test("all business native buttons and role buttons use the registered interactio
     (count, { sourceFile }) => count + jsxOpeningElements(sourceFile, "button").length,
     0
   )
-  assert.equal(nativeButtons.length + sidebarNativeButtons.length, 24)
-  assert.equal(totalNativeButtons, 24)
+  assert.equal(nativeButtons.length + sidebarNativeButtons.length, 23)
+  assert.equal(totalNativeButtons, 23)
 
   const roleInspections = businessFiles.map(({ relativePath, sourceFile }) =>
     inspectBusinessRoles(relativePath, sourceFile)
@@ -1655,18 +1655,82 @@ test("selection controls expose their current state to assistive technology", ()
   const forumModeration = readSource("components/admin/AdminForumModerationPanel.tsx")
   const tags = readSource("components/admin/AdminTagManagementPanel.tsx")
 
-  assert.match(account, /role="tablist"/)
-  assert.match(account, /role="tab"/)
-  assert.match(account, /aria-selected=\{activeTab === tab\.id\}/)
-  assert.match(account, /aria-controls=\{`account-tabpanel-\$\{tab\.id\}`\}/)
-  assert.match(account, /role="tabpanel"/)
-  assert.match(account, /aria-labelledby=\{`account-tab-\$\{activeTab\}`\}/)
+  assert.match(
+    account,
+    /import \{ Tabs, TabsContent, TabsList, TabsTrigger \} from "@\/components\/ui\/tabs"/
+  )
+  assert.match(account, /<Tabs value=\{activeTab\} onValueChange=\{handleTabChange\}/)
+  assert.equal(openingTags(account, "TabsList").length, 1)
+  assert.equal(openingTags(account, "TabsTrigger").length, 1)
+  assert.match(openingTags(account, "TabsTrigger")[0], /value=\{tab\.id\}/)
+  const accountPanels = openingTags(account, "TabsContent")
+  assert.equal(accountPanels.length, 4)
+  for (const tabId of ["posts", "pictures", "featured", "albums"]) {
+    const panel = accountPanels.find((tag) => tag.includes(`value="${tabId}"`))
+    assert.ok(panel, `missing ${tabId} TabsContent`)
+    assert.match(
+      panel,
+      /render=\{<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" \/>\}/
+    )
+  }
+  assert.doesNotMatch(account, /role="tablist"|role="tab"|role="tabpanel"/)
+  assert.doesNotMatch(account, /aria-selected=\{activeTab === tab\.id\}/)
   assert.match(account, /aria-pressed=\{profile\.isFollowing\}/)
 
   assert.match(community, /aria-pressed=\{selectedBoard\?\.id === board\.id\}/)
   assert.match(contentModeration, /aria-pressed=\{selectedKey === itemKey\}/)
   assert.match(forumModeration, /aria-pressed=\{selectedId === item\.post\.id\}/)
   assert.match(tags, /aria-pressed=\{mergeTarget\?\.id === tag\.id\}/)
+})
+
+test("optimistic reaction Buttons use action-neutral pending copy", () => {
+  const postCard = readSource("components/post/PostCard.tsx")
+  const photoStats = readSource("components/photo/PhotoStats.tsx")
+  const likeButton = elementBlocks(postCard, "Button").find((block) =>
+    block.includes("onClick={handleLike}")
+  )
+  const favoriteButton = elementBlocks(postCard, "Button").find((block) =>
+    block.includes("onClick={handleFavorite}")
+  )
+
+  assert.ok(likeButton)
+  assert.ok(favoriteButton)
+  for (const block of [likeButton, favoriteButton]) {
+    assert.match(block, /<Spinner aria-label="加载中" \/>处理中/)
+    assert.doesNotMatch(block, /点赞中|取消点赞中|收藏中|取消收藏中/)
+  }
+  assert.match(
+    openingTags(likeButton, "Button")[0],
+    /aria-label=\{togglingLike \? "点赞操作处理中" : liked \? "取消点赞" : "点赞"\}/
+  )
+  assert.match(
+    openingTags(favoriteButton, "Button")[0],
+    /aria-label=\{togglingFav \? "收藏操作处理中" : favorited \? "取消收藏" : "收藏"\}/
+  )
+  assert.match(photoStats, /likePending \? <><Spinner aria-label="加载中" \/>处理中<\/> : content/)
+  assert.match(
+    photoStats,
+    /aria-label=\{likePending \? "点赞操作处理中" : isLiked \? "取消点赞" : "点赞"\}/
+  )
+  assert.doesNotMatch(photoStats, /点赞中|取消点赞中/)
+})
+
+test("forum moderation pending state belongs to the originating post", () => {
+  const forum = readSource("components/admin/AdminForumModerationPanel.tsx")
+
+  assert.match(
+    forum,
+    /type PendingForumAction = \{[\s\S]*postId: string;[\s\S]*action: ForumModerationAction;[\s\S]*\};/
+  )
+  assert.match(
+    forum,
+    /const \[pendingAction, setPendingAction\] = useState<PendingForumAction \| null>\(null\)/
+  )
+  assert.match(forum, /pendingAction && pendingAction\.postId === selected\?\.post\.id/)
+  assert.match(forum, /if \(!selected \|\| !reason\.trim\(\) \|\| pendingAction\) return;/)
+  assert.match(forum, /setPendingAction\(\{ postId, action \}\)/)
+  assert.match(forum, /const actionPending = Boolean\(pendingAction\)/)
+  assert.doesNotMatch(forum, /actingAction|setActingAction/)
 })
 
 test("business loading Buttons use Spinner with disabled and busy semantics", () => {
@@ -1781,7 +1845,7 @@ test("account post upload and media actions use Button while semantic surfaces r
     }
   }
 
-  assertMarkedNativeSurfaces("pages/AccountDetailPage.tsx", 2)
+  assertMarkedNativeSurfaces("pages/AccountDetailPage.tsx", 1)
   assertMarkedNativeSurfaces("components/post/PostComposerDialog.tsx", 0)
   assertMarkedNativeSurfaces("components/post/PostImageAttach.tsx", 1)
   assertMarkedNativeSurfaces("components/post/PostCard.tsx", 0)

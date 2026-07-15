@@ -49,6 +49,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -321,6 +322,12 @@ export default function AccountDetailPage() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [followPending, setFollowPending] = useState(false);
+
+  const handleTabChange = (value: unknown) => {
+    if (TAB_ITEMS.some((tab) => tab.id === value)) {
+      setActiveTab(value as AccountTab);
+    }
+  };
 
   // Preview state
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
@@ -810,8 +817,9 @@ export default function AccountDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Profile Header */}
-      <div className="border-b border-border">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="gap-0">
+        {/* Profile Header */}
+        <div className="border-b border-border">
         {/* Profile Info */}
         <div className="mx-auto flex min-h-[24rem] max-w-3xl items-end px-4 sm:min-h-[26rem] sm:px-6">
           <div className="relative w-full">
@@ -916,28 +924,20 @@ export default function AccountDetailPage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <div
-            className="flex gap-8 border-b border-border"
-            role="tablist"
-            aria-label="账户内容"
-          >
+          {/* Tabs */}
+          <div className="mx-auto max-w-3xl px-4 sm:px-6">
+            <TabsList
+              aria-label="账户内容"
+              className="h-auto justify-start gap-8 rounded-none border-b border-border bg-transparent p-0"
+            >
             {TAB_ITEMS.map((tab) => {
               const Icon = tab.icon;
               return (
-                <button
+                <TabsTrigger
                   key={tab.id}
-                  type="button"
-                  data-slot="interactive-surface"
-                  id={`account-tab-${tab.id}`}
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  aria-controls={`account-tabpanel-${tab.id}`}
-                  onClick={() => setActiveTab(tab.id)}
+                  value={tab.id}
                   className={cn(
-                    "group relative flex items-center gap-2 px-1 py-3 text-[15px] font-medium",
-                    interactiveSurfaceClassName,
+                    "group relative h-auto flex-none justify-start gap-2 rounded-none border-0 bg-transparent px-1 py-3 text-[15px] shadow-none hover:bg-transparent focus-visible:border-ring focus-visible:ring-ring/50 data-[selected]:bg-transparent data-[selected]:shadow-none dark:data-[selected]:bg-transparent",
                     activeTab === tab.id
                       ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground"
@@ -948,21 +948,18 @@ export default function AccountDetailPage() {
                   {activeTab === tab.id ? (
                     <div className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-foreground" />
                   ) : null}
-                </button>
+                </TabsTrigger>
               );
             })}
+            </TabsList>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <main
-        id={`account-tabpanel-${activeTab}`}
-        role="tabpanel"
-        aria-labelledby={`account-tab-${activeTab}`}
-        className="mx-auto max-w-3xl px-4 py-4 sm:px-6"
-      >
-        {activeTab === "posts" ? (
+        {/* Content */}
+        <TabsContent
+          value="posts"
+          render={<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" />}
+        >
           <>
             {isOwnProfile ? (
               <div
@@ -1017,8 +1014,12 @@ export default function AccountDetailPage() {
               ) : null}
             </div>
           )}
-        </>
-        ) : activeTab === "pictures" ? (
+          </>
+        </TabsContent>
+        <TabsContent
+          value="pictures"
+          render={<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" />}
+        >
           <div className="space-y-4">
             {isOwnProfile && !picturesLoading && pictures.length > 0 ? (
               <div className="flex justify-end">
@@ -1104,7 +1105,11 @@ export default function AccountDetailPage() {
             </div>
             )}
           </div>
-        ) : activeTab === "featured" ? (
+        </TabsContent>
+        <TabsContent
+          value="featured"
+          render={<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" />}
+        >
           <div className="space-y-4">
             {isOwnProfile && !featuredLoading && featuredImages.length > 0 ? (
               <div className="flex justify-end">
@@ -1173,7 +1178,11 @@ export default function AccountDetailPage() {
             </div>
           )}
           </div>
-        ) : (
+        </TabsContent>
+        <TabsContent
+          value="albums"
+          render={<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" />}
+        >
           <div className="space-y-4">
             {isOwnProfile ? (
               <div className="flex justify-end">
@@ -1249,8 +1258,8 @@ export default function AccountDetailPage() {
               </div>
             )}
           </div>
-        )}
-      </main>
+        </TabsContent>
+      </Tabs>
 
       {/* Scroll to top */}
       <div className="mx-auto max-w-3xl px-4 pb-12 sm:px-6">

@@ -483,9 +483,10 @@ export function PostCard({
               disabled={togglingLike}
               aria-busy={togglingLike}
               aria-pressed={liked}
+              aria-label={togglingLike ? "点赞操作处理中" : liked ? "取消点赞" : "点赞"}
             >
               {togglingLike ? (
-                <><Spinner aria-label="加载中" />点赞中</>
+                <><Spinner aria-label="加载中" />处理中</>
               ) : (
                 <>
                   <Heart
@@ -519,9 +520,10 @@ export function PostCard({
               disabled={togglingFav}
               aria-busy={togglingFav}
               aria-pressed={favorited}
+              aria-label={togglingFav ? "收藏操作处理中" : favorited ? "取消收藏" : "收藏"}
             >
               {togglingFav ? (
-                <><Spinner aria-label="加载中" />收藏中</>
+                <><Spinner aria-label="加载中" />处理中</>
               ) : (
                 <>
                   <Bookmark

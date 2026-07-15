@@ -119,9 +119,9 @@ export function PhotoStats({
               disabled={likePending}
               aria-busy={likePending}
               aria-pressed={isLiked}
-              aria-label={isLiked ? "取消点赞" : "点赞"}
+              aria-label={likePending ? "点赞操作处理中" : isLiked ? "取消点赞" : "点赞"}
             >
-              {likePending ? <><Spinner aria-label="加载中" />点赞中</> : content}
+              {likePending ? <><Spinner aria-label="加载中" />处理中</> : content}
             </Button>
           );
         }
