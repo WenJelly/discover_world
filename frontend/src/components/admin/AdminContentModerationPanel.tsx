@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -89,6 +90,9 @@ export function AdminContentModerationPanel() {
   const [selectedKey, setSelectedKey] = useState("");
   const [reason, setReason] = useState("");
   const [acting, setActing] = useState(false);
+  const [loadRequestVersion, setLoadRequestVersion] = useState(0);
+  const loadContentInFlightRef = useRef(false);
+  const queueLoadContentRef = useRef(false);
 
   const selected = useMemo(
     () =>
@@ -99,7 +103,12 @@ export function AdminContentModerationPanel() {
   );
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const loadContent = useCallback(async () => {
+  const loadContent = useCallback(async (queueIfBusy = false) => {
+    if (loadContentInFlightRef.current) {
+      if (queueIfBusy) queueLoadContentRef.current = true;
+      return;
+    }
+    loadContentInFlightRef.current = true;
     setLoading(true);
     setError("");
     try {
@@ -127,12 +136,17 @@ export function AdminContentModerationPanel() {
       setError(errorMessage(loadError, "治理内容加载失败，请稍后重试。"));
     } finally {
       setLoading(false);
+      loadContentInFlightRef.current = false;
+      if (queueLoadContentRef.current) {
+        queueLoadContentRef.current = false;
+        setLoadRequestVersion((current) => current + 1);
+      }
     }
   }, [filters, pageNum]);
 
   useEffect(() => {
-    if (view === "content") void loadContent();
-  }, [loadContent, view]);
+    if (view === "content") void loadContent(true);
+  }, [loadContent, loadRequestVersion, view]);
 
   useEffect(() => {
     setReason("");
@@ -199,8 +213,8 @@ export function AdminContentModerationPanel() {
           </p>
         </div>
         {view === "content" ? (
-          <Button type="button" variant="outline" aria-busy={loading} onClick={() => void loadContent()}>
-            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+          <Button type="button" variant="outline" disabled={loading} aria-busy={loading} onClick={() => void loadContent()}>
+            {loading ? <Spinner aria-label="加载中" /> : <RefreshCw className="size-4" />}
             刷新
           </Button>
         ) : null}
@@ -331,7 +345,7 @@ export function AdminContentModerationPanel() {
                     <EyeOff className="size-6 text-muted-foreground" />
                     <p className="mt-3 text-sm font-medium text-foreground">内容加载失败</p>
                     <p className="mt-1 text-sm text-muted-foreground">{error}</p>
-                    <Button type="button" variant="outline" className="mt-4" aria-busy={loading} onClick={() => void loadContent()}>重新加载</Button>
+                    <Button type="button" variant="outline" className="mt-4" disabled={loading} aria-busy={loading} onClick={() => void loadContent()}>{loading ? <Spinner aria-label="加载中" /> : null}重新加载</Button>
                   </div>
                 ) : items.length === 0 ? (
                   <div className="flex min-h-[20rem] flex-col items-center justify-center px-6 text-center">

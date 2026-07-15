@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   MessageSquare,
   Pin,
@@ -49,6 +49,9 @@ export function AdminForumModerationPanel() {
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
   const [acting, setActing] = useState(false);
+  const [resetRequestVersion, setResetRequestVersion] = useState(0);
+  const loadPostsInFlightRef = useRef(false);
+  const queueResetPostsRef = useRef(false);
 
   const selected = posts.find((item) => item.post.id === selectedId) ?? null;
 
@@ -66,6 +69,11 @@ export function AdminForumModerationPanel() {
 
   const loadPosts = useCallback(
     async (mode: "reset" | "append" = "reset") => {
+      if (loadPostsInFlightRef.current) {
+        if (mode === "reset") queueResetPostsRef.current = true;
+        return;
+      }
+      loadPostsInFlightRef.current = true;
       if (mode === "append") setLoadingMore(true);
       else setLoading(true);
       setError("");
@@ -91,6 +99,11 @@ export function AdminForumModerationPanel() {
       } finally {
         setLoading(false);
         setLoadingMore(false);
+        loadPostsInFlightRef.current = false;
+        if (queueResetPostsRef.current) {
+          queueResetPostsRef.current = false;
+          setResetRequestVersion((current) => current + 1);
+        }
       }
     },
     [cursor, posts, selectedBoardId]
@@ -100,7 +113,7 @@ export function AdminForumModerationPanel() {
     void loadPosts("reset");
     // Board changes reset the cursor and reload from the beginning.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBoardId]);
+  }, [resetRequestVersion, selectedBoardId]);
 
   const applyAction = async (action: "lock" | "unlock" | "pin" | "unpin") => {
     if (!selected || !reason.trim() || acting) return;
@@ -153,8 +166,8 @@ export function AdminForumModerationPanel() {
               <p className="text-sm font-medium text-foreground">论坛帖子</p>
               <p className="text-xs text-muted-foreground">按分区查看并执行锁定或置顶。</p>
             </div>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="刷新论坛帖子" aria-busy={loading} onClick={() => void loadPosts("reset")}>
-              <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+            <Button type="button" variant="ghost" size="icon-sm" aria-label="刷新论坛帖子" disabled={loading} aria-busy={loading} onClick={() => void loadPosts("reset")}>
+              {loading ? <Spinner aria-label="加载中" /> : <RefreshCw className="size-4" />}
             </Button>
           </div>
           <div className="space-y-1.5">
@@ -196,7 +209,7 @@ export function AdminForumModerationPanel() {
               <MessageSquare className="size-6 text-muted-foreground" />
               <p className="mt-3 text-sm font-medium text-foreground">论坛帖子加载失败</p>
               <p className="mt-1 text-sm text-muted-foreground">{error}</p>
-              <Button type="button" variant="outline" className="mt-4" aria-busy={loading} onClick={() => void loadPosts("reset")}>重新加载</Button>
+              <Button type="button" variant="outline" className="mt-4" disabled={loading} aria-busy={loading} onClick={() => void loadPosts("reset")}>{loading ? <Spinner aria-label="加载中" /> : null}重新加载</Button>
             </div>
           ) : posts.length === 0 ? (
             <div className="flex min-h-[20rem] items-center justify-center px-6 text-sm text-muted-foreground">当前分区暂无帖子</div>

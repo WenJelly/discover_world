@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast as sonner } from "sonner";
 import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 
@@ -12,6 +12,11 @@ import {
 import { getMediaUrl } from "@/lib/format";
 import type { MediaAssetResponse } from "@/lib/types";
 
+type PendingReview = {
+  id: string;
+  action: "approved" | "rejected";
+};
+
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError || error instanceof Error) {
     return error.message || fallback;
@@ -23,7 +28,8 @@ export function AdminMediaReviewPanel() {
   const [pendingMedia, setPendingMedia] = useState<MediaAssetResponse[]>([]);
   const [mediaReviewLoading, setMediaReviewLoading] = useState(false);
   const [mediaReviewMessage, setMediaReviewMessage] = useState("");
-  const [reviewingMediaId, setReviewingMediaId] = useState("");
+  const [pendingReview, setPendingReview] = useState<PendingReview | null>(null);
+  const reviewInFlightRef = useRef(false);
 
   const loadPendingMedia = useCallback(async () => {
     setMediaReviewLoading(true);
@@ -50,7 +56,9 @@ export function AdminMediaReviewPanel() {
     asset: MediaAssetResponse,
     auditStatus: "approved" | "rejected"
   ) => {
-    setReviewingMediaId(asset.id);
+    if (reviewInFlightRef.current) return;
+    reviewInFlightRef.current = true;
+    setPendingReview({ id: asset.id, action: auditStatus });
     try {
       await reviewMediaAsset({
         id: asset.id,
@@ -65,7 +73,8 @@ export function AdminMediaReviewPanel() {
         description: getErrorMessage(error, "请稍后重试。"),
       });
     } finally {
-      setReviewingMediaId("");
+      setPendingReview(null);
+      reviewInFlightRef.current = false;
     }
   };
 
@@ -120,61 +129,73 @@ export function AdminMediaReviewPanel() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {pendingMedia.map((asset) => (
-              <article
-                key={asset.id}
-                className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
-              >
-                <div className="aspect-[4/3] bg-slate-200 dark:bg-slate-800">
-                  <img
-                    src={getMediaUrl(asset)}
-                    alt={asset.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="space-y-3 p-4">
-                  <div>
-                    <h3 className="line-clamp-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {asset.title}
-                    </h3>
-                    <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
-                      {asset.owner?.nickname ||
-                        asset.owner?.username ||
-                        "未知用户"}
-                    </p>
+            {pendingMedia.map((asset) => {
+              const approving =
+                pendingReview?.id === asset.id &&
+                pendingReview.action === "approved";
+              const rejecting =
+                pendingReview?.id === asset.id &&
+                pendingReview.action === "rejected";
+
+              return (
+                <article
+                  key={asset.id}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
+                >
+                  <div className="aspect-[4/3] bg-slate-200 dark:bg-slate-800">
+                    <img
+                      src={getMediaUrl(asset)}
+                      alt={asset.title}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={reviewingMediaId === asset.id}
-                      aria-busy={reviewingMediaId === asset.id}
-                      onClick={() =>
-                        void handleReviewMedia(asset, "approved")
-                      }
-                    >
-                      {reviewingMediaId === asset.id ? (
-                        <Spinner aria-label="加载中" />
-                      ) : null}
-                      通过
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      disabled={reviewingMediaId === asset.id}
-                      aria-busy={reviewingMediaId === asset.id}
-                      onClick={() =>
-                        void handleReviewMedia(asset, "rejected")
-                      }
-                    >
-                      拒绝
-                    </Button>
+                  <div className="space-y-3 p-4">
+                    <div>
+                      <h3 className="line-clamp-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {asset.title}
+                      </h3>
+                      <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+                        {asset.owner?.nickname ||
+                          asset.owner?.username ||
+                          "未知用户"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={pendingReview !== null}
+                        aria-busy={approving}
+                        onClick={() =>
+                          void handleReviewMedia(asset, "approved")
+                        }
+                      >
+                        {approving ? (
+                          <Spinner aria-label="加载中" />
+                        ) : null}
+                        通过
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        disabled={pendingReview !== null}
+                        aria-busy={rejecting}
+                        onClick={() =>
+                          void handleReviewMedia(asset, "rejected")
+                        }
+                      >
+                        {rejecting ? (
+                          <Spinner aria-label="加载中" />
+                        ) : null}
+                        拒绝
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Flag,
@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   fetchAdminDashboard,
   fetchAdminOperationLogList,
@@ -50,8 +51,12 @@ export function AdminDashboardPanel({
   const [recentLogs, setRecentLogs] = useState<AdminOperationLogResponse[]>([]);
   const [logsLoading, setLogsLoading] = useState(true);
   const [logsError, setLogsError] = useState("");
+  const loadDashboardInFlightRef = useRef(false);
+  const loadRecentLogsInFlightRef = useRef(false);
 
   const loadDashboard = useCallback(async () => {
+    if (loadDashboardInFlightRef.current) return;
+    loadDashboardInFlightRef.current = true;
     setDashboardLoading(true);
     setDashboardError("");
     try {
@@ -60,10 +65,13 @@ export function AdminDashboardPanel({
       setDashboardError(errorMessage(error, "运营数据加载失败，请稍后重试。"));
     } finally {
       setDashboardLoading(false);
+      loadDashboardInFlightRef.current = false;
     }
   }, []);
 
   const loadRecentLogs = useCallback(async () => {
+    if (loadRecentLogsInFlightRef.current) return;
+    loadRecentLogsInFlightRef.current = true;
     setLogsLoading(true);
     setLogsError("");
     try {
@@ -73,6 +81,7 @@ export function AdminDashboardPanel({
       setLogsError(errorMessage(error, "最近操作加载失败，请稍后重试。"));
     } finally {
       setLogsLoading(false);
+      loadRecentLogsInFlightRef.current = false;
     }
   }, []);
 
@@ -82,9 +91,14 @@ export function AdminDashboardPanel({
   }, [loadDashboard, loadRecentLogs]);
 
   const refreshAll = () => {
+    if (
+      loadDashboardInFlightRef.current ||
+      loadRecentLogsInFlightRef.current
+    ) return;
     void loadDashboard();
     void loadRecentLogs();
   };
+  const refreshBusy = dashboardLoading || logsLoading;
 
   return (
     <section className="space-y-8" aria-labelledby="admin-dashboard-title">
@@ -103,13 +117,8 @@ export function AdminDashboardPanel({
             先处理需要行动的事项，再查看站点规模与最近变更。
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={refreshAll}>
-          <RefreshCw
-            className={cn(
-              "size-4",
-              (dashboardLoading || logsLoading) && "animate-spin"
-            )}
-          />
+        <Button type="button" variant="outline" disabled={refreshBusy} aria-busy={refreshBusy} onClick={refreshAll}>
+          {refreshBusy ? <Spinner aria-label="加载中" /> : <RefreshCw className="size-4" />}
           刷新
         </Button>
       </div>
@@ -141,7 +150,8 @@ export function AdminDashboardPanel({
                 <div className="flex min-h-40 flex-col items-center justify-center px-6 text-center">
                   <p className="text-sm font-medium text-foreground">待办数据加载失败</p>
                   <p className="mt-1 text-sm text-muted-foreground">{dashboardError}</p>
-                  <Button type="button" variant="outline" className="mt-4" onClick={() => void loadDashboard()}>
+                  <Button type="button" variant="outline" className="mt-4" disabled={dashboardLoading} aria-busy={dashboardLoading} onClick={() => void loadDashboard()}>
+                    {dashboardLoading ? <Spinner aria-label="加载中" /> : null}
                     重新加载
                   </Button>
                 </div>
@@ -258,7 +268,7 @@ export function AdminDashboardPanel({
                 <ScrollText className="size-6 text-muted-foreground" aria-hidden="true" />
                 <p className="mt-3 text-sm font-medium text-foreground">最近操作加载失败</p>
                 <p className="mt-1 text-sm text-muted-foreground">{logsError}</p>
-                <Button type="button" variant="outline" className="mt-4" onClick={() => void loadRecentLogs()}>重新加载</Button>
+                <Button type="button" variant="outline" className="mt-4" disabled={logsLoading} aria-busy={logsLoading} onClick={() => void loadRecentLogs()}>{logsLoading ? <Spinner aria-label="加载中" /> : null}重新加载</Button>
               </div>
             ) : recentLogs.length === 0 ? (
               <div className="flex min-h-[26rem] flex-col items-center justify-center px-6 text-center text-sm text-muted-foreground">

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   fetchAdminOperationLogDetail,
   fetchAdminOperationLogList,
@@ -115,10 +117,18 @@ export function AdminAuditPanel({
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
   const [detailRequestVersion, setDetailRequestVersion] = useState(0);
+  const [listRequestVersion, setListRequestVersion] = useState(0);
+  const loadLogsInFlightRef = useRef(false);
+  const queueLoadLogsRef = useRef(false);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const loadLogs = useCallback(async () => {
+  const loadLogs = useCallback(async (queueIfBusy = false) => {
+    if (loadLogsInFlightRef.current) {
+      if (queueIfBusy) queueLoadLogsRef.current = true;
+      return;
+    }
+    loadLogsInFlightRef.current = true;
     setListLoading(true);
     setListError("");
     try {
@@ -138,12 +148,17 @@ export function AdminAuditPanel({
       setListError(errorMessage(error, "操作日志加载失败，请稍后重试。"));
     } finally {
       setListLoading(false);
+      loadLogsInFlightRef.current = false;
+      if (queueLoadLogsRef.current) {
+        queueLoadLogsRef.current = false;
+        setListRequestVersion((current) => current + 1);
+      }
     }
   }, [filters, pageNum]);
 
   useEffect(() => {
-    void loadLogs();
-  }, [loadLogs]);
+    void loadLogs(true);
+  }, [listRequestVersion, loadLogs]);
 
   useEffect(() => {
     if (!listLoading && logs.length > 0 && !selectedId) {
@@ -218,8 +233,8 @@ export function AdminAuditPanel({
             查询管理员操作记录，核对变更前后快照和请求来源。
           </p>
         </div>
-        <Button type="button" variant="outline" aria-busy={listLoading} onClick={() => void loadLogs()}>
-          <RefreshCw className={cn("size-4", listLoading && "animate-spin")} />
+        <Button type="button" variant="outline" disabled={listLoading} aria-busy={listLoading} onClick={() => void loadLogs()}>
+          {listLoading ? <Spinner aria-label="加载中" /> : <RefreshCw className="size-4" />}
           刷新
         </Button>
       </div>
@@ -275,7 +290,7 @@ export function AdminAuditPanel({
               </div>
             ) : listError && logs.length === 0 ? (
               <div className="flex min-h-[22rem] flex-col items-center justify-center px-6 text-center">
-                <ScrollText className="size-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">操作日志加载失败</p><p className="mt-1 text-sm text-muted-foreground">{listError}</p><Button type="button" variant="outline" className="mt-4" aria-busy={listLoading} onClick={() => void loadLogs()}>重新加载</Button>
+                <ScrollText className="size-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">操作日志加载失败</p><p className="mt-1 text-sm text-muted-foreground">{listError}</p><Button type="button" variant="outline" className="mt-4" disabled={listLoading} aria-busy={listLoading} onClick={() => void loadLogs()}>{listLoading ? <Spinner aria-label="加载中" /> : null}重新加载</Button>
               </div>
             ) : logs.length === 0 ? (
               <div className="flex min-h-[22rem] flex-col items-center justify-center px-6 text-center">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -106,10 +106,18 @@ export function AdminTagManagementPanel() {
   const [mergeTarget, setMergeTarget] = useState<AdminTagResponse | null>(null);
   const [mergeReason, setMergeReason] = useState("");
   const [merging, setMerging] = useState(false);
+  const [loadRequestVersion, setLoadRequestVersion] = useState(0);
+  const loadTagsInFlightRef = useRef(false);
+  const queueLoadTagsRef = useRef(false);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const loadTags = useCallback(async () => {
+  const loadTags = useCallback(async (queueIfBusy = false) => {
+    if (loadTagsInFlightRef.current) {
+      if (queueIfBusy) queueLoadTagsRef.current = true;
+      return;
+    }
+    loadTagsInFlightRef.current = true;
     setLoading(true);
     setError("");
     try {
@@ -126,12 +134,17 @@ export function AdminTagManagementPanel() {
       setError(errorMessage(loadError, "标签列表加载失败，请稍后重试。"));
     } finally {
       setLoading(false);
+      loadTagsInFlightRef.current = false;
+      if (queueLoadTagsRef.current) {
+        queueLoadTagsRef.current = false;
+        setLoadRequestVersion((current) => current + 1);
+      }
     }
   }, [filters, pageNum]);
 
   useEffect(() => {
-    void loadTags();
-  }, [loadTags]);
+    void loadTags(true);
+  }, [loadRequestVersion, loadTags]);
 
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -179,7 +192,7 @@ export function AdminTagManagementPanel() {
         reason: editDraft.reason.trim(),
       });
       if (next.status !== filters.status) {
-        await loadTags();
+        await loadTags(true);
       } else {
         setTags((current) =>
           current.map((item) => (item.id === next.id ? next : item))
@@ -265,7 +278,7 @@ export function AdminTagManagementPanel() {
         description: `标签关联已迁移到“${next.name}”。`,
       });
       if (pageNum === 1) {
-        await loadTags();
+        await loadTags(true);
       } else {
         setPageNum(1);
       }
@@ -291,8 +304,8 @@ export function AdminTagManagementPanel() {
           <h2 id="admin-tags-title" className="mt-1 text-xl font-semibold text-foreground">标签管理</h2>
           <p className="mt-1 text-sm text-muted-foreground">维护标签语义，通过停用或合并处理重复标签。</p>
         </div>
-        <Button type="button" variant="outline" aria-busy={loading} onClick={() => void loadTags()}>
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />刷新
+        <Button type="button" variant="outline" disabled={loading} aria-busy={loading} onClick={() => void loadTags()}>
+          {loading ? <Spinner aria-label="加载中" /> : <RefreshCw className="size-4" />}刷新
         </Button>
       </div>
 
@@ -359,7 +372,7 @@ export function AdminTagManagementPanel() {
           </table>
         </div>
         {!loading && error && tags.length === 0 ? (
-          <div className="flex min-h-52 flex-col items-center justify-center px-6 text-center"><Tags className="size-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">标签列表加载失败</p><p className="mt-1 text-sm text-muted-foreground">{error}</p><Button type="button" variant="outline" className="mt-4" aria-busy={loading} onClick={() => void loadTags()}>重新加载</Button></div>
+          <div className="flex min-h-52 flex-col items-center justify-center px-6 text-center"><Tags className="size-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">标签列表加载失败</p><p className="mt-1 text-sm text-muted-foreground">{error}</p><Button type="button" variant="outline" className="mt-4" disabled={loading} aria-busy={loading} onClick={() => void loadTags()}>{loading ? <Spinner aria-label="加载中" /> : null}重新加载</Button></div>
         ) : !loading && !error && tags.length === 0 ? (
           <div className="flex min-h-52 flex-col items-center justify-center px-6 text-center"><Tags className="size-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">没有符合条件的标签</p><Button type="button" variant="ghost" className="mt-2" onClick={clearFilters}>恢复默认筛选</Button></div>
         ) : null}

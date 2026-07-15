@@ -257,7 +257,7 @@ export function MediaPickerDialog({
                 size="icon-sm"
                 onClick={clearSearch}
                 aria-label="清空搜索"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute inset-y-0 right-2.5 my-auto text-slate-400"
               >
                 <X className="size-4" strokeWidth={2.5} />
               </Button>

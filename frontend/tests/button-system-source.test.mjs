@@ -46,6 +46,22 @@ function openingTags(source, tagName) {
   return result
 }
 
+function elementBlocks(source, tagName) {
+  const result = []
+  const openingNeedle = `<${tagName}`
+  const closingNeedle = `</${tagName}>`
+  let start = 0
+
+  while ((start = source.indexOf(openingNeedle, start)) >= 0) {
+    const end = source.indexOf(closingNeedle, start)
+    assert.notEqual(end, -1, `${tagName} block starting at ${start}`)
+    result.push(source.slice(start, end + closingNeedle.length))
+    start = end + closingNeedle.length
+  }
+
+  return result
+}
+
 function assertMarkedNativeSurfaces(relativePath, expectedCount) {
   const tags = openingTags(readSource(relativePath), "button")
   assert.equal(tags.length, expectedCount, relativePath)
@@ -59,6 +75,20 @@ function assertUsesShadcnButton(relativePath) {
   const source = readSource(relativePath)
   assert.match(source, /import \{ Button \} from "@\/components\/ui\/button";?/)
   assert.ok(openingTags(source, "Button").length > 0, relativePath)
+}
+
+function assertBusyButtons(relativePath, callbackNeedle, busyState, expectedCount) {
+  const blocks = elementBlocks(readSource(relativePath), "Button").filter((block) =>
+    block.includes(callbackNeedle)
+  )
+  assert.equal(blocks.length, expectedCount, `${relativePath}: ${callbackNeedle}`)
+
+  for (const block of blocks) {
+    const openingTag = openingTags(block, "Button")[0]
+    assert.match(openingTag, new RegExp(`disabled=\\{${busyState}\\}`), block)
+    assert.match(openingTag, new RegExp(`aria-busy=\\{${busyState}\\}`), block)
+    assert.match(block, /<Spinner aria-label="加载中" \/>/, block)
+  }
 }
 
 test("button foundations keep shadcn Button and provide Spinner plus interactive surface states", () => {
@@ -216,4 +246,139 @@ test("admin actions use Button and admin rows remain registered surfaces", () =>
   assertMarkedNativeSurfaces("components/admin/AdminTagManagementPanel.tsx", 1)
   assertMarkedNativeSurfaces("components/admin/AdminAuditPanel.tsx", 1)
   assertMarkedNativeSurfaces("components/admin/MediaPickerDialog.tsx", 1)
+  assertMarkedNativeSurfaces("components/admin/AdminMediaReviewPanel.tsx", 0)
+
+  assertBusyButtons(
+    "components/admin/AdminAuditPanel.tsx",
+    "onClick={() => void loadLogs()}",
+    "listLoading",
+    2
+  )
+  assertBusyButtons(
+    "components/admin/AdminContentModerationPanel.tsx",
+    "onClick={() => void loadContent()}",
+    "loading",
+    2
+  )
+  assertBusyButtons(
+    "components/admin/AdminReportsPanel.tsx",
+    "onClick={() => void loadReports()}",
+    "listLoading",
+    2
+  )
+  assertBusyButtons(
+    "components/admin/AdminTagManagementPanel.tsx",
+    "onClick={() => void loadTags()}",
+    "loading",
+    2
+  )
+  assertBusyButtons(
+    "components/admin/AdminForumModerationPanel.tsx",
+    'onClick={() => void loadPosts("reset")}',
+    "loading",
+    2
+  )
+  assertBusyButtons(
+    "components/admin/AdminDashboardPanel.tsx",
+    "onClick={refreshAll}",
+    "refreshBusy",
+    1
+  )
+
+  for (const relativePath of [
+    "components/admin/AdminAuditPanel.tsx",
+    "components/admin/AdminContentModerationPanel.tsx",
+    "components/admin/AdminReportsPanel.tsx",
+    "components/admin/AdminTagManagementPanel.tsx",
+    "components/admin/AdminForumModerationPanel.tsx",
+    "components/admin/AdminDashboardPanel.tsx",
+  ]) {
+    const source = readSource(relativePath)
+    assert.match(source, /const \w+InFlightRef = useRef\(false\);/, relativePath)
+    assert.match(source, /if \(\w+InFlightRef\.current\)/, relativePath)
+  }
+  assertBusyButtons(
+    "components/admin/AdminDashboardPanel.tsx",
+    "onClick={() => void loadDashboard()}",
+    "dashboardLoading",
+    1
+  )
+  assertBusyButtons(
+    "components/admin/AdminDashboardPanel.tsx",
+    "onClick={() => void loadRecentLogs()}",
+    "logsLoading",
+    1
+  )
+
+  const homepage = readSource("components/admin/AdminHomepagePanel.tsx")
+  const homepageButtons = elementBlocks(homepage, "Button")
+  const removeFeatured = homepageButtons.find((block) => block.includes("移出精选"))
+  assert.ok(removeFeatured)
+  assert.match(homepage, /className="dark flex shrink-0 items-center gap-1"/)
+  assert.match(openingTags(removeFeatured, "Button")[0], /variant="destructive"/)
+
+  const forum = readSource("components/admin/AdminForumModerationPanel.tsx")
+  const forumAction = elementBlocks(forum, "Button").find((block) =>
+    block.includes("解锁帖子")
+  )
+  assert.ok(forumAction)
+  assert.match(openingTags(forumAction, "Button")[0], /variant="outline"/)
+
+  const reports = readSource("components/admin/AdminReportsPanel.tsx")
+  const resolveReport = elementBlocks(reports, "Button").find((block) =>
+    block.includes("提交处理结果")
+  )
+  assert.ok(resolveReport)
+  assert.doesNotMatch(openingTags(resolveReport, "Button")[0], /variant=/)
+
+  const content = readSource("components/admin/AdminContentModerationPanel.tsx")
+  const moderateContent = elementBlocks(content, "Button").find((block) =>
+    block.includes("恢复内容")
+  )
+  assert.ok(moderateContent)
+  assert.match(
+    openingTags(moderateContent, "Button")[0],
+    /variant=\{selected\.status === "hidden" \? "outline" : "destructive"\}/
+  )
+
+  const tags = readSource("components/admin/AdminTagManagementPanel.tsx")
+  const mergeTag = elementBlocks(tags, "Button").find((block) =>
+    block.includes("确认合并")
+  )
+  assert.ok(mergeTag)
+  assert.match(openingTags(mergeTag, "Button")[0], /variant="destructive"/)
+
+  const mediaPicker = readSource("components/admin/MediaPickerDialog.tsx")
+  const clearSearch = elementBlocks(mediaPicker, "Button").find((block) =>
+    block.includes('aria-label="清空搜索"')
+  )
+  assert.ok(clearSearch)
+  const clearSearchTag = openingTags(clearSearch, "Button")[0]
+  assert.match(clearSearchTag, /variant="ghost"/)
+  assert.match(clearSearchTag, /size="icon-sm"/)
+  assert.match(clearSearchTag, /inset-y-0/)
+  assert.match(clearSearchTag, /my-auto/)
+  assert.doesNotMatch(clearSearchTag, /translate-y/)
+
+  const mediaReview = readSource("components/admin/AdminMediaReviewPanel.tsx")
+  assert.match(mediaReview, /type PendingReview = \{\s*id: string;\s*action: "approved" \| "rejected";\s*\};/)
+  assert.match(mediaReview, /useState<PendingReview \| null>\(null\)/)
+  assert.match(mediaReview, /const reviewInFlightRef = useRef\(false\);/)
+  assert.match(mediaReview, /if \(reviewInFlightRef\.current\) return;/)
+  const approve = elementBlocks(mediaReview, "Button").find((block) =>
+    block.includes('handleReviewMedia(asset, "approved")')
+  )
+  const reject = elementBlocks(mediaReview, "Button").find((block) =>
+    block.includes('handleReviewMedia(asset, "rejected")')
+  )
+  assert.ok(approve)
+  assert.ok(reject)
+  assert.match(openingTags(approve, "Button")[0], /disabled=\{pendingReview !== null\}/)
+  assert.match(openingTags(approve, "Button")[0], /aria-busy=\{approving\}/)
+  assert.match(approve, /\{approving \? \([\s\S]*<Spinner aria-label="加载中" \/>/)
+  assert.doesNotMatch(openingTags(approve, "Button")[0], /variant=/)
+  assert.match(openingTags(reject, "Button")[0], /disabled=\{pendingReview !== null\}/)
+  assert.match(openingTags(reject, "Button")[0], /aria-busy=\{rejecting\}/)
+  assert.match(reject, /\{rejecting \? \([\s\S]*<Spinner aria-label="加载中" \/>/)
+  assert.match(openingTags(reject, "Button")[0], /variant="destructive"/)
 })

@@ -131,10 +131,18 @@ export function AdminReportsPanel() {
   const [resolutionNote, setResolutionNote] = useState("");
   const [resolving, setResolving] = useState(false);
   const detailRef = useRef<HTMLDivElement | null>(null);
+  const [listRequestVersion, setListRequestVersion] = useState(0);
+  const loadReportsInFlightRef = useRef(false);
+  const queueLoadReportsRef = useRef(false);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const loadReports = useCallback(async () => {
+  const loadReports = useCallback(async (queueIfBusy = false) => {
+    if (loadReportsInFlightRef.current) {
+      if (queueIfBusy) queueLoadReportsRef.current = true;
+      return;
+    }
+    loadReportsInFlightRef.current = true;
     setListLoading(true);
     setListError("");
     try {
@@ -160,12 +168,17 @@ export function AdminReportsPanel() {
       setListError(errorMessage(error, "举报工单加载失败，请稍后重试。"));
     } finally {
       setListLoading(false);
+      loadReportsInFlightRef.current = false;
+      if (queueLoadReportsRef.current) {
+        queueLoadReportsRef.current = false;
+        setListRequestVersion((current) => current + 1);
+      }
     }
   }, [filters, pageNum]);
 
   useEffect(() => {
-    void loadReports();
-  }, [loadReports]);
+    void loadReports(true);
+  }, [listRequestVersion, loadReports]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -253,7 +266,7 @@ export function AdminReportsPanel() {
       sonner.success("举报工单已处理", {
         description: `${reportTargetLabel(next.targetType)}工单已更新为${reportStatusLabel(next.status)}。`,
       });
-      await loadReports();
+      await loadReports(true);
     } catch (error) {
       sonner.error("举报处理失败", {
         description: errorMessage(error, "请检查处理选项后重试。"),
@@ -277,8 +290,8 @@ export function AdminReportsPanel() {
             查看举报上下文，记录结论，并按需同步治理目标内容。
           </p>
         </div>
-        <Button type="button" variant="outline" aria-busy={listLoading} onClick={() => void loadReports()}>
-          <RefreshCw className={cn("size-4", listLoading && "animate-spin")} />
+        <Button type="button" variant="outline" disabled={listLoading} aria-busy={listLoading} onClick={() => void loadReports()}>
+          {listLoading ? <Spinner aria-label="加载中" /> : <RefreshCw className="size-4" />}
           刷新
         </Button>
       </div>
@@ -392,7 +405,8 @@ export function AdminReportsPanel() {
                 <Flag className="size-6 text-muted-foreground" />
                 <p className="mt-3 text-sm font-medium text-foreground">工单加载失败</p>
                 <p className="mt-1 text-sm text-muted-foreground">{listError}</p>
-                <Button type="button" variant="outline" className="mt-4" aria-busy={listLoading} onClick={() => void loadReports()}>
+                <Button type="button" variant="outline" className="mt-4" disabled={listLoading} aria-busy={listLoading} onClick={() => void loadReports()}>
+                  {listLoading ? <Spinner aria-label="加载中" /> : null}
                   重新加载
                 </Button>
               </div>
