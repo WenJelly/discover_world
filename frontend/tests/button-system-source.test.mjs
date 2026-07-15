@@ -310,18 +310,19 @@ function isAllowlisted(allowlist, relativePath, expression) {
   return allowlist.get(relativePath)?.has(expression) ?? false
 }
 
-function inspectBusinessIntrinsicRoles(relativePath, sourceOrSourceFile) {
+function inspectBusinessRoles(relativePath, sourceOrSourceFile) {
   const sourceFile = sourceFileFor(relativePath, sourceOrSourceFile)
   const roleButtons = []
   const violations = []
 
   for (const element of jsxOpeningElements(sourceFile)) {
     const tagName = element.tagName.getText(sourceFile)
-    if (!/^[a-z][a-z0-9.-]*$/.test(tagName)) continue
+    const intrinsic = /^[a-z][a-z0-9.-]*$/.test(tagName)
 
     const resolvedRoles = []
     for (const property of element.attributes.properties) {
       if (ts.isJsxSpreadAttribute(property)) {
+        if (!intrinsic) continue
         const spread = inspectRoleSpread(property.expression, sourceFile)
         resolvedRoles.push(...spread.roles)
         for (const unresolved of spread.unresolved) {
@@ -491,7 +492,10 @@ function baseUtility(classToken) {
       lastVariantSeparator = index
     }
   }
-  return classToken.slice(lastVariantSeparator + 1).replace(/^!/, "")
+  return classToken
+    .slice(lastVariantSeparator + 1)
+    .replace(/^!/, "")
+    .replace(/!$/, "")
 }
 
 function forbiddenButtonClassReason(classToken) {
@@ -574,55 +578,98 @@ function inspectBusinessButtons(relativePath, sourceOrSourceFile) {
 
 function hasStaticJsxAttribute(element, sourceFile, attributeName, expectedValue) {
   return jsxAttributes(element, sourceFile, attributeName).some((attribute) => {
-    const result = resolveJsxAttributeStrings(attribute, sourceFile)
+    if (!attribute.initializer) return false
+    if (ts.isStringLiteral(attribute.initializer)) {
+      return attribute.initializer.text === expectedValue
+    }
+    if (!ts.isJsxExpression(attribute.initializer) || !attribute.initializer.expression) {
+      return false
+    }
+    const expression = unwrapExpression(attribute.initializer.expression)
     return (
-      result.unresolved.length === 0 &&
-      result.values.some((value) => value.trim() === expectedValue)
+      (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) &&
+      expression.text === expectedValue
     )
   })
 }
 
-function expressionContainsIdentifier(expression, identifier) {
-  let found = false
-  function visit(node) {
-    if (ts.isIdentifier(node) && node.text === identifier) found = true
-    if (!found) ts.forEachChild(node, visit)
-  }
-  visit(expression)
-  return found
-}
-
 function hasSharedInteractiveClass(element, sourceFile) {
   return jsxAttributes(element, sourceFile, "className").some(
-    (attribute) =>
-      attribute.initializer &&
-      ts.isJsxExpression(attribute.initializer) &&
-      attribute.initializer.expression &&
-      expressionContainsIdentifier(
-        attribute.initializer.expression,
-        "interactiveSurfaceClassName"
-      )
+    (attribute) => {
+      if (
+        !attribute.initializer ||
+        !ts.isJsxExpression(attribute.initializer) ||
+        !attribute.initializer.expression
+      ) {
+        return false
+      }
+      const expression = unwrapExpression(attribute.initializer.expression)
+      if (
+        ts.isIdentifier(expression) &&
+        expression.text === "interactiveSurfaceClassName"
+      ) {
+        return true
+      }
+      if (!ts.isCallExpression(expression) || expression.expression.getText(sourceFile) !== "cn") {
+        return false
+      }
+      return expression.arguments.some((argument) => {
+        const unwrapped = unwrapExpression(argument)
+        return (
+          ts.isIdentifier(unwrapped) &&
+          unwrapped.text === "interactiveSurfaceClassName"
+        )
+      })
+    }
   )
 }
 
 test("AST role mutation fixtures enforce direct semantic attributes", () => {
-  const expressionRole = inspectBusinessIntrinsicRoles(
+  const expressionRole = inspectBusinessRoles(
     "fixtures/ExpressionRole.tsx",
     '<div role={"button"} data-slot="interactive-surface" className={cn(interactiveSurfaceClassName)} />'
   )
   assert.equal(expressionRole.roleButtons.length, 1)
 
-  const dynamicRole = inspectBusinessIntrinsicRoles(
+  const dynamicRole = inspectBusinessRoles(
     "fixtures/DynamicRole.tsx",
     "<div role={dynamicRole} />"
   )
   assert.match(dynamicRole.violations.join("\n"), /unresolved role/)
 
-  const spreadRole = inspectBusinessIntrinsicRoles(
+  const spreadRole = inspectBusinessRoles(
     "fixtures/SpreadRole.tsx",
     "<div {...roleProps} />"
   )
   assert.match(spreadRole.violations.join("\n"), /unresolved intrinsic spread attributes/)
+
+  const customRole = inspectBusinessRoles(
+    "fixtures/CustomRole.tsx",
+    '<Card role={"button"} onClick={() => undefined} />'
+  )
+  assert.equal(customRole.roleButtons.length, 1)
+
+  const dynamicCustomRole = inspectBusinessRoles(
+    "fixtures/DynamicCustomRole.tsx",
+    "<Card role={dynamicRole} />"
+  )
+  assert.match(dynamicCustomRole.violations.join("\n"), /unresolved role/)
+
+  const conditionalMarkersSource = createTsxSourceFile(
+    "fixtures/ConditionalMarkers.tsx",
+    '<button data-slot={active ? "interactive-surface" : "other"} className={cn(active && interactiveSurfaceClassName, "gap-2")} />'
+  )
+  const conditionalMarkers = jsxOpeningElements(conditionalMarkersSource, "button")[0]
+  assert.equal(
+    hasStaticJsxAttribute(
+      conditionalMarkers,
+      conditionalMarkersSource,
+      "data-slot",
+      "interactive-surface"
+    ),
+    false
+  )
+  assert.equal(hasSharedInteractiveClass(conditionalMarkers, conditionalMarkersSource), false)
 })
 
 test("AST Button mutation fixtures enforce direct semantic attributes", () => {
@@ -649,6 +696,13 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
   assert.match(colorViolations, /border-blue-500/)
   assert.match(colorViolations, /ring-blue-500/)
   assert.match(colorViolations, /bg-\[#00ffff\]/)
+
+  const importantHeightViolations = inspectBusinessButtons(
+    "fixtures/TrailingImportantHeight.tsx",
+    '<Button className="h-8! h-[40px]!">操作</Button>'
+  ).join("\n")
+  assert.match(importantHeightViolations, /h-8!/)
+  assert.match(importantHeightViolations, /h-\[40px\]!/)
 
   assert.match(
     inspectBusinessButtons(
@@ -744,7 +798,7 @@ test("all business native buttons and role buttons use the registered interactio
   assert.equal(totalNativeButtons, 24)
 
   const roleInspections = businessFiles.map(({ relativePath, sourceFile }) =>
-    inspectBusinessIntrinsicRoles(relativePath, sourceFile)
+    inspectBusinessRoles(relativePath, sourceFile)
   )
   assert.deepEqual(roleInspections.flatMap(({ violations }) => violations), [])
   const roleButtons = roleInspections.flatMap(({ roleButtons: resolved }) => resolved)
