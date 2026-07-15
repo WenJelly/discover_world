@@ -565,7 +565,7 @@ export function PostCard({
                     title="确认删除"
                   >
                     {deleting ? (
-                      <Spinner />
+                      <Spinner aria-label="加载中" />
                     ) : (
                       <Trash2 className="size-4" aria-hidden />
                     )}
@@ -604,7 +604,7 @@ export function PostCard({
                   aria-label={pinned ? "取消置顶动态" : "置顶动态"}
                 >
                   {pinning ? (
-                    <Spinner />
+                    <Spinner aria-label="加载中" />
                   ) : (
                     <Pin className="size-4" />
                   )}
@@ -653,7 +653,7 @@ export function PostCard({
               className="self-start"
             >
               {commentSubmitting ? (
-                <Spinner />
+                <Spinner aria-label="加载中" />
               ) : (
                 <Send className="size-4" />
               )}
@@ -730,7 +730,7 @@ export function PostCard({
                 onClick={() => void loadComments("append")}
               >
                 {commentsLoading ? (
-                  <Spinner />
+                  <Spinner aria-label="加载中" />
                 ) : null}
                 加载更多评论
               </Button>
@@ -814,7 +814,7 @@ export function PostCard({
             aria-busy={reporting}
             onClick={() => void handleReportSubmit()}
           >
-            {reporting ? <Spinner /> : null}
+            {reporting ? <Spinner aria-label="加载中" /> : null}
             提交举报
           </Button>
         </DialogFooter>

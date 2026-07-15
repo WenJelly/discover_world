@@ -564,7 +564,7 @@ export function UploadDialog({
               >
                 {isUploading ? (
                   <>
-                    <Spinner />
+                    <Spinner aria-label="加载中" />
                     上传中…
                   </>
                 ) : error ? (

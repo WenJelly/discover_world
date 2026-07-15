@@ -67,7 +67,7 @@ export function DownloadButton({
       aria-label="下载原图"
     >
       {loading ? (
-        <Spinner />
+        <Spinner aria-label="加载中" />
       ) : (
         <Download className="size-4" aria-hidden="true" />
       )}

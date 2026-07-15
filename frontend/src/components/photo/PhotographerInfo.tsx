@@ -86,7 +86,7 @@ export function PhotographerInfo({
           aria-pressed={isFollowing}
         >
           {followPending ? (
-            <Spinner className="size-3.5" />
+            <Spinner className="size-3.5" aria-label="加载中" />
           ) : null}
           {isFollowing && !followPending ? (
             <Check className="size-3.5" aria-hidden="true" />

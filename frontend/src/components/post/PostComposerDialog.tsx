@@ -349,7 +349,7 @@ export function PostComposerDialog({
           >
             {submitting ? (
               <>
-                <Spinner />
+                <Spinner aria-label="加载中" />
                 发布中...
               </>
             ) : (

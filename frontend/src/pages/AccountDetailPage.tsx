@@ -272,7 +272,7 @@ function FollowListDialog({
               aria-busy={loading}
               onClick={() => void load("append")}
             >
-              {loading ? <Spinner /> : null}
+              {loading ? <Spinner aria-label="加载中" /> : null}
               加载更多
             </Button>
           </DialogFooter>
@@ -902,7 +902,7 @@ export default function AccountDetailPage() {
                     onClick={() => void handleToggleProfileFollow()}
                   >
                     {followPending ? (
-                      <Spinner />
+                      <Spinner aria-label="加载中" />
                     ) : null}
                     {profile.isFollowing && !followPending ? (
                       <Check className="size-4" aria-hidden="true" />
@@ -996,7 +996,7 @@ export default function AccountDetailPage() {
                     aria-busy={postLoadingMore}
                     onClick={() => void loadPosts(false)}
                   >
-                    {postLoadingMore ? <Spinner /> : null}
+                    {postLoadingMore ? <Spinner aria-label="加载中" /> : null}
                     加载更多
                   </Button>
                 </div>
@@ -1082,7 +1082,7 @@ export default function AccountDetailPage() {
                     aria-busy={picturesLoadingMore}
                     onClick={() => void loadPictures(false)}
                   >
-                    {picturesLoadingMore ? <Spinner /> : null}
+                    {picturesLoadingMore ? <Spinner aria-label="加载中" /> : null}
                     加载更多
                   </Button>
                 </div>
@@ -1330,7 +1330,7 @@ export default function AccountDetailPage() {
               aria-busy={deletingImage}
               onClick={() => void handleDeleteImage()}
             >
-              {deletingImage ? <Spinner /> : null}
+              {deletingImage ? <Spinner aria-label="加载中" /> : null}
               {deleteConfirmation?.mode === "force" ? "继续删除" : "确认删除"}
             </Button>
           </DialogFooter>

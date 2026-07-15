@@ -95,7 +95,7 @@ export function PostVisibilityMenu({
           {selected.label}
         </span>
         {loading ? (
-          <Spinner className="size-3.5 shrink-0" />
+          <Spinner className="size-3.5 shrink-0" aria-label="加载中" />
         ) : (
           <ChevronDown className="size-3.5 shrink-0" />
         )}

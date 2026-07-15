@@ -150,6 +150,27 @@ test("shell and auth use shadcn actions and keep notification rows as surfaces",
 })
 
 test("account post upload and media actions use Button while semantic surfaces remain native", () => {
+  const taskFiles = [
+    "pages/AccountDetailPage.tsx",
+    "components/post/PostComposerDialog.tsx",
+    "components/post/PostImageAttach.tsx",
+    "components/post/PostCard.tsx",
+    "components/post/PostVisibilityMenu.tsx",
+    "components/upload/UploadDialog.tsx",
+    "components/photo/PhotoStats.tsx",
+    "components/photo/PhotoDetailDialog.tsx",
+    "components/photo/PhotographerInfo.tsx",
+    "components/photo/DownloadButton.tsx",
+    "components/ImagePreviewModal.tsx",
+  ]
+
+  for (const relativePath of taskFiles) {
+    assertUsesShadcnButton(relativePath)
+    for (const tag of openingTags(readSource(relativePath), "Spinner")) {
+      assert.match(tag, /aria-label="加载中"/, `${relativePath}: ${tag}`)
+    }
+  }
+
   assertMarkedNativeSurfaces("pages/AccountDetailPage.tsx", 2)
   assertMarkedNativeSurfaces("components/post/PostComposerDialog.tsx", 0)
   assertMarkedNativeSurfaces("components/post/PostImageAttach.tsx", 1)
