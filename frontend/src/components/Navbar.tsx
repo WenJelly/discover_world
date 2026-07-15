@@ -516,7 +516,6 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                         <Button
                                             type="button"
                                             variant="ghost"
-                                            size="sm"
                                             onClick={() => setAuthOpen(true)}
                                         >
                                             登录

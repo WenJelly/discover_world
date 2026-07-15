@@ -55,6 +55,12 @@ function assertMarkedNativeSurfaces(relativePath, expectedCount) {
   }
 }
 
+function assertUsesShadcnButton(relativePath) {
+  const source = readSource(relativePath)
+  assert.match(source, /import \{ Button \} from "@\/components\/ui\/button";?/)
+  assert.ok(openingTags(source, "Button").length > 0, relativePath)
+}
+
 test("button foundations keep shadcn Button and provide Spinner plus interactive surface states", () => {
   const button = readSource("components/ui/button.tsx")
   const spinner = readSource("components/ui/spinner.tsx")
@@ -95,8 +101,50 @@ test("public discovery and search keep only registered native interaction surfac
 })
 
 test("shell and auth use shadcn actions and keep notification rows as surfaces", () => {
-  assertMarkedNativeSurfaces("components/Navbar.tsx", 0)
-  assertMarkedNativeSurfaces("components/auth/AuthDialog.tsx", 0)
-  assertMarkedNativeSurfaces("components/notifications/NotificationBell.tsx", 1)
-  assertMarkedNativeSurfaces("pages/NotificationsPage.tsx", 1)
+  const taskFiles = [
+    "components/Navbar.tsx",
+    "components/auth/AuthDialog.tsx",
+    "components/notifications/NotificationBell.tsx",
+    "pages/NotificationsPage.tsx",
+  ]
+  const navbar = readSource(taskFiles[0])
+  const auth = readSource(taskFiles[1])
+  const notificationBell = readSource(taskFiles[2])
+
+  for (const relativePath of taskFiles.slice(0, 3)) {
+    assertUsesShadcnButton(relativePath)
+  }
+
+  assertMarkedNativeSurfaces(taskFiles[0], 0)
+  assertMarkedNativeSurfaces(taskFiles[1], 0)
+  assertMarkedNativeSurfaces(taskFiles[2], 1)
+  assertMarkedNativeSurfaces(taskFiles[3], 1)
+
+  const bellTrigger = openingTags(notificationBell, "Button").find((tag) =>
+    tag.includes('aria-label="通知"')
+  )
+  assert.ok(bellTrigger, "NotificationBell must expose a shadcn bell trigger")
+  assert.match(bellTrigger, /variant="ghost"/)
+  assert.match(bellTrigger, /size="icon-lg"/)
+  assert.match(
+    notificationBell,
+    /className="absolute -right-1 -top-1 min-w-4 rounded-full/
+  )
+
+  const desktopAuthButtons = openingTags(navbar, "Button").filter((tag) =>
+    tag.includes("onClick={() => setAuthOpen(true)}")
+  )
+  assert.equal(desktopAuthButtons.length, 2)
+  for (const tag of desktopAuthButtons) {
+    assert.doesNotMatch(tag, /size="sm"/)
+  }
+
+  assert.match(auth, /import \{ Spinner \} from "@\/components\/ui\/spinner"/)
+  assert.equal(openingTags(auth, "Spinner").length, 2)
+  assert.match(auth, /aria-busy=\{loading === "login"\}/)
+  assert.match(auth, /aria-busy=\{loading === "register"\}/)
+
+  for (const relativePath of taskFiles) {
+    assert.doesNotMatch(readSource(relativePath), /role\s*=\s*["']button["']/)
+  }
 })
