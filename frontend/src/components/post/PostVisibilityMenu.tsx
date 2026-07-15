@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, Globe2, Loader2, Lock } from "lucide-react";
+import { Check, ChevronDown, Globe2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import { cn } from "@/lib/utils";
 import type { PostVisibilityValue } from "./postVisibility";
 
@@ -79,11 +81,12 @@ export function PostVisibilityMenu({
         variant="ghost"
         size="default"
         disabled={disabled}
+        aria-busy={loading}
         onClick={() => setOpen((current) => !current)}
         aria-label={ariaLabel}
         aria-expanded={open}
         className={cn(
-          "h-8 min-w-[7.5rem] justify-start gap-1 rounded-md px-2 text-xs font-normal text-muted-foreground disabled:cursor-not-allowed",
+          "min-w-[7.5rem] justify-start",
           buttonClassName
         )}
       >
@@ -92,7 +95,7 @@ export function PostVisibilityMenu({
           {selected.label}
         </span>
         {loading ? (
-          <Loader2 className="size-3.5 shrink-0 animate-spin" />
+          <Spinner className="size-3.5 shrink-0" />
         ) : (
           <ChevronDown className="size-3.5 shrink-0" />
         )}
@@ -112,6 +115,7 @@ export function PostVisibilityMenu({
               <button
                 key={item.value}
                 type="button"
+                data-slot="interactive-surface"
                 role="option"
                 aria-selected={optionSelected}
                 onClick={() => {
@@ -121,7 +125,8 @@ export function PostVisibilityMenu({
                   }
                 }}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-muted-foreground hover:bg-muted hover:text-foreground",
+                  interactiveSurfaceClassName,
                   optionSelected && "bg-muted text-foreground"
                 )}
               >

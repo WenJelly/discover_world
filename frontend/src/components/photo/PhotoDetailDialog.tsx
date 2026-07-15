@@ -399,15 +399,17 @@ export function PhotoDetailDialog({
             transition={{ duration, ease: [0.16, 1, 0.3, 1] }}
           >
             {/* Close button */}
-            <button
+            <Button
               ref={closeButtonRef}
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={close}
               aria-label="关闭"
-              className="absolute right-3 top-2 z-30 flex size-7 items-center justify-center rounded-full bg-transparent text-slate-950 transition hover:bg-slate-100 focus-visible:outline-none"
+              className="absolute right-3 top-2 z-30"
             >
               <X className="size-4" aria-hidden="true" />
-            </button>
+            </Button>
 
             {/* Left: image stage */}
             <div className="flex min-h-0 flex-col items-start justify-between gap-3.5">
@@ -524,7 +526,6 @@ export function PhotoDetailDialog({
                   type="button"
                   variant="outline"
                   onClick={handleShare}
-                  className="h-10 rounded-none border-[#d8dee8] bg-[#fbfcff] text-sm text-slate-700 hover:bg-slate-50"
                 >
                   <Share2 className="size-4" aria-hidden="true" />
                   分享
@@ -535,13 +536,12 @@ export function PhotoDetailDialog({
                   fileSize={displayFileSize}
                   canDownload={canDownload}
                   onDownloadRequest={handleDownloadRequest}
-                  className="h-10 rounded-none bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"
                 />
                 <Button
                   type="button"
                   variant="outline"
+                  size="icon"
                   aria-label="更多操作"
-                  className="h-10 rounded-none border-[#d8dee8] bg-[#fbfcff] text-slate-700 hover:bg-slate-50"
                 >
                   <MoreHorizontal className="size-4" aria-hidden="true" />
                 </Button>

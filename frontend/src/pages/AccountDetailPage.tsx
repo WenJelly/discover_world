@@ -48,6 +48,7 @@ import {
 } from "@/lib/account-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
@@ -72,6 +73,7 @@ import {
   getMediaUrl,
 } from "@/lib/format";
 import { isForceDeleteMediaConflict } from "@/lib/api-error";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import type {
   ImageItem,
   AccountSummary,
@@ -228,7 +230,11 @@ function FollowListDialog({
               <button
                 key={item.id}
                 type="button"
-                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                data-slot="interactive-surface"
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-muted",
+                  interactiveSurfaceClassName
+                )}
                 onClick={() => {
                   window.history.pushState({}, "", `/account?userId=${item.id}`);
                   window.dispatchEvent(new Event("popstate"));
@@ -263,9 +269,10 @@ function FollowListDialog({
               type="button"
               variant="outline"
               disabled={loading}
+              aria-busy={loading}
               onClick={() => void load("append")}
             >
-              {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+              {loading ? <Spinner /> : null}
               加载更多
             </Button>
           </DialogFooter>
@@ -863,9 +870,11 @@ export default function AccountDetailPage() {
                   </div>
                   <div className="mt-3 flex items-center gap-5 text-sm">
                     {stats.map((stat) => (
-                      <button
+                      <Button
                         key={stat.label}
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         disabled={stat.label === "作品"}
                         onClick={() =>
                           stat.label === "粉丝"
@@ -874,13 +883,12 @@ export default function AccountDetailPage() {
                               ? openFollowList("following")
                               : undefined
                         }
-                        className="rounded-md text-left transition-colors enabled:hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-default"
                       >
                         <span className="font-semibold text-foreground">
                           {formatCount(stat.value)}
                         </span>{" "}
                         <span className="text-muted-foreground">{stat.label}</span>
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -890,10 +898,11 @@ export default function AccountDetailPage() {
                     variant={profile.isFollowing ? "outline" : "default"}
                     className="w-24 shrink-0"
                     disabled={followPending}
+                    aria-busy={followPending}
                     onClick={() => void handleToggleProfileFollow()}
                   >
                     {followPending ? (
-                      <Loader2 className="size-4 animate-spin" />
+                      <Spinner />
                     ) : null}
                     {profile.isFollowing && !followPending ? (
                       <Check className="size-4" aria-hidden="true" />
@@ -915,9 +924,11 @@ export default function AccountDetailPage() {
                 <button
                   key={tab.id}
                   type="button"
+                  data-slot="interactive-surface"
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "group relative flex items-center gap-2 px-1 py-3 text-[15px] font-medium transition-colors",
+                    "group relative flex items-center gap-2 px-1 py-3 text-[15px] font-medium",
+                    interactiveSurfaceClassName,
                     activeTab === tab.id
                       ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground"
@@ -947,7 +958,6 @@ export default function AccountDetailPage() {
                 <Button
                   type="button"
                   size="lg"
-                  className="rounded-full px-5"
                   aria-label="打开发布动态面板"
                   onClick={handleNewPost}
                 >
@@ -983,9 +993,10 @@ export default function AccountDetailPage() {
                     type="button"
                     variant="outline"
                     disabled={postLoadingMore}
+                    aria-busy={postLoadingMore}
                     onClick={() => void loadPosts(false)}
                   >
-                    {postLoadingMore ? <Loader2 className="size-4 animate-spin" /> : null}
+                    {postLoadingMore ? <Spinner /> : null}
                     加载更多
                   </Button>
                 </div>
@@ -1068,9 +1079,10 @@ export default function AccountDetailPage() {
                     type="button"
                     variant="outline"
                     disabled={picturesLoadingMore}
+                    aria-busy={picturesLoadingMore}
                     onClick={() => void loadPictures(false)}
                   >
-                    {picturesLoadingMore ? <Loader2 className="size-4 animate-spin" /> : null}
+                    {picturesLoadingMore ? <Spinner /> : null}
                     加载更多
                   </Button>
                 </div>
@@ -1258,24 +1270,24 @@ export default function AccountDetailPage() {
           actions={
             isOwnProfile ? (
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => handleEditImage(previewImage.id)}
-                className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 aria-label="编辑图片"
               >
                 <Pencil size={18} aria-hidden="true" />
                 编辑
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="destructive"
                 onClick={() => requestDeleteImage(previewImage.id)}
-                className="inline-flex items-center gap-2 rounded-lg border border-red-500/50 px-4 py-2.5 text-sm font-medium text-red-400 backdrop-blur-sm transition-colors hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                 aria-label="删除图片"
               >
                 <Trash2 size={18} aria-hidden="true" />
                 删除
-              </button>
+              </Button>
             </div>
             ) : null
           }
@@ -1315,9 +1327,10 @@ export default function AccountDetailPage() {
               type="button"
               variant="destructive"
               disabled={deletingImage}
+              aria-busy={deletingImage}
               onClick={() => void handleDeleteImage()}
             >
-              {deletingImage ? <Loader2 className="size-4 animate-spin" /> : null}
+              {deletingImage ? <Spinner /> : null}
               {deleteConfirmation?.mode === "force" ? "继续删除" : "确认删除"}
             </Button>
           </DialogFooter>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ImagePlus, Link as LinkIcon, Loader2, Upload, X } from "lucide-react";
+import { Check, ImagePlus, Link as LinkIcon, Upload, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,11 +9,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { uploadMediaAsset, uploadMediaAssetByUrl } from "@/lib/api";
 import { notifyMediaAssetUploaded } from "@/lib/media-events";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import {
   isSupportedUploadImageFile,
   MEDIA_UPLOAD_ACCEPT,
@@ -344,6 +346,7 @@ export function UploadDialog({
 
                 <TabsContent value="local">
                   <div
+                    data-slot="interactive-surface"
                     role="button"
                     tabIndex={0}
                     aria-label="选择图片文件"
@@ -354,7 +357,8 @@ export function UploadDialog({
                     onDragEnter={handleDragEnter}
                     onDragLeave={handleDragLeave}
                     className={cn(
-                      "flex min-h-[220px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center outline-none transition-colors hover:border-foreground/25 hover:bg-muted/60 focus-visible:border-blue-500 focus-visible:ring-3 focus-visible:ring-blue-500/20",
+                      "flex min-h-[220px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center hover:border-foreground/25 hover:bg-muted/60",
+                      interactiveSurfaceClassName,
                       dragOver && "border-primary bg-muted/80"
                     )}
                   >
@@ -432,14 +436,16 @@ export function UploadDialog({
                     />
                   ) : null}
                   {!isUploading ? (
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="icon-sm"
                       onClick={removeFile}
-                      className="absolute right-2 top-2 inline-flex size-7 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur-sm transition hover:bg-background focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                      className="absolute right-2 top-2"
                       aria-label="移除图片"
                     >
                       <X className="size-4" />
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
                 {file ? (
@@ -554,10 +560,11 @@ export function UploadDialog({
                 size="lg"
                 onClick={handleUpload}
                 disabled={!canSubmit || isUploading}
+                aria-busy={isUploading}
               >
                 {isUploading ? (
                   <>
-                    <Loader2 className="animate-spin" />
+                    <Spinner />
                     上传中…
                   </>
                 ) : error ? (

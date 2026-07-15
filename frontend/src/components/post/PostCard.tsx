@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
@@ -396,9 +397,6 @@ export function PostCard({
     }
   };
 
-  const footerActionClass =
-    "h-8 gap-1 rounded-md px-2 text-xs font-normal text-muted-foreground";
-  const footerIconActionClass = "size-8 rounded-md text-muted-foreground";
   const ipDisplayLocation = post.ipRegion?.displayLocation?.trim();
   const ipRegion = ipDisplayLocation ? (
     <div
@@ -480,14 +478,10 @@ export function PostCard({
           >
             <Button
               type="button"
-              variant="ghost"
-              size="default"
+              variant={liked ? "secondary" : "ghost"}
               onClick={handleLike}
               disabled={togglingLike}
-              className={cn(
-                footerActionClass,
-                liked && "text-rose-600 hover:text-rose-600 hover:bg-rose-500/10"
-              )}
+              aria-busy={togglingLike}
               aria-pressed={liked}
             >
               <Heart
@@ -502,12 +496,7 @@ export function PostCard({
             <Button
               type="button"
               variant="ghost"
-              size="default"
               onClick={handleCommentButtonClick}
-              className={cn(
-                footerActionClass,
-                commentsOpen && "bg-muted text-foreground"
-              )}
               aria-label="评论动态"
               aria-expanded={commentsOpen}
             >
@@ -519,15 +508,10 @@ export function PostCard({
 
             <Button
               type="button"
-              variant="ghost"
-              size="default"
+              variant={favorited ? "secondary" : "ghost"}
               onClick={handleFavorite}
               disabled={togglingFav}
-              className={cn(
-                footerActionClass,
-                favorited &&
-                  "text-amber-600 hover:text-amber-600 hover:bg-amber-500/10"
-              )}
+              aria-busy={togglingFav}
               aria-pressed={favorited}
             >
               <Bookmark
@@ -550,7 +534,6 @@ export function PostCard({
                   title: "举报动态",
                 })
               }
-              className={footerIconActionClass}
               aria-label="举报动态"
               title="举报"
             >
@@ -566,7 +549,6 @@ export function PostCard({
                     size="icon"
                     onClick={() => setConfirmDelete(false)}
                     disabled={deleting}
-                    className={footerIconActionClass}
                     aria-label="取消删除"
                     title="取消删除"
                   >
@@ -574,19 +556,16 @@ export function PostCard({
                   </Button>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="destructive"
                     size="icon"
                     onClick={handleDeleteClick}
                     disabled={deleting}
-                    className={cn(
-                      footerIconActionClass,
-                      "text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    )}
+                    aria-busy={deleting}
                     aria-label="确认删除动态"
                     title="确认删除"
                   >
                     {deleting ? (
-                      <Loader2 className="size-4 animate-spin" />
+                      <Spinner />
                     ) : (
                       <Trash2 className="size-4" aria-hidden />
                     )}
@@ -595,13 +574,9 @@ export function PostCard({
               ) : (
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="destructive"
                   size="icon"
                   onClick={handleDeleteClick}
-                  className={cn(
-                    footerIconActionClass,
-                    "hover:text-destructive"
-                  )}
                   aria-label="删除动态"
                   title="删除"
                 >
@@ -623,14 +598,13 @@ export function PostCard({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="default"
                   onClick={() => void handlePinToggle()}
                   disabled={pinning}
-                  className={footerActionClass}
+                  aria-busy={pinning}
                   aria-label={pinned ? "取消置顶动态" : "置顶动态"}
                 >
                   {pinning ? (
-                    <Loader2 className="size-4 animate-spin" />
+                    <Spinner />
                   ) : (
                     <Pin className="size-4" />
                   )}
@@ -674,11 +648,12 @@ export function PostCard({
               type="button"
               size="sm"
               disabled={!commentText.trim() || commentSubmitting}
+              aria-busy={commentSubmitting}
               onClick={() => void handleCommentSubmit()}
               className="self-start"
             >
               {commentSubmitting ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Spinner />
               ) : (
                 <Send className="size-4" />
               )}
@@ -718,9 +693,10 @@ export function PostCard({
                           {formatRelativeTime(comment.createdAt)}
                         </time>
                       </div>
-                      <button
+                      <Button
                         type="button"
-                        className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                        variant="ghost"
+                        size="xs"
                         onClick={() =>
                           openReportDialog({
                             targetType: "comment_record",
@@ -732,7 +708,7 @@ export function PostCard({
                       >
                         <Flag className="size-3.5" aria-hidden />
                         举报
-                      </button>
+                      </Button>
                     </div>
                     <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-foreground">
                       {comment.content}
@@ -750,10 +726,11 @@ export function PostCard({
                 size="sm"
                 variant="outline"
                 disabled={commentsLoading}
+                aria-busy={commentsLoading}
                 onClick={() => void loadComments("append")}
               >
                 {commentsLoading ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Spinner />
                 ) : null}
                 加载更多评论
               </Button>
@@ -834,9 +811,10 @@ export function PostCard({
           <Button
             type="button"
             disabled={reporting}
+            aria-busy={reporting}
             onClick={() => void handleReportSubmit()}
           >
-            {reporting ? <Loader2 className="size-4 animate-spin" /> : null}
+            {reporting ? <Spinner /> : null}
             提交举报
           </Button>
         </DialogFooter>

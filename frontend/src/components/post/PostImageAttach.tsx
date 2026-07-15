@@ -1,6 +1,8 @@
 import { useId, useRef, type ChangeEvent } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { toast as sonner } from "sonner";
+import { Button } from "@/components/ui/button";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import {
   isSupportedUploadImageFile,
   MEDIA_UPLOAD_ACCEPT,
@@ -128,15 +130,17 @@ export function PostImageAttach({
                 <ImagePlus className="size-6" />
               </div>
             )}
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="icon-xs"
               onClick={() => onRemove(images[0].clientId)}
               disabled={disabled}
-              className="absolute right-1.5 top-1.5 inline-flex size-6 items-center justify-center rounded-full bg-slate-950/65 text-white shadow-sm backdrop-blur-sm transition hover:bg-slate-950/80 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:opacity-50"
+              className="absolute right-1.5 top-1.5"
               aria-label="移除图片"
             >
               <X className="size-3" />
-            </button>
+            </Button>
           </div>
         ) : images.length > 1 ? (
           <div className={cn("grid", imageGridClass(images.length))}>
@@ -160,15 +164,17 @@ export function PostImageAttach({
                     <ImagePlus className="size-6" />
                   </div>
                 )}
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="icon-xs"
                   onClick={() => onRemove(image.clientId)}
                   disabled={disabled}
-                  className="absolute right-1.5 top-1.5 inline-flex size-6 items-center justify-center rounded-full bg-slate-950/65 text-white shadow-sm backdrop-blur-sm transition hover:bg-slate-950/80 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:opacity-50"
+                  className="absolute right-1.5 top-1.5"
                   aria-label="移除图片"
                 >
                   <X className="size-3" />
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -180,9 +186,13 @@ export function PostImageAttach({
           {!reached ? (
             <button
               type="button"
+              data-slot="interactive-surface"
               onClick={() => inputRef.current?.click()}
               disabled={disabled}
-              className="flex size-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-muted/30 text-muted-foreground outline-none transition-colors hover:border-foreground/25 hover:bg-muted/60 focus-visible:border-blue-500 focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className={cn(
+                "flex size-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-muted/30 text-muted-foreground hover:border-foreground/25 hover:bg-muted/60 focus-visible:ring-inset",
+                interactiveSurfaceClassName
+              )}
               aria-label="添加图片"
             >
               <ImagePlus className="size-5" />

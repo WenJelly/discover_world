@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { X, Heart, Download, Calendar, Eye, Tag } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import type { ImageItem } from "@/lib/types";
 
 interface ImagePreviewModalProps {
@@ -120,7 +121,7 @@ export function ImagePreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
+      className="dark fixed inset-0 z-[100] flex items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="preview-title"
@@ -161,15 +162,17 @@ export function ImagePreviewModal({
               </h2>
             )}
           </div>
-          <button
+          <Button
             ref={closeButtonRef}
             type="button"
+            variant="secondary"
+            size="icon-lg"
             onClick={onClose}
-            className="ml-4 rounded-lg bg-white/10 p-2 text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="ml-4"
             aria-label="关闭预览"
           >
             <X size={24} aria-hidden="true" />
-          </button>
+          </Button>
         </div>
 
         {/* Image Container */}
@@ -183,10 +186,12 @@ export function ImagePreviewModal({
 
           {/* Navigation Arrows */}
           {onPrevious && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="icon-lg"
               onClick={onPrevious}
-              className="absolute left-4 rounded-full bg-white/10 p-3 text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="absolute left-4"
               aria-label="上一张"
             >
               <svg
@@ -203,13 +208,15 @@ export function ImagePreviewModal({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-            </button>
+            </Button>
           )}
           {onNext && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="icon-lg"
               onClick={onNext}
-              className="absolute right-4 rounded-full bg-white/10 p-3 text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="absolute right-4"
               aria-label="下一张"
             >
               <svg
@@ -226,7 +233,7 @@ export function ImagePreviewModal({
                   d="M9 5l7 7-7 7"
                 />
               </svg>
-            </button>
+            </Button>
           )}
         </div>
 
@@ -278,22 +285,22 @@ export function ImagePreviewModal({
             <div className="flex items-center gap-2">{actions}</div>
           ) : (
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                variant="secondary"
                 aria-label="下载图片"
               >
                 <Download size={18} aria-hidden="true" />
                 下载
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                variant="outline"
                 aria-label="点赞"
               >
                 <Heart size={18} aria-hidden="true" />
                 点赞
-              </button>
+              </Button>
             </div>
           )}
         </div>

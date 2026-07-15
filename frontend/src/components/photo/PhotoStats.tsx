@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { formatCount } from "@/lib/format";
 import type { MediaAssetStats } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,7 @@ interface StatDef {
 }
 
 const STATS: StatDef[] = [
-  { key: "reactionCount", label: "点赞", icon: ThumbsUp, activeClass: "fill-blue-500 text-blue-500" },
+  { key: "reactionCount", label: "点赞", icon: ThumbsUp, activeClass: "fill-current" },
   { key: "viewCount", label: "浏览", icon: Eye, activeClass: "" },
   { key: "downloadCount", label: "下载", icon: Download, activeClass: "" },
 ];
@@ -70,7 +71,7 @@ export function PhotoStats({
       {STATS.map(({ key, label, icon: Icon, activeClass }) => {
         const active = key === "reactionCount" && isLiked;
         const isLike = key === "reactionCount";
-        const iconTone = active ? "text-blue-500" : "text-slate-500";
+        const iconTone = isLike ? undefined : "text-slate-500";
         const content = (
           <>
             <span
@@ -108,17 +109,19 @@ export function PhotoStats({
 
         if (isLike && onToggleLike) {
           return (
-            <button
+            <Button
               key={key}
               type="button"
-              className="flex min-w-[76px] cursor-pointer items-center justify-center gap-2 rounded-none px-0 py-1 text-center transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:cursor-default disabled:opacity-60"
+              variant={isLiked ? "secondary" : "ghost"}
+              className="min-w-[76px]"
               onClick={onToggleLike}
               disabled={likePending}
+              aria-busy={likePending}
               aria-pressed={isLiked}
               aria-label={isLiked ? "取消点赞" : "点赞"}
             >
               {content}
-            </button>
+            </Button>
           );
         }
 

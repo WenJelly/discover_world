@@ -4,7 +4,6 @@ import {
   AtSign,
   Hash,
   ImagePlus,
-  Loader2,
   Send,
   X,
 } from "lucide-react";
@@ -18,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ApiError, createPost, uploadMediaAsset } from "@/lib/api";
 import { notifyMediaAssetUploaded } from "@/lib/media-events";
@@ -46,9 +46,6 @@ export type PostComposerDialogProps = {
   onPublished?: (post: ProfilePostResponse) => void;
   author?: PostAuthor | null;
 };
-
-const toolButtonClass =
-  "inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-45";
 
 function revokeImagePreview(image: AttachedImage) {
   URL.revokeObjectURL(image.thumbUrl);
@@ -231,7 +228,7 @@ export function PostComposerDialog({
               onChange={setVisibility}
               ariaLabel="选择动态可见范围"
               disabled={submitting}
-              buttonClassName="min-w-[6.75rem] shrink-0 rounded-full border border-border bg-background font-semibold text-primary hover:bg-primary/10 hover:text-primary"
+              buttonClassName="min-w-[6.75rem] shrink-0"
               menuClassName="z-30"
             />
           </div>
@@ -246,21 +243,17 @@ export function PostComposerDialog({
             {POST_TYPE_OPTIONS.map((option) => {
               const active = option.value === postType;
               return (
-                <button
+                <Button
                   key={option.value}
                   type="button"
+                  size="sm"
+                  variant={active ? "secondary" : "ghost"}
                   onClick={() => setPostType(option.value)}
                   disabled={submitting}
                   aria-pressed={active}
-                  className={[
-                    "h-8 rounded-full px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60",
-                    active
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  ].join(" ")}
                 >
                   {option.label}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -314,47 +307,49 @@ export function PostComposerDialog({
 
         <DialogFooter className="flex-row items-center justify-between gap-3 border-t border-border px-4 py-3 sm:justify-between">
           <div className="flex min-w-0 items-center gap-1">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={handleImageToolClick}
               disabled={submitting || images.length >= POST_MAX_IMAGES}
-              className={toolButtonClass}
               aria-label="添加图片"
               title="图片"
             >
               <ImagePlus className="size-[18px]" />
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => insertTextAtCursor("#在这里输入话题# ", 1)}
               disabled={submitting}
-              className={toolButtonClass}
               aria-label="插入话题"
               title="话题"
             >
               <Hash className="size-[18px]" />
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => insertTextAtCursor("@", 1)}
               disabled={submitting}
-              className={toolButtonClass}
               aria-label="提醒谁看"
               title="提醒谁看"
             >
               <AtSign className="size-[18px]" />
-            </button>
+            </Button>
           </div>
 
           <Button
-            size="lg"
-            className="h-9 rounded-full px-5 font-semibold"
             onClick={handleSubmit}
             disabled={!canSubmit}
+            aria-busy={submitting}
           >
             {submitting ? (
               <>
-                <Loader2 className="animate-spin" />
+                <Spinner />
                 发布中...
               </>
             ) : (

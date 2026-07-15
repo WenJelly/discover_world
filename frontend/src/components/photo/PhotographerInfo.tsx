@@ -1,7 +1,8 @@
-import { BadgeCheck, Check, Loader2, MapPin } from "lucide-react";
+import { BadgeCheck, Check, MapPin } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { getAvatarFallback } from "@/lib/format";
 import type { AccountSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -78,18 +79,14 @@ export function PhotographerInfo({
           type="button"
           size="sm"
           variant={isFollowing ? "outline" : "default"}
-          className={cn(
-            "h-9 w-[72px] shrink-0 rounded-none px-0 text-sm font-medium",
-            isFollowing
-              ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-              : "border border-[#b9c9ff] bg-white text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-          )}
+          className="w-[72px] shrink-0"
           disabled={followPending}
           onClick={onToggleFollow}
+          aria-busy={followPending}
           aria-pressed={isFollowing}
         >
           {followPending ? (
-            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            <Spinner className="size-3.5" />
           ) : null}
           {isFollowing && !followPending ? (
             <Check className="size-3.5" aria-hidden="true" />

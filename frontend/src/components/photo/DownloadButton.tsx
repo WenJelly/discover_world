@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import type { MediaAssetDownloadResponse } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 import { downloadAsset, formatFileSize } from "./photo-utils";
 
@@ -62,14 +62,12 @@ export function DownloadButton({
       type="button"
       onClick={handleDownload}
       disabled={disabled}
-      className={cn(
-        "bg-blue-600 text-white hover:bg-blue-600/90",
-        className
-      )}
+      className={className}
+      aria-busy={loading}
       aria-label="下载原图"
     >
       {loading ? (
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        <Spinner />
       ) : (
         <Download className="size-4" aria-hidden="true" />
       )}

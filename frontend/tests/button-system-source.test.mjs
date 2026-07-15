@@ -148,3 +148,21 @@ test("shell and auth use shadcn actions and keep notification rows as surfaces",
     assert.doesNotMatch(readSource(relativePath), /role\s*=\s*["']button["']/)
   }
 })
+
+test("account post upload and media actions use Button while semantic surfaces remain native", () => {
+  assertMarkedNativeSurfaces("pages/AccountDetailPage.tsx", 2)
+  assertMarkedNativeSurfaces("components/post/PostComposerDialog.tsx", 0)
+  assertMarkedNativeSurfaces("components/post/PostImageAttach.tsx", 1)
+  assertMarkedNativeSurfaces("components/post/PostCard.tsx", 0)
+  assertMarkedNativeSurfaces("components/post/PostVisibilityMenu.tsx", 1)
+  assertMarkedNativeSurfaces("components/upload/UploadDialog.tsx", 0)
+  assertMarkedNativeSurfaces("components/photo/PhotoStats.tsx", 0)
+  assertMarkedNativeSurfaces("components/photo/PhotoDetailDialog.tsx", 0)
+  assertMarkedNativeSurfaces("components/ImagePreviewModal.tsx", 0)
+
+  const upload = readSource("components/upload/UploadDialog.tsx")
+  assert.match(
+    upload,
+    /data-slot="interactive-surface"\s+role="button"|role="button"\s+data-slot="interactive-surface"/
+  )
+})
