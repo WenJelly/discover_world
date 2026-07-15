@@ -149,11 +149,12 @@ export function AdminAuditPanel({
       if (queueLoadLogsRef.current) return;
       setListError(errorMessage(error, "操作日志加载失败，请稍后重试。"));
     } finally {
-      setListLoading(false);
       loadLogsInFlightRef.current = false;
       if (queueLoadLogsRef.current) {
         queueLoadLogsRef.current = false;
         setListRequestVersion((current) => current + 1);
+      } else {
+        setListLoading(false);
       }
     }
   }, [filters, pageNum]);
@@ -163,7 +164,12 @@ export function AdminAuditPanel({
   }, [listRequestVersion, loadLogs]);
 
   useEffect(() => {
-    if (!listLoading && logs.length > 0 && !selectedId) {
+    if (listLoading) return;
+    if (logs.length === 0) {
+      if (selectedId) onSelectedIdChange("");
+      return;
+    }
+    if (!logs.some((log) => log.id === selectedId)) {
       onSelectedIdChange(logs[0].id);
     }
   }, [listLoading, logs, onSelectedIdChange, selectedId]);

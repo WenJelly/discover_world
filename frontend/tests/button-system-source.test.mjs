@@ -259,6 +259,21 @@ test("admin actions use Button and admin rows remain registered surfaces", () =>
     /catch \(error\) \{\s+if \(queueLoadLogsRef\.current\) return;\s+setListError\(/,
     "queued audit refresh must discard an obsolete failed response before committing the error"
   )
+  assert.match(
+    audit,
+    /finally \{\s+loadLogsInFlightRef\.current = false;\s+if \(queueLoadLogsRef\.current\) \{\s+queueLoadLogsRef\.current = false;\s+setListRequestVersion\(\(current\) => current \+ 1\);\s+\} else \{\s+setListLoading\(false\);\s+\}\s+\}/,
+    "queued audit refresh must keep loading active until the latest request finishes"
+  )
+  assert.match(
+    audit,
+    /if \(listLoading\) return;\s+if \(logs\.length === 0\)/,
+    "audit selection reconciliation must wait for the final list"
+  )
+  assert.match(
+    audit,
+    /if \(!logs\.some\(\(log\) => log\.id === selectedId\)\) \{\s+onSelectedIdChange\(logs\[0\]\.id\);/,
+    "audit selection reconciliation must keep only IDs present in the latest list"
+  )
 
   assertBusyButtons(
     "components/admin/AdminAuditPanel.tsx",
