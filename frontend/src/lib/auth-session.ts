@@ -21,6 +21,14 @@ function safeRemove(storage: AuthStorage, key: string) {
   }
 }
 
+function safeGet(storage: AuthStorage, key: string) {
+  try {
+    return storage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
 function getBrowserAuthStorage(): AuthStoragePair | null {
   if (typeof window === "undefined") {
     return null
@@ -99,11 +107,23 @@ export function clearAuthStorage(storage: AuthStoragePair | null = getBrowserAut
   safeRemove(storage.sessionStorage, USER_KEY)
 }
 
-export function notifyAuthExpired(message = "登录已过期，请重新登录") {
-  clearAuthStorage()
+function getStoredToken(storage: AuthStoragePair) {
+  return safeGet(storage.localStorage, TOKEN_KEY) ?? safeGet(storage.sessionStorage, TOKEN_KEY)
+}
+
+export function notifyAuthExpired(
+  message = "登录已过期，请重新登录",
+  failedToken?: string
+) {
+  const storage = getBrowserAuthStorage()
+  if (failedToken !== undefined && (!storage || getStoredToken(storage) !== failedToken)) {
+    return false
+  }
+
+  clearAuthStorage(storage)
 
   if (typeof window === "undefined") {
-    return
+    return false
   }
 
   window.dispatchEvent(
@@ -111,4 +131,5 @@ export function notifyAuthExpired(message = "登录已过期，请重新登录")
       detail: { message },
     })
   )
+  return true
 }

@@ -278,14 +278,11 @@ func (c *Client) IsTokenRevoked(ctx context.Context, tokenID string) (bool, erro
 	if c == nil || c.store == nil {
 		return false, ErrUnavailable
 	}
-	_, err := c.store.GetCtx(ctx, c.Key("auth", "revoked", tokenID))
-	if errors.Is(err, zeroredis.Nil) {
-		return false, nil
-	}
+	value, err := c.store.GetCtx(ctx, c.Key("auth", "revoked", tokenID))
 	if err != nil {
 		return false, err
 	}
-	return true, nil
+	return strings.TrimSpace(value) == "1", nil
 }
 
 func (c *Client) GetInt64(ctx context.Context, key string) (int64, bool, error) {

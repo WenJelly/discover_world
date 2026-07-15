@@ -161,15 +161,20 @@ async function request<T>(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  let requestToken: string | null = null;
   if (options.requireAuth) {
-    const token = getToken();
-    if (!token || !isTokenUsable(token)) {
+    requestToken = getToken();
+    if (!requestToken || !isTokenUsable(requestToken)) {
       const message = "登录已过期，请重新登录";
-      notifyAuthExpired(message);
+      if (requestToken) {
+        notifyAuthExpired(message, requestToken);
+      } else {
+        notifyAuthExpired(message);
+      }
       throw new ApiError(401, message);
     }
 
-    headers.Authorization = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${requestToken}`;
   }
 
   let res: Response;
@@ -207,7 +212,9 @@ async function request<T>(
   } catch {
     if (res.status === 401) {
       const message = "登录已过期，请重新登录";
-      notifyAuthExpired(message);
+      if (options.requireAuth && requestToken) {
+        notifyAuthExpired(message, requestToken);
+      }
       throw new ApiError(401, message);
     }
 
@@ -216,7 +223,9 @@ async function request<T>(
 
   if (isWrappedResponse<T>(json) && (res.status === 401 || json.code === 401)) {
     const message = json.message || "登录已过期，请重新登录";
-    notifyAuthExpired(message);
+    if (options.requireAuth && requestToken) {
+      notifyAuthExpired(message, requestToken);
+    }
     throw new ApiError(401, message);
   }
 
