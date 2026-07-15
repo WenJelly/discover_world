@@ -13,7 +13,6 @@ import {
     ArrowRight,
     Camera,
     ChevronDown,
-    Loader2,
     LogOut,
     Menu,
     Search,
@@ -35,6 +34,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/context/AuthContext";
 import {
     ApiError,
@@ -760,11 +760,12 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                         variant="outline"
                                         size="sm"
                                         disabled={uploading}
+                                        aria-busy={uploading}
                                         onClick={() => avatarInputRef.current?.click()}
                                         className="gap-2"
                                     >
                                         {uploading ? (
-                                            <Loader2 className="size-4 animate-spin" />
+                                            <Spinner aria-label="加载中" />
                                         ) : (
                                             <Camera className="size-4" />
                                         )}
@@ -841,10 +842,11 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                             <Button
                                 type="submit"
                                 disabled={savingSettings}
+                                aria-busy={savingSettings}
                                 className="gap-2"
                             >
                                 {savingSettings ? (
-                                    <Loader2 className="size-4 animate-spin" />
+                                    <Spinner aria-label="加载中" />
                                 ) : (
                                     <Settings className="size-4" />
                                 )}

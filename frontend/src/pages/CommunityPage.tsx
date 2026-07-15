@@ -28,6 +28,7 @@ import {
   type AttachedImage,
 } from "@/components/post/PostImageAttach";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -354,9 +355,9 @@ function ForumComposer({
         <p className="text-xs text-muted-foreground">
           公开论坛内容会展示给所有访客。
         </p>
-        <Button type="submit" disabled={!canSubmit}>
+        <Button type="submit" disabled={!canSubmit} aria-busy={submitting}>
           {submitting ? (
-            <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+            <Spinner aria-label="加载中" />
           ) : (
             <Plus className="mr-2 size-4" aria-hidden />
           )}
@@ -822,8 +823,12 @@ export default function CommunityPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button type="submit" disabled={publicLoading}>
-                {publicLoading ? <Loader2 className="size-4 animate-spin" /> : null}
+              <Button
+                type="submit"
+                disabled={publicLoading}
+                aria-busy={publicLoading}
+              >
+                {publicLoading ? <Spinner aria-label="加载中" /> : null}
                 应用
               </Button>
             </form>

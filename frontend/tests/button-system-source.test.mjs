@@ -576,6 +576,63 @@ function inspectBusinessButtons(relativePath, sourceOrSourceFile) {
   return violations
 }
 
+function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
+  const sourceFile = sourceFileFor(relativePath, sourceOrSourceFile)
+  const violations = []
+
+  for (const openingElement of jsxOpeningElements(sourceFile, "Button")) {
+    const buttonElement = openingElement.parent
+    if (!ts.isJsxElement(buttonElement)) continue
+
+    const legacyLoaders = []
+    const spinners = []
+
+    function visit(node) {
+      if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+        const tagName = node.tagName.getText(sourceFile)
+        if (tagName === "Loader2" || tagName === "LoaderCircle") {
+          legacyLoaders.push(tagName)
+        } else if (tagName === "Spinner") {
+          spinners.push(node)
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+
+    ts.forEachChild(buttonElement, visit)
+
+    if (legacyLoaders.length > 0) {
+      violations.push(
+        `${relativePath}: Button must use Spinner instead of ${[
+          ...new Set(legacyLoaders),
+        ].join("/")}: ${openingElement.getText(sourceFile)}`
+      )
+    }
+
+    if (spinners.length === 0) continue
+
+    if (jsxAttributes(openingElement, sourceFile, "disabled").length === 0) {
+      violations.push(
+        `${relativePath}: Spinner Button requires direct disabled state: ${openingElement.getText(sourceFile)}`
+      )
+    }
+    if (jsxAttributes(openingElement, sourceFile, "aria-busy").length === 0) {
+      violations.push(
+        `${relativePath}: Spinner Button requires direct aria-busy state: ${openingElement.getText(sourceFile)}`
+      )
+    }
+    for (const spinner of spinners) {
+      if (!hasStaticJsxAttribute(spinner, sourceFile, "aria-label", "加载中")) {
+        violations.push(
+          `${relativePath}: Spinner inside Button requires aria-label="加载中": ${spinner.getText(sourceFile)}`
+        )
+      }
+    }
+  }
+
+  return violations
+}
+
 function hasStaticJsxAttribute(element, sourceFile, attributeName, expectedValue) {
   return jsxAttributes(element, sourceFile, attributeName).some((attribute) => {
     if (!attribute.initializer) return false
@@ -725,6 +782,28 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
     ),
     []
   )
+
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/LegacyLoader.tsx",
+      '<Button disabled={loading} aria-busy={loading}><Loader2 />加载中</Button>'
+    ).join("\n"),
+    /must use Spinner instead of Loader2/
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/IncompleteSpinner.tsx",
+      '<Button><Spinner aria-label="Loading" />加载中</Button>'
+    ).join("\n"),
+    /requires direct disabled state[\s\S]*requires direct aria-busy state[\s\S]*aria-label="加载中"/
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/ValidSpinner.tsx",
+      '<Button disabled={loading} aria-busy={loading}><Spinner aria-label="加载中" />加载中</Button>'
+    ),
+    []
+  )
 })
 
 test("button foundations keep shadcn Button and provide Spinner plus interactive surface states", () => {
@@ -827,6 +906,17 @@ test("business Button calls do not recreate visual systems", () => {
   )
   const violations = businessFiles.flatMap(({ relativePath, sourceFile }) =>
     inspectBusinessButtons(relativePath, sourceFile)
+  )
+
+  assert.deepEqual(violations, [])
+})
+
+test("business loading Buttons use Spinner with disabled and busy semantics", () => {
+  const businessFiles = tsxInventory.filter(
+    ({ relativePath }) => !relativePath.startsWith("components/ui/")
+  )
+  const violations = businessFiles.flatMap(({ relativePath, sourceFile }) =>
+    inspectBusinessButtonLoadingStates(relativePath, sourceFile)
   )
 
   assert.deepEqual(violations, [])
