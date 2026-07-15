@@ -185,7 +185,7 @@ export function AdminForumModerationPanel() {
               <p className="text-sm font-medium text-foreground">论坛帖子</p>
               <p className="text-xs text-muted-foreground">按分区查看并执行锁定或置顶。</p>
             </div>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="刷新论坛帖子" disabled={loading} aria-busy={loading} onClick={() => void loadPosts("reset")}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label="刷新论坛帖子" disabled={loading || actionPending} aria-busy={loading} onClick={() => void loadPosts("reset")}>
               {loading ? <Spinner aria-label="加载中" /> : <RefreshCw className="size-4" />}
             </Button>
           </div>
@@ -193,6 +193,7 @@ export function AdminForumModerationPanel() {
             <Label htmlFor="admin-forum-board">论坛分区</Label>
             <Select
               value={selectedBoardId || "all"}
+              disabled={actionPending}
               onValueChange={(value) => {
                 if (!value) return;
                 setCursor("");
@@ -238,6 +239,7 @@ export function AdminForumModerationPanel() {
                 key={item.post.id}
                 data-slot="interactive-surface"
                 type="button"
+                disabled={actionPending}
                 aria-pressed={selectedId === item.post.id}
                 onClick={() => {
                   setSelectedId(item.post.id);
@@ -306,6 +308,7 @@ export function AdminForumModerationPanel() {
               <textarea
                 id="forum-moderation-reason"
                 value={reason}
+                disabled={actionPending}
                 onChange={(event) => setReason(event.target.value)}
                 rows={4}
                 maxLength={500}

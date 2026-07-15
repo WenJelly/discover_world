@@ -112,10 +112,15 @@ function assertBusyButtons(relativePath, callbackNeedle, busyState, expectedCoun
     block.includes(callbackNeedle)
   )
   assert.equal(blocks.length, expectedCount, `${relativePath}: ${callbackNeedle}`)
+  const escapedBusyState = busyState.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
   for (const block of blocks) {
     const openingTag = openingTags(block, "Button")[0]
-    assert.match(openingTag, new RegExp(`disabled=\\{${busyState}\\}`), block)
+    assert.match(
+      openingTag,
+      new RegExp(`disabled=\\{[^}]*\\b${escapedBusyState}\\b[^}]*\\}`),
+      block
+    )
     assert.match(openingTag, new RegExp(`aria-busy=\\{${busyState}\\}`), block)
     assert.match(block, /<Spinner aria-label="加载中" \/>/, block)
   }
@@ -1747,6 +1752,31 @@ test("forum moderation pending state belongs to the originating post", () => {
   assert.match(forum, /setPendingAction\(\{ postId, action \}\)/)
   assert.match(forum, /const actionPending = Boolean\(pendingAction\)/)
   assert.doesNotMatch(forum, /actingAction|setActingAction/)
+
+  const boardSelect = elementBlocks(forum, "Select").find((block) =>
+    block.includes("setSelectedBoardId")
+  )
+  const postSelection = openingTags(forum, "button").find((tag) =>
+    tag.includes("setSelectedId")
+  )
+  const reasonInput = openingTags(forum, "textarea").find((tag) =>
+    tag.includes('id="forum-moderation-reason"')
+  )
+  const refreshButton = elementBlocks(forum, "Button").find((block) =>
+    block.includes('aria-label="刷新论坛帖子"')
+  )
+
+  assert.ok(boardSelect)
+  assert.ok(postSelection)
+  assert.ok(reasonInput)
+  assert.ok(refreshButton)
+  assert.match(openingTags(boardSelect, "Select")[0], /disabled=\{actionPending\}/)
+  assert.match(postSelection, /disabled=\{actionPending\}/)
+  assert.match(reasonInput, /disabled=\{actionPending\}/)
+  assert.match(
+    openingTags(refreshButton, "Button")[0],
+    /disabled=\{loading \|\| actionPending\}/
+  )
 })
 
 test("business loading Buttons use Spinner with disabled and busy semantics", () => {
