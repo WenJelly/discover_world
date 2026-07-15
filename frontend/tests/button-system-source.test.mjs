@@ -630,7 +630,7 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
       ts.forEachChild(node, (child) => visitContent(child, loadingExpression))
     }
 
-    buttonElement.children.forEach(visitContent)
+    buttonElement.children.forEach((child) => visitContent(child))
 
     if (legacyLoaders.length > 0) {
       violations.push(
@@ -925,6 +925,13 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
     inspectBusinessButtonLoadingStates(
       "fixtures/ExplicitTrueSpinner.tsx",
       '<Button disabled aria-busy={true}><Spinner aria-label="加载中" />加载中</Button>'
+    ),
+    []
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/ExplicitTrueSpinnerAfterText.tsx",
+      '<Button disabled aria-busy={true}>保存<Spinner aria-label="加载中" /></Button>'
     ),
     []
   )
