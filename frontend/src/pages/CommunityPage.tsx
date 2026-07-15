@@ -52,6 +52,7 @@ import {
   uploadMediaAsset,
 } from "@/lib/api";
 import { notifyMediaAssetUploaded } from "@/lib/media-events";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import type {
   ForumBoardResponse,
   ForumPostResponse,
@@ -60,6 +61,7 @@ import type {
   ProfilePostResponse,
   PublicPostResponse,
 } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type CommunityTab = "public" | "followingPosts" | "followingMedia" | "forum";
 type PublicSort = "latest" | "hot" | "rising";
@@ -166,13 +168,14 @@ function PostFeed({
         <div key={post.id} className="space-y-2">
           <PostCard post={post} author={authorFromPost(post)} />
           <div className="flex justify-end">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               onClick={() => onOpenDetail(post)}
-              className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
             >
               查看详情
-            </button>
+            </Button>
           </div>
         </div>
       ))}
@@ -696,14 +699,16 @@ export default function CommunityPage() {
             return (
               <button
                 key={tab.key}
+                data-slot="interactive-surface"
                 type="button"
                 onClick={() => navigateTab(tab.key)}
-                className={[
-                  "inline-flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20",
+                className={cn(
+                  interactiveSurfaceClassName,
+                  "inline-flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-medium",
                   active
                     ? "border-foreground text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                ].join(" ")}
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
                 aria-pressed={active}
               >
                 <Icon className="size-4" aria-hidden />
@@ -873,14 +878,16 @@ export default function CommunityPage() {
               {boards.map((board) => (
                 <button
                   key={board.id}
+                  data-slot="interactive-surface"
                   type="button"
                   onClick={() => handleBoardChange(board.id)}
-                  className={[
-                    "rounded-full border px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20",
+                  className={cn(
+                    interactiveSurfaceClassName,
+                    "rounded-full border px-3 py-1.5 text-sm",
                     selectedBoard?.id === board.id
                       ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background text-muted-foreground hover:text-foreground",
-                  ].join(" ")}
+                      : "border-border bg-background text-muted-foreground hover:text-foreground"
+                  )}
                 >
                   {board.name}
                 </button>

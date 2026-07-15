@@ -3,6 +3,7 @@ import { toast as sonner } from "sonner";
 import { GalleryHorizontal, Grid2X2, ImageOff, RefreshCw } from "lucide-react";
 import { DiscoverPictureCard } from "@/components/discover/DiscoverPictureCard";
 import { PhotoDetailDialog } from "@/components/photo/PhotoDetailDialog";
+import { Button } from "@/components/ui/button";
 import { useInView } from "@/hooks/useInView";
 import { useInfinitePictures } from "@/hooks/useInfinitePictures";
 import {
@@ -469,21 +470,18 @@ export default function DiscoverPage() {
                   option.key === "justified" ? GalleryHorizontal : Grid2X2;
 
                 return (
-                  <button
+                  <Button
                     key={option.key}
                     type="button"
-                    className={
-                      active
-                        ? "discover-layout-switch__button selected"
-                        : "discover-layout-switch__button"
-                    }
+                    variant={active ? "secondary" : "ghost"}
+                    size="icon-sm"
                     aria-label={option.title}
                     aria-pressed={active}
                     title={option.title}
                     onClick={() => handleLayoutClick(option.key)}
                   >
                     <Icon size={18} strokeWidth={2} aria-hidden="true" />
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -516,16 +514,17 @@ export default function DiscoverPage() {
           <div className="discover-filter-navigation">
             <div className="discover-filter-options">
               <div className="discover-filter">
-                <button
+                <Button
                   type="button"
-                  className="discover-filter__target"
+                  variant="ghost"
+                  size="sm"
                   aria-expanded={openMenu === "sort"}
                   onClick={() =>
                     setOpenMenu((current) => (current === "sort" ? null : "sort"))
                   }
                 >
                   {activeSortLabel}
-                </button>
+                </Button>
                 {openMenu === "sort" ? (
                   <div className="popup popup-centered discover-filter-popover">
                     <div className="contain">
@@ -562,9 +561,10 @@ export default function DiscoverPage() {
               </div>
 
               <div className="discover-filter">
-                <button
+                <Button
                   type="button"
-                  className="discover-filter__target"
+                  variant="ghost"
+                  size="sm"
                   aria-expanded={openMenu === "photographer"}
                   onClick={() =>
                     setOpenMenu((current) =>
@@ -573,7 +573,7 @@ export default function DiscoverPage() {
                   }
                 >
                   {activePhotographerLabel}
-                </button>
+                </Button>
                 {openMenu === "photographer" ? (
                   <div className="popup popup-centered discover-filter-popover">
                     <div className="contain">
@@ -610,9 +610,10 @@ export default function DiscoverPage() {
               </div>
 
               <div className="discover-category-region">
-                <button
+                <Button
                   type="button"
-                  className="discover-category-picker"
+                  variant="ghost"
+                  size="sm"
                   aria-expanded={openMenu === "category"}
                   onClick={() =>
                     setOpenMenu((current) =>
@@ -620,8 +621,8 @@ export default function DiscoverPage() {
                     )
                   }
                 >
-                  <span className="discover-category-target">{activeCategoryLabel}</span>
-                </button>
+                  {activeCategoryLabel}
+                </Button>
                 {openMenu === "category" ? (
                   <div className="popup popup-centered category_popover category_content">
                     <div className="contain">
@@ -757,10 +758,10 @@ export default function DiscoverPage() {
                 <h2>加载失败</h2>
                 <p>发现图片暂时无法加载,请稍后重试。</p>
               </div>
-              <button type="button" className="discover-feedback__button" onClick={retry}>
+              <Button type="button" variant="outline" size="sm" onClick={retry}>
                 <RefreshCw size={14} aria-hidden="true" />
                 重试
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -777,10 +778,10 @@ export default function DiscoverPage() {
           {error && displayRows.length > 0 ? (
             <div className="discover-inline-error">
               <span>加载失败</span>
-              <button type="button" onClick={retry}>
+              <Button type="button" variant="outline" size="sm" onClick={retry}>
                 <RefreshCw size={14} aria-hidden="true" />
                 重试
-              </button>
+              </Button>
             </div>
           ) : null}
 

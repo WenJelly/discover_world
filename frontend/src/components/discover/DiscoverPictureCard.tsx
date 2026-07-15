@@ -1,6 +1,8 @@
 ﻿import { memo, useState } from "react";
 import { Eye, Heart, ImageOff } from "lucide-react";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import type { PictureResponse } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type DiscoverPictureCardProps = {
   picture: PictureResponse;
@@ -26,9 +28,13 @@ function DiscoverPictureCardImpl({ picture, onOpen }: DiscoverPictureCardProps) 
       style={{ backgroundColor: picture.picColor || "#b9c1c7" }}
     >
       <button
+        data-slot="interactive-surface"
         type="button"
         onClick={() => onOpen?.(picture)}
-        className="photo_link block h-full w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+        className={cn(
+          interactiveSurfaceClassName,
+          "photo_link block h-full w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+        )}
         aria-label={`查看发现图片: ${picture.name || "未命名作品"}, 作者 ${authorName}`}
       >
         {errored || !imageSrc ? (

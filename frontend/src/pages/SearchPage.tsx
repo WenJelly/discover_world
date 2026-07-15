@@ -23,6 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, globalSearch } from "@/lib/api";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import type {
   AccountSummary,
   GlobalSearchAlbumResponse,
@@ -30,6 +31,7 @@ import type {
   GlobalSearchResponse,
   MediaAssetResponse,
 } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type SearchGroupKey = "all" | "media" | "posts" | "albums" | "users";
 
@@ -694,14 +696,15 @@ export default function SearchPage() {
                   <Loader2 className="h-5 w-5 animate-spin text-slate-500" />
                 )}
                 {inputValue && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={handleClearInput}
-                    className="search-clear-button"
                     aria-label="清空搜索"
                   >
                     <X className="h-5 w-5" />
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
@@ -717,6 +720,7 @@ export default function SearchPage() {
                 return (
                   <button
                     key={group.key}
+                    data-slot="interactive-surface"
                     type="button"
                     role="tab"
                     aria-selected={activeGroup === group.key}
@@ -724,7 +728,11 @@ export default function SearchPage() {
                       setActiveGroup(group.key);
                       if (query) navigateSearch(query, group.key);
                     }}
-                    className={`search-group-tab${isActive ? " search-group-tab--active" : ""}`}
+                    className={cn(
+                      interactiveSurfaceClassName,
+                      "search-group-tab",
+                      isActive && "search-group-tab--active"
+                    )}
                     aria-pressed={isActive}
                   >
                     <Icon className="h-4 w-4" />
@@ -783,9 +791,13 @@ export default function SearchPage() {
                 {TRENDING_SEARCHES.map((term) => (
                   <button
                     key={term}
+                    data-slot="interactive-surface"
                     type="button"
                     onClick={() => handleRecentClick(term)}
-                    className="search-suggestion-button"
+                    className={cn(
+                      interactiveSurfaceClassName,
+                      "search-suggestion-button"
+                    )}
                   >
                     {term}
                   </button>
@@ -798,21 +810,27 @@ export default function SearchPage() {
                 <div className="search-suggestion-heading">
                   <Clock className="h-5 w-5 text-slate-400" />
                   <h3>最近搜索</h3>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="xs"
                     onClick={handleClearRecent}
-                    className="ml-2 text-xs text-slate-500 hover:text-slate-800"
+                    className="ml-2"
                   >
                     清除
-                  </button>
+                  </Button>
                 </div>
                 <div className="search-suggestion-list">
                   {recentSearches.map((term) => (
                     <button
                       key={term}
+                      data-slot="interactive-surface"
                       type="button"
                       onClick={() => handleRecentClick(term)}
-                      className="search-suggestion-button search-suggestion-button--muted"
+                      className={cn(
+                        interactiveSurfaceClassName,
+                        "search-suggestion-button search-suggestion-button--muted"
+                      )}
                     >
                       {term}
                     </button>

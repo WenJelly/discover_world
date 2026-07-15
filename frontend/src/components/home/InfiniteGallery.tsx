@@ -1,5 +1,6 @@
 import { ImageOff, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Button } from "@/components/ui/button";
 import { useInfinitePictures } from "@/hooks/useInfinitePictures";
 import { fetchHomepageConfig } from "@/lib/api";
 import type { PictureResponse } from "@/lib/types";
@@ -160,14 +161,15 @@ export default function InfiniteGallery() {
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-20 sm:px-6 lg:px-8">
           <ImageOff size={48} className="text-muted-foreground/50" aria-hidden="true" />
           <p className="text-muted-foreground">暂时无法加载作品</p>
-          <button
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => retry()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/80 focus-visible:outline-offset-2"
             aria-label="重试加载作品"
           >
             <RefreshCw size={14} aria-hidden="true" />
             重试
-          </button>
+          </Button>
         </div>
       ) : displayPictures.length === 0 && !galleryLoading ? (
         <div className="mx-auto max-w-7xl px-4 py-20 text-center text-muted-foreground sm:px-6 lg:px-8">
@@ -211,14 +213,16 @@ export default function InfiniteGallery() {
           {galleryError && displayPictures.length > 0 && (
             <div className="mt-4 flex items-center justify-center gap-3">
               <span className="text-sm text-muted-foreground">加载失败</span>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => retry()}
-                className="inline-flex items-center gap-1 text-sm text-foreground transition-colors hover:underline focus-visible:outline-offset-2"
                 aria-label="重试加载更多作品"
               >
                 <RefreshCw size={14} aria-hidden="true" />
                 重试
-              </button>
+              </Button>
             </div>
           )}
         </>
