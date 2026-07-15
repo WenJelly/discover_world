@@ -603,7 +603,10 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
         legacyLoaders.push(legacyLoader)
       } else if (loadingIndicators.spinnerNames.has(tagName)) {
         spinners.push({ element, loadingExpression })
-      } else if (/(?:^|\.)(?:Spinner|[A-Za-z_$][\w$]*Spinner)$/.test(tagName)) {
+      } else if (
+        loadingIndicators.invalidSpinnerNames.has(tagName) ||
+        /(?:^|\.)(?:Spinner|[A-Za-z_$][\w$]*Spinner)$/.test(tagName)
+      ) {
         invalidSpinners.push(tagName)
       }
     }
@@ -1006,6 +1009,7 @@ function loadingIndicatorIdentifiers(sourceFile) {
   ])
   const lucideNamespaces = new Set()
   const spinnerNames = new Set()
+  const invalidSpinnerNames = new Set()
 
   for (const statement of sourceFile.statements) {
     if (
@@ -1034,13 +1038,22 @@ function loadingIndicatorIdentifiers(sourceFile) {
       ) {
         legacyLoaderNames.set(element.name.text, importedName)
       }
-      if (source === "@/components/ui/spinner" && importedName === "Spinner") {
-        spinnerNames.add(element.name.text)
+      if (importedName === "Spinner") {
+        const names =
+          source === "@/components/ui/spinner"
+            ? spinnerNames
+            : invalidSpinnerNames
+        names.add(element.name.text)
       }
     }
   }
 
-  return { legacyLoaderNames, lucideNamespaces, spinnerNames }
+  return {
+    legacyLoaderNames,
+    lucideNamespaces,
+    spinnerNames,
+    invalidSpinnerNames,
+  }
 }
 
 function resolveLegacyLoader(tagName, loadingIndicators) {
@@ -1445,6 +1458,13 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
     inspectBusinessButtonLoadingStates(
       "fixtures/WrongSpinnerSource.tsx",
       'import { Spinner } from "./spinner"; <Button disabled={loading} aria-busy={loading}><Spinner aria-label="加载中" />保存中</Button>'
+    ).join("\n"),
+    /must import Spinner from @\/components\/ui\/spinner/
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/WrongAliasedSpinnerSource.tsx",
+      'import { Spinner as BusyIndicator } from "./spinner"; <Button disabled={loading} aria-busy={loading}><BusyIndicator aria-label="加载中" />保存中</Button>'
     ).join("\n"),
     /must import Spinner from @\/components\/ui\/spinner/
   )
