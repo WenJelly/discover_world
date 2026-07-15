@@ -93,3 +93,10 @@ test("public discovery and search keep only registered native interaction surfac
     /focus-visible:ring-inset/
   )
 })
+
+test("shell and auth use shadcn actions and keep notification rows as surfaces", () => {
+  assertMarkedNativeSurfaces("components/Navbar.tsx", 0)
+  assertMarkedNativeSurfaces("components/auth/AuthDialog.tsx", 0)
+  assertMarkedNativeSurfaces("components/notifications/NotificationBell.tsx", 1)
+  assertMarkedNativeSurfaces("pages/NotificationsPage.tsx", 1)
+})

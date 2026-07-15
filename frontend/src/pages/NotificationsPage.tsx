@@ -2,17 +2,20 @@ import { useCallback, useEffect, useState } from "react";
 import { Bell, CheckCheck, Circle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   fetchNotificationCursorList,
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/lib/api";
 import { formatRelativeTime } from "@/lib/format";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import {
   getNotificationTargetHref,
   navigateNotificationTarget,
 } from "@/lib/notification-target";
 import type { NotificationResponse } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 30;
 
@@ -111,9 +114,13 @@ export default function NotificationsPage() {
             {notifications.map((notification) => (
               <button
                 key={notification.id}
+                data-slot="interactive-surface"
                 type="button"
                 title={getNotificationTargetHref(notification)}
-                className="flex w-full gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+                className={cn(
+                  interactiveSurfaceClassName,
+                  "flex w-full gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left hover:bg-muted/45"
+                )}
                 onClick={() => void handleClick(notification)}
               >
                 <span className="mt-1 inline-flex size-5 shrink-0 items-center justify-center">
@@ -146,9 +153,10 @@ export default function NotificationsPage() {
               type="button"
               variant="outline"
               disabled={loading}
+              aria-busy={loading}
               onClick={() => void loadNotifications("append")}
             >
-              {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+              {loading ? <Spinner aria-label="加载中" /> : null}
               加载更多
             </Button>
           </div>

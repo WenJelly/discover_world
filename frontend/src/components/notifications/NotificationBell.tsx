@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck, Circle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   fetchNotificationCursorList,
   fetchUnreadNotificationCount,
@@ -7,11 +8,13 @@ import {
   markNotificationRead,
 } from "@/lib/api";
 import { formatRelativeTime } from "@/lib/format";
+import { interactiveSurfaceClassName } from "@/lib/interactive-surface";
 import {
   getNotificationTargetHref,
   navigateNotificationTarget,
 } from "@/lib/notification-target";
 import type { NotificationResponse } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function getActorName(notification: NotificationResponse) {
   return (
@@ -102,11 +105,13 @@ export function NotificationBell() {
 
   return (
     <div ref={rootRef} className="relative">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-lg"
         aria-label="通知"
         aria-expanded={open}
-        className="relative inline-flex size-[42px] items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20"
+        className="relative"
         onClick={() => setOpen((current) => !current)}
       >
         <Bell className="size-[18px]" aria-hidden />
@@ -115,7 +120,7 @@ export function NotificationBell() {
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         ) : null}
-      </button>
+      </Button>
 
       {open ? (
         <div className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
@@ -126,14 +131,15 @@ export function NotificationBell() {
                 {unreadCount > 0 ? `${unreadCount} 条未读` : "没有未读通知"}
               </p>
             </div>
-            <button
+            <Button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20"
+              variant="ghost"
+              size="xs"
               onClick={handleMarkAllRead}
             >
               <CheckCheck className="size-3.5" aria-hidden />
               全部已读
-            </button>
+            </Button>
           </div>
 
           <div className="max-h-[26rem] overflow-y-auto p-2">
@@ -152,9 +158,13 @@ export function NotificationBell() {
               notifications.map((notification) => (
                 <button
                   key={notification.id}
+                  data-slot="interactive-surface"
                   type="button"
                   title={getNotificationTargetHref(notification)}
-                  className="flex w-full gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20"
+                  className={cn(
+                    interactiveSurfaceClassName,
+                    "flex w-full gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-slate-50"
+                  )}
                   onClick={() => void handleNotificationClick(notification)}
                 >
                   <span className="mt-1 inline-flex size-5 shrink-0 items-center justify-center">
@@ -181,9 +191,10 @@ export function NotificationBell() {
             )}
           </div>
           <div className="border-t border-slate-100 p-2">
-            <button
+            <Button
               type="button"
-              className="w-full rounded-lg px-3 py-2 text-center text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20"
+              variant="ghost"
+              className="w-full"
               onClick={() => {
                 setOpen(false);
                 window.history.pushState({}, "", "/notifications");
@@ -191,7 +202,7 @@ export function NotificationBell() {
               }}
             >
               查看全部通知
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}

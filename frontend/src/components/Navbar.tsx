@@ -397,14 +397,16 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                         }`}
                                     />
                                     {searchQuery && (
-                                        <button
+                                        <Button
                                             type="button"
+                                            variant="ghost"
+                                            size="icon-sm"
                                             onClick={clearSearch}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2"
                                             aria-label="清空搜索"
                                         >
                                             <X className="size-4" strokeWidth={2.5} />
-                                        </button>
+                                        </Button>
                                     )}
                                 </div>
                             </form>
@@ -413,16 +415,18 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                 {isAuthenticated ? <NotificationBell /> : null}
                                 {isAuthenticated && user ? (
                                     <div ref={accountMenuRef} className="relative">
-                                        <button
+                                        <Button
                                             type="button"
+                                            variant="ghost"
+                                            size="lg"
                                             aria-haspopup="menu"
                                             aria-expanded={accountMenuOpen}
                                             aria-label={`打开 ${displayName} 的账户菜单`}
-                                            className="group flex items-center gap-2.5 transition-opacity hover:opacity-80"
+                                            className="gap-2.5 justify-start"
                                             onClick={() => setAccountMenuOpen((open) => !open)}
                                         >
                                             <div className="relative">
-                                                <Avatar className="size-9 ring-2 ring-transparent transition-all duration-200 group-hover:ring-indigo-500/20">
+                                                <Avatar className="size-9">
                                                     {user.userAvatar ? (
                                                         <AvatarImage src={user.userAvatar} alt={displayName} />
                                                     ) : null}
@@ -444,7 +448,7 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                                 aria-hidden="true"
                                                 strokeWidth={2}
                                             />
-                                        </button>
+                                        </Button>
 
                                         <AnimatePresence>
                                             {accountMenuOpen && (
@@ -466,16 +470,17 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                                         <UserRound className="size-[17px] text-slate-400 dark:text-slate-500" strokeWidth={2} />
                                                         个人主页
                                                     </a>
-                                                    <button
+                                                    <Button
                                                         role="menuitem"
                                                         type="button"
-                                                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[15px] font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800/50 dark:hover:text-white"
+                                                        variant="ghost"
+                                                        className="w-full justify-start"
                                                         disabled={uploading}
                                                         onClick={openSettings}
                                                     >
                                                         <Settings className="size-[17px] text-slate-400 dark:text-slate-500" strokeWidth={2} />
                                                         个人设置
-                                                    </button>
+                                                    </Button>
                                                     {isAdmin ? (
                                                         <a
                                                             role="menuitem"
@@ -492,15 +497,16 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                                         </a>
                                                     ) : null}
                                                     <div className="my-1.5 border-t border-slate-100 dark:border-slate-800/50" />
-                                                    <button
+                                                    <Button
                                                         role="menuitem"
                                                         type="button"
-                                                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[15px] font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/20 dark:text-red-400 dark:hover:bg-red-500/10"
+                                                        variant="destructive"
+                                                        className="w-full justify-start"
                                                         onClick={handleLogout}
                                                     >
                                                         <LogOut className="size-[17px]" strokeWidth={2} />
                                                         退出登录
-                                                    </button>
+                                                    </Button>
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>
@@ -511,18 +517,17 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            className="h-[42px] px-5 text-[15px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
                                             onClick={() => setAuthOpen(true)}
                                         >
                                             登录
                                         </Button>
                                         <Button
                                             type="button"
-                                            className="group inline-flex h-[42px] items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-5 text-[15px] font-medium text-white shadow-sm shadow-indigo-500/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-500 hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98]"
+                                            variant="default"
                                             onClick={() => setAuthOpen(true)}
                                         >
                                             开始使用
-                                            <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+                                            <ArrowRight size={15} />
                                         </Button>
                                     </>
                                 )}
@@ -530,13 +535,15 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                         </div>
 
                         <div className="ml-auto flex md:hidden">
-                            <button
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => setIsOpen(!isOpen)}
-                                aria-label="Toggle Menu"
-                                className="inline-flex items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-900"
+                                aria-label={isOpen ? "关闭导航菜单" : "打开导航菜单"}
                             >
                                 {isOpen ? <X size={20} /> : <Menu size={20} />}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -592,14 +599,16 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                             }`}
                                         />
                                         {searchQuery && (
-                                            <button
+                                            <Button
                                                 type="button"
+                                                variant="ghost"
+                                                size="icon-sm"
                                                 onClick={clearSearch}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2"
                                                 aria-label="清空搜索"
                                             >
                                                 <X className="size-4" strokeWidth={2.5} />
-                                            </button>
+                                            </Button>
                                         )}
                                     </form>
 
@@ -660,8 +669,8 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                                 ) : null}
                                                 <Button
                                                     type="button"
-                                                    variant="outline"
-                                                    className="h-10 w-full rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+                                                    variant="destructive"
+                                                    className="w-full"
                                                     onClick={handleLogout}
                                                 >
                                                     退出登录
@@ -672,7 +681,7 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
-                                                    className="h-10 w-full rounded-xl text-slate-600 dark:text-slate-400"
+                                                    className="w-full"
                                                     onClick={() => {
                                                         setIsOpen(false);
                                                         setAuthOpen(true);
@@ -682,7 +691,8 @@ export default function FadingSiblingsNavbar({ fixed = true }: NavbarProps) {
                                                 </Button>
                                                 <Button
                                                     type="button"
-                                                    className="h-10 w-full rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-500/10 hover:bg-indigo-500"
+                                                    variant="default"
+                                                    className="w-full"
                                                     onClick={() => {
                                                         setIsOpen(false);
                                                         setAuthOpen(true);

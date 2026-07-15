@@ -5,7 +5,6 @@ import {
   Eye,
   EyeOff,
   Globe,
-  LoaderCircle,
   Lock,
   Mail,
   User,
@@ -30,6 +29,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/context/AuthContext"
 import { ApiError } from "@/lib/api"
@@ -145,14 +145,16 @@ function PasswordInput({
         className="pr-10"
         onChange={(event) => onChange(event.target.value)}
       />
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-sm"
         aria-label={visible ? "隐藏密码" : "显示密码"}
-        className="absolute right-2 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20"
+        className="absolute right-2 top-1/2 -translate-y-1/2"
         onClick={onToggle}
       >
         {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -442,9 +444,10 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                         记住我
                       </Label>
                     </div>
-                    <button
+                    <Button
                       type="button"
-                      className="text-sm font-medium text-blue-600 transition hover:text-blue-500 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 dark:text-blue-400"
+                      variant="link"
+                      size="xs"
                       onClick={() =>
                         sonner.info("忘记密码暂未开放", {
                           description: "请先联系站点管理员重置账号。",
@@ -452,17 +455,19 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                       }
                     >
                       忘记密码？
-                    </button>
+                    </Button>
                   </div>
 
                   <Button
                     type="submit"
+                    variant="default"
                     disabled={loading === "login"}
-                    className="h-10 w-full bg-blue-600 text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-500"
+                    aria-busy={loading === "login"}
+                    className="w-full"
                   >
                     {loading === "login" ? (
                       <>
-                        <LoaderCircle className="size-4 animate-spin" />
+                        <Spinner aria-label="加载中" />
                         登录中
                       </>
                     ) : (
@@ -482,7 +487,6 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-10 transition hover:-translate-y-0.5"
                       onClick={() => handleProviderLogin("GitHub")}
                     >
                       <Code className="size-4" />
@@ -491,7 +495,6 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-10 transition hover:-translate-y-0.5"
                       onClick={() => handleProviderLogin("Google")}
                     >
                       <Globe className="size-4" />
@@ -501,13 +504,15 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
                   <p className="pt-1 text-center text-sm text-muted-foreground">
                     还没有账号？
-                    <button
+                    <Button
                       type="button"
-                      className="ml-1 font-medium text-blue-600 transition hover:text-blue-500 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 dark:text-blue-400"
+                      variant="link"
+                      size="xs"
+                      className="ml-1"
                       onClick={() => switchMode("register")}
                     >
                       点击注册
-                    </button>
+                    </Button>
                   </p>
                 </form>
               </TabsContent>
@@ -635,12 +640,14 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
                   <Button
                     type="submit"
+                    variant="default"
                     disabled={loading === "register"}
-                    className="h-10 w-full bg-blue-600 text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-500"
+                    aria-busy={loading === "register"}
+                    className="w-full"
                   >
                     {loading === "register" ? (
                       <>
-                        <LoaderCircle className="size-4 animate-spin" />
+                        <Spinner aria-label="加载中" />
                         注册中
                       </>
                     ) : (
@@ -650,13 +657,15 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
                   <p className="pt-1 text-center text-sm text-muted-foreground">
                     已有账号？
-                    <button
+                    <Button
                       type="button"
-                      className="ml-1 font-medium text-blue-600 transition hover:text-blue-500 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-500/20 dark:text-blue-400"
+                      variant="link"
+                      size="xs"
+                      className="ml-1"
                       onClick={() => switchMode("login")}
                     >
                       点击登录
-                    </button>
+                    </Button>
                   </p>
                 </form>
               </TabsContent>
