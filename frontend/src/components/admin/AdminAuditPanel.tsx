@@ -142,9 +142,11 @@ export function AdminAuditPanel({
         pageNum,
         pageSize: PAGE_SIZE,
       });
+      if (queueLoadLogsRef.current) return;
       setLogs(page.list ?? []);
       setTotal(page.total ?? 0);
     } catch (error) {
+      if (queueLoadLogsRef.current) return;
       setListError(errorMessage(error, "操作日志加载失败，请稍后重试。"));
     } finally {
       setListLoading(false);

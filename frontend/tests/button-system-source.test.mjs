@@ -248,6 +248,18 @@ test("admin actions use Button and admin rows remain registered surfaces", () =>
   assertMarkedNativeSurfaces("components/admin/MediaPickerDialog.tsx", 1)
   assertMarkedNativeSurfaces("components/admin/AdminMediaReviewPanel.tsx", 0)
 
+  const audit = readSource("components/admin/AdminAuditPanel.tsx")
+  assert.match(
+    audit,
+    /if \(queueLoadLogsRef\.current\) return;\s+setLogs\(/,
+    "queued audit refresh must discard an obsolete successful response before committing logs"
+  )
+  assert.match(
+    audit,
+    /catch \(error\) \{\s+if \(queueLoadLogsRef\.current\) return;\s+setListError\(/,
+    "queued audit refresh must discard an obsolete failed response before committing the error"
+  )
+
   assertBusyButtons(
     "components/admin/AdminAuditPanel.tsx",
     "onClick={() => void loadLogs()}",
