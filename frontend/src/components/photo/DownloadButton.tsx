@@ -61,7 +61,7 @@ export function DownloadButton({
     <Button
       type="button"
       onClick={handleDownload}
-      disabled={disabled}
+      disabled={disabled || loading}
       className={className}
       aria-busy={loading}
       aria-label="下载原图"

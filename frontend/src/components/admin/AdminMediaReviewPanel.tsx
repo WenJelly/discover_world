@@ -165,7 +165,7 @@ export function AdminMediaReviewPanel() {
                       <Button
                         type="button"
                         size="sm"
-                        disabled={pendingReview !== null}
+                        disabled={pendingReview !== null || approving}
                         aria-busy={approving}
                         onClick={() =>
                           void handleReviewMedia(asset, "approved")
@@ -180,7 +180,7 @@ export function AdminMediaReviewPanel() {
                         type="button"
                         size="sm"
                         variant="destructive"
-                        disabled={pendingReview !== null}
+                        disabled={pendingReview !== null || rejecting}
                         aria-busy={rejecting}
                         onClick={() =>
                           void handleReviewMedia(asset, "rejected")

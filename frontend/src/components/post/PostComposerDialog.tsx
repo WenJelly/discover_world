@@ -344,7 +344,7 @@ export function PostComposerDialog({
 
           <Button
             onClick={handleSubmit}
-            disabled={!canSubmit}
+            disabled={!canSubmit || submitting}
             aria-busy={submitting}
           >
             {submitting ? (

@@ -567,7 +567,7 @@ export function AdminReportsPanel() {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <Button type="button" disabled={!canResolve} aria-busy={resolving} onClick={() => void handleResolve()}>
+                    <Button type="button" disabled={!canResolve || resolving} aria-busy={resolving} onClick={() => void handleResolve()}>
                       {resolving ? <Spinner aria-label="加载中" /> : null}
                       提交处理结果
                     </Button>

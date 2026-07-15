@@ -355,7 +355,7 @@ function ForumComposer({
         <p className="text-xs text-muted-foreground">
           公开论坛内容会展示给所有访客。
         </p>
-        <Button type="submit" disabled={!canSubmit} aria-busy={submitting}>
+        <Button type="submit" disabled={!canSubmit || submitting} aria-busy={submitting}>
           {submitting ? (
             <Spinner aria-label="加载中" />
           ) : (

@@ -44,6 +44,12 @@ function openingTags(source, tagName) {
   return jsxOpeningElements(sourceFile, tagName).map((node) => node.getText(sourceFile))
 }
 
+function withSpinnerImport(source, importedName = "Spinner") {
+  const importSpecifier =
+    importedName === "Spinner" ? "Spinner" : `Spinner as ${importedName}`
+  return `import { ${importSpecifier} } from "@/components/ui/spinner"; ${source}`
+}
+
 function walkTsxFiles(directory = sourceRoot) {
   const files = []
 
@@ -450,20 +456,6 @@ const buttonClassForwardingAllowlist = new Map([
 ])
 const buttonSizeExpressionAllowlist = new Map()
 const buttonSpreadAllowlist = new Map()
-const buttonLoadingDisabledExpressionAllowlist = new Map([
-  [
-    "components/admin/AdminMediaReviewPanel.tsx",
-    new Set([
-      "pendingReview!==null::approving",
-      "pendingReview!==null::rejecting",
-    ]),
-  ],
-  ["components/admin/AdminReportsPanel.tsx", new Set(["!canResolve::resolving"])],
-  ["components/admin/AdminTagManagementPanel.tsx", new Set(["!canMerge::merging"])],
-  ["components/photo/DownloadButton.tsx", new Set(["disabled::loading"])],
-  ["components/post/PostComposerDialog.tsx", new Set(["!canSubmit::submitting"])],
-  ["pages/CommunityPage.tsx", new Set(["!canSubmit::submitting"])],
-])
 
 const tailwindPaletteColors = new Set([
   "amber",
@@ -593,21 +585,26 @@ function inspectBusinessButtons(relativePath, sourceOrSourceFile) {
 function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
   const sourceFile = sourceFileFor(relativePath, sourceOrSourceFile)
   const violations = []
-  const legacyLoaderNames = legacyLoaderLocalNames(sourceFile)
+  const loadingIndicators = loadingIndicatorIdentifiers(sourceFile)
+  const staticVisibleStrings = collectStaticStringBindings(sourceFile)
 
   for (const openingElement of jsxOpeningElements(sourceFile, "Button")) {
     const buttonElement = openingElement.parent
     if (!ts.isJsxElement(buttonElement)) continue
 
     const legacyLoaders = []
+    const invalidSpinners = []
     const spinners = []
 
     function inspectLoader(element, loadingExpression) {
       const tagName = element.tagName.getText(sourceFile)
-      if (legacyLoaderNames.has(tagName)) {
-        legacyLoaders.push(legacyLoaderNames.get(tagName))
-      } else if (tagName === "Spinner") {
+      const legacyLoader = resolveLegacyLoader(tagName, loadingIndicators)
+      if (legacyLoader) {
+        legacyLoaders.push(legacyLoader)
+      } else if (loadingIndicators.spinnerNames.has(tagName)) {
         spinners.push({ element, loadingExpression })
+      } else if (/(?:^|\.)(?:Spinner|[A-Za-z_$][\w$]*Spinner)$/.test(tagName)) {
+        invalidSpinners.push(tagName)
       }
     }
 
@@ -655,6 +652,14 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
       )
     }
 
+    if (invalidSpinners.length > 0) {
+      violations.push(
+        `${relativePath}: Button loading indicator must import Spinner from @/components/ui/spinner: ${[
+          ...new Set(invalidSpinners),
+        ].join("/")}`
+      )
+    }
+
     if (spinners.length === 0) continue
 
     const disabledAttributes = jsxAttributes(openingElement, sourceFile, "disabled")
@@ -695,7 +700,6 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
         conditionalLoadingStates.length > 0 &&
         !conditionalLoadingStates.every((loadingExpression) =>
           disabledIncludesLoadingState(
-            relativePath,
             disabledState,
             loadingExpression,
             sourceFile
@@ -718,7 +722,12 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
     const iconOnly = hasStaticIconSize(openingElement, sourceFile)
     const hasVisibleLoadingText = spinners.every(({ loadingExpression }) =>
       buttonElement.children.some((child) =>
-        hasVisibleTextForLoadingState(child, loadingExpression, sourceFile)
+        hasVisibleTextForLoadingState(
+          child,
+          loadingExpression,
+          sourceFile,
+          staticVisibleStrings
+        )
       )
     )
     if (!hasVisibleLoadingText) {
@@ -795,7 +804,6 @@ function resolveLoadingState(attribute, sourceFile) {
 }
 
 function disabledIncludesLoadingState(
-  relativePath,
   disabledState,
   loadingExpression,
   sourceFile
@@ -815,15 +823,42 @@ function disabledIncludesLoadingState(
     )
   }
 
-  if (includes(disabledState.node)) return true
-  return isAllowlisted(
-    buttonLoadingDisabledExpressionAllowlist,
-    relativePath,
-    `${disabledState.expression}::${loadingExpression}`
+  return includes(disabledState.node)
+}
+
+function collectStaticStringBindings(sourceFile) {
+  const candidates = new Map()
+
+  function visit(node) {
+    if (
+      (ts.isVariableDeclaration(node) || ts.isBindingElement(node)) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer
+    ) {
+      const result = resolveStaticStrings(node.initializer, sourceFile)
+      if (result.unresolved.length === 0 && result.values.length > 0) {
+        const values = candidates.get(node.name.text) ?? []
+        values.push(result.values)
+        candidates.set(node.name.text, values)
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return new Map(
+    [...candidates]
+      .filter(([, values]) => values.length === 1)
+      .map(([name, values]) => [name, values[0]])
   )
 }
 
-function hasVisibleTextForLoadingState(node, loadingExpression, sourceFile) {
+function hasVisibleTextForLoadingState(
+  node,
+  loadingExpression,
+  sourceFile,
+  staticVisibleStrings
+) {
   const unwrapped = unwrapExpression(node)
   if (ts.isJsxText(unwrapped)) return unwrapped.text.trim() !== ""
   if (ts.isStringLiteral(unwrapped) || ts.isNoSubstitutionTemplateLiteral(unwrapped)) {
@@ -836,20 +871,42 @@ function hasVisibleTextForLoadingState(node, loadingExpression, sourceFile) {
     )
   }
   if (ts.isIdentifier(unwrapped)) {
-    return /(?:Label|Text|Title)$/.test(unwrapped.text)
+    const values = staticVisibleStrings.get(unwrapped.text)
+    return values?.every((value) => value.trim() !== "") ?? false
   }
   if (ts.isPropertyAccessExpression(unwrapped)) {
-    return /^(?:label|text|title)$/.test(unwrapped.name.text)
+    return unwrapped.name.text === "label"
   }
-  if (ts.isJsxElement(unwrapped) || ts.isJsxFragment(unwrapped)) {
+  if (ts.isJsxElement(unwrapped)) {
+    if (isVisuallyHiddenElement(unwrapped.openingElement, sourceFile)) return false
     return unwrapped.children.some((child) =>
-      hasVisibleTextForLoadingState(child, loadingExpression, sourceFile)
+      hasVisibleTextForLoadingState(
+        child,
+        loadingExpression,
+        sourceFile,
+        staticVisibleStrings
+      )
+    )
+  }
+  if (ts.isJsxFragment(unwrapped)) {
+    return unwrapped.children.some((child) =>
+      hasVisibleTextForLoadingState(
+        child,
+        loadingExpression,
+        sourceFile,
+        staticVisibleStrings
+      )
     )
   }
   if (ts.isJsxSelfClosingElement(unwrapped)) return false
   if (ts.isJsxExpression(unwrapped)) {
     return unwrapped.expression
-      ? hasVisibleTextForLoadingState(unwrapped.expression, loadingExpression, sourceFile)
+      ? hasVisibleTextForLoadingState(
+          unwrapped.expression,
+          loadingExpression,
+          sourceFile,
+          staticVisibleStrings
+        )
       : false
   }
   if (ts.isConditionalExpression(unwrapped)) {
@@ -858,19 +915,31 @@ function hasVisibleTextForLoadingState(node, loadingExpression, sourceFile) {
       return hasVisibleTextForLoadingState(
         unwrapped.whenTrue,
         loadingExpression,
-        sourceFile
+        sourceFile,
+        staticVisibleStrings
       )
     }
     if (negateNormalizedLoadingExpression(condition) === loadingExpression) {
       return hasVisibleTextForLoadingState(
         unwrapped.whenFalse,
         loadingExpression,
-        sourceFile
+        sourceFile,
+        staticVisibleStrings
       )
     }
     return (
-      hasVisibleTextForLoadingState(unwrapped.whenTrue, loadingExpression, sourceFile) &&
-      hasVisibleTextForLoadingState(unwrapped.whenFalse, loadingExpression, sourceFile)
+      hasVisibleTextForLoadingState(
+        unwrapped.whenTrue,
+        loadingExpression,
+        sourceFile,
+        staticVisibleStrings
+      ) &&
+      hasVisibleTextForLoadingState(
+        unwrapped.whenFalse,
+        loadingExpression,
+        sourceFile,
+        staticVisibleStrings
+      )
     )
   }
   if (
@@ -879,43 +948,123 @@ function hasVisibleTextForLoadingState(node, loadingExpression, sourceFile) {
   ) {
     const condition = normalizeLoadingExpression(unwrapped.left, sourceFile)
     return condition === loadingExpression
-      ? hasVisibleTextForLoadingState(unwrapped.right, loadingExpression, sourceFile)
+      ? hasVisibleTextForLoadingState(
+          unwrapped.right,
+          loadingExpression,
+          sourceFile,
+          staticVisibleStrings
+        )
       : false
   }
   return false
 }
 
-function legacyLoaderLocalNames(sourceFile) {
-  const loaders = new Map([
+function isVisuallyHiddenElement(element, sourceFile) {
+  for (const attributeName of ["hidden", "aria-hidden"]) {
+    if (
+      jsxAttributes(element, sourceFile, attributeName).some((attribute) => {
+        if (!attribute.initializer) return true
+        if (ts.isStringLiteral(attribute.initializer)) {
+          return attribute.initializer.text === "true"
+        }
+        if (
+          ts.isJsxExpression(attribute.initializer) &&
+          attribute.initializer.expression
+        ) {
+          return unwrapExpression(attribute.initializer.expression).kind ===
+            ts.SyntaxKind.TrueKeyword
+        }
+        return false
+      })
+    ) {
+      return true
+    }
+  }
+
+  return jsxAttributes(element, sourceFile, "className").some((attribute) => {
+    let classes = { tokens: [], unresolved: [] }
+    if (attribute.initializer && ts.isStringLiteral(attribute.initializer)) {
+      classes.tokens = attribute.initializer.text.split(/\s+/).filter(Boolean)
+    } else if (
+      attribute.initializer &&
+      ts.isJsxExpression(attribute.initializer) &&
+      attribute.initializer.expression
+    ) {
+      classes = collectClassExpression(attribute.initializer.expression, sourceFile)
+    }
+    return classes.tokens.some((classToken) =>
+      ["sr-only", "hidden", "invisible"].includes(baseUtility(classToken))
+    )
+  })
+}
+
+function loadingIndicatorIdentifiers(sourceFile) {
+  const legacyLoaderNames = new Map([
     ["Loader2", "Loader2"],
+    ["Loader2Icon", "Loader2Icon"],
     ["LoaderCircle", "LoaderCircle"],
   ])
+  const lucideNamespaces = new Set()
+  const spinnerNames = new Set()
 
   for (const statement of sourceFile.statements) {
     if (
       !ts.isImportDeclaration(statement) ||
       !ts.isStringLiteral(statement.moduleSpecifier) ||
-      statement.moduleSpecifier.text !== "lucide-react" ||
-      !statement.importClause?.namedBindings ||
-      !ts.isNamedImports(statement.importClause.namedBindings)
+      !statement.importClause?.namedBindings
     ) {
       continue
     }
-    for (const element of statement.importClause.namedBindings.elements) {
+
+    const source = statement.moduleSpecifier.text
+    const bindings = statement.importClause.namedBindings
+    if (source === "lucide-react" && ts.isNamespaceImport(bindings)) {
+      lucideNamespaces.add(bindings.name.text)
+      continue
+    }
+    if (!ts.isNamedImports(bindings)) continue
+
+    for (const element of bindings.elements) {
       const importedName = (element.propertyName ?? element.name).text
-      if (importedName === "Loader2" || importedName === "LoaderCircle") {
-        loaders.set(element.name.text, importedName)
+      if (
+        source === "lucide-react" &&
+        (importedName === "Loader2" ||
+          importedName === "Loader2Icon" ||
+          importedName === "LoaderCircle")
+      ) {
+        legacyLoaderNames.set(element.name.text, importedName)
+      }
+      if (source === "@/components/ui/spinner" && importedName === "Spinner") {
+        spinnerNames.add(element.name.text)
       }
     }
   }
 
-  return loaders
+  return { legacyLoaderNames, lucideNamespaces, spinnerNames }
+}
+
+function resolveLegacyLoader(tagName, loadingIndicators) {
+  const direct = loadingIndicators.legacyLoaderNames.get(tagName)
+  if (direct) return direct
+
+  const separator = tagName.indexOf(".")
+  if (separator < 0) return ""
+  const namespace = tagName.slice(0, separator)
+  const member = tagName.slice(separator + 1)
+  return loadingIndicators.lucideNamespaces.has(namespace) &&
+    (member === "Loader2" || member === "Loader2Icon" || member === "LoaderCircle")
+    ? member
+    : ""
 }
 
 function hasStaticIconSize(element, sourceFile) {
   return jsxAttributes(element, sourceFile, "size").some((attribute) => {
     const result = resolveJsxAttributeStrings(attribute, sourceFile)
-    return result.unresolved.length === 0 && result.values.some((value) => value.startsWith("icon"))
+    return (
+      result.unresolved.length === 0 &&
+      result.values.length > 0 &&
+      result.values.every((value) => value.startsWith("icon"))
+    )
   })
 }
 
@@ -1092,60 +1241,74 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
   assert.match(
     inspectBusinessButtonLoadingStates(
       "fixtures/IncompleteSpinner.tsx",
-      '<Button><Spinner aria-label="Loading" />加载中</Button>'
+      withSpinnerImport('<Button><Spinner aria-label="Loading" />加载中</Button>')
     ).join("\n"),
     /requires direct disabled state[\s\S]*requires direct aria-busy state[\s\S]*aria-label="加载中"/
   )
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
       "fixtures/ValidSpinner.tsx",
-      '<Button disabled={loading} aria-busy={loading}><Spinner aria-label="加载中" />加载中</Button>'
+      withSpinnerImport(
+        '<Button disabled={loading} aria-busy={loading}><Spinner aria-label="加载中" />加载中</Button>'
+      )
     ),
     []
   )
   assert.match(
     inspectBusinessButtonLoadingStates(
       "fixtures/FalseLoadingSemantics.tsx",
-      '<Button disabled={false} aria-busy={false}><Spinner aria-label="加载中" />加载中</Button>'
+      withSpinnerImport(
+        '<Button disabled={false} aria-busy={false}><Spinner aria-label="加载中" />加载中</Button>'
+      )
     ).join("\n"),
     /must be true or use the same loading state expression/
   )
   assert.match(
     inspectBusinessButtonLoadingStates(
       "fixtures/MismatchedLoadingSemantics.tsx",
-      '<Button disabled={loading} aria-busy={saving}>{loading ? <Spinner aria-label="加载中" /> : null}加载中</Button>'
+      withSpinnerImport(
+        '<Button disabled={loading} aria-busy={saving}>{loading ? <Spinner aria-label="加载中" /> : null}加载中</Button>'
+      )
     ).join("\n"),
     /must be true or use the same loading state expression/
   )
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
       "fixtures/ValidCompositeDisabledState.tsx",
-      '<Button disabled={!canSubmit || loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}加载中</Button>'
+      withSpinnerImport(
+        '<Button disabled={!canSubmit || loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}加载中</Button>'
+      )
     ),
     []
   )
   assert.match(
     inspectBusinessButtonLoadingStates(
       "fixtures/DisabledOmitsLoadingState.tsx",
-      '<Button disabled={canSubmit} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}保存中</Button>'
+      withSpinnerImport(
+        '<Button disabled={canSubmit} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}保存中</Button>'
+      )
     ).join("\n"),
     /disabled must include Spinner loading state/
   )
   assert.match(
     inspectBusinessButtonLoadingStates(
       "fixtures/DisabledNegatesLoadingState.tsx",
-      '<Button disabled={!loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}保存中</Button>'
+      withSpinnerImport(
+        '<Button disabled={!loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}保存中</Button>'
+      )
     ).join("\n"),
     /disabled must include Spinner loading state/
   )
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
       "fixtures/DisabledIncludesLoadingState.tsx",
-      '<Button disabled={loading || !canSubmit} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}保存中</Button>'
+      withSpinnerImport(
+        '<Button disabled={loading || !canSubmit} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}保存中</Button>'
+      )
     ),
     []
   )
-  for (const legacyLoader of ["Loader2", "LoaderCircle"]) {
+  for (const legacyLoader of ["Loader2", "Loader2Icon", "LoaderCircle"]) {
     assert.match(
       inspectBusinessButtonLoadingStates(
         `fixtures/Aliased${legacyLoader}.tsx`,
@@ -1154,40 +1317,143 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
       new RegExp(`must use Spinner instead of ${legacyLoader}`)
     )
   }
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/Loader2Icon.tsx",
+      '<Button disabled={loading} aria-busy={loading}><Loader2Icon />加载中</Button>'
+    ).join("\n"),
+    /must use Spinner instead of Loader2Icon/
+  )
+  for (const legacyLoader of ["Loader2", "Loader2Icon", "LoaderCircle"]) {
+    assert.match(
+      inspectBusinessButtonLoadingStates(
+        `fixtures/Namespaced${legacyLoader}.tsx`,
+        `import * as Icons from "lucide-react"; <Button disabled={loading} aria-busy={loading}><Icons.${legacyLoader} />加载中</Button>`
+      ).join("\n"),
+      new RegExp(`must use Spinner instead of ${legacyLoader}`)
+    )
+  }
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
       "fixtures/FalseBranchSpinner.tsx",
-      '<Button disabled={!loading} aria-busy={!loading}>{loading ? "保存" : <><Spinner aria-label="加载中" />保存中</>}</Button>'
+      withSpinnerImport(
+        '<Button disabled={!loading} aria-busy={!loading}>{loading ? "保存" : <><Spinner aria-label="加载中" />保存中</>}</Button>'
+      )
     ),
     []
   )
   assert.match(
     inspectBusinessButtonLoadingStates(
       "fixtures/MissingVisibleLoadingText.tsx",
-      '<Button disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+      withSpinnerImport(
+        '<Button disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+      )
     ).join("\n"),
     /requires visible loading text/
   )
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
       "fixtures/VisibleLoadingText.tsx",
-      '<Button disabled={loading} aria-busy={loading}>{loading ? <><Spinner aria-label="加载中" />保存中</> : <Save />}</Button>'
+      withSpinnerImport(
+        '<Button disabled={loading} aria-busy={loading}>{loading ? <><Spinner aria-label="加载中" />保存中</> : <Save />}</Button>'
+      )
     ),
     []
   )
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
       "fixtures/IconLoadingButton.tsx",
-      '<Button size="icon-sm" aria-label="保存" disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+      withSpinnerImport(
+        '<Button size="icon-sm" aria-label="保存" disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+      )
     ),
     []
   )
   assert.match(
     inspectBusinessButtonLoadingStates(
       "fixtures/InaccurateIconLoadingLabel.tsx",
-      '<Button size="icon-sm" aria-label="加载中" disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+      withSpinnerImport(
+        '<Button size="icon-sm" aria-label="加载中" disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+      )
     ).join("\n"),
     /requires an action aria-label/
+  )
+  for (const hiddenContent of [
+    '<span className="sr-only">保存中</span>',
+    '<span className="hidden">保存中</span>',
+    '<span className="invisible">保存中</span>',
+    '<span aria-hidden="true">保存中</span>',
+    '<span hidden>保存中</span>',
+  ]) {
+    assert.match(
+      inspectBusinessButtonLoadingStates(
+        "fixtures/HiddenLoadingText.tsx",
+        withSpinnerImport(
+          `<Button disabled={loading} aria-busy={loading}>{loading ? <><Spinner aria-label="加载中" />${hiddenContent}</> : <Save />}</Button>`
+        )
+      ).join("\n"),
+      /requires visible loading text/
+    )
+  }
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/EmptyStaticLoadingText.tsx",
+      withSpinnerImport(
+        'const loadingLabel = ""; <Button disabled={loading} aria-busy={loading}>{loading ? <><Spinner aria-label="加载中" />{loadingLabel}</> : <Save />}</Button>'
+      )
+    ).join("\n"),
+    /requires visible loading text/
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/StaticLoadingText.tsx",
+      withSpinnerImport(
+        'const loadingLabel = "保存中"; <Button disabled={loading} aria-busy={loading}>{loading ? <><Spinner aria-label="加载中" />{loadingLabel}</> : <Save />}</Button>'
+      )
+    ),
+    []
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/MixedDynamicIconSize.tsx",
+      withSpinnerImport(
+        '<Button size={compact ? "icon-sm" : "default"} aria-label="保存" disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+      )
+    ).join("\n"),
+    /requires visible loading text/
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/DynamicIconSize.tsx",
+      withSpinnerImport(
+        '<Button size={compact ? "icon-sm" : "icon-lg"} aria-label="保存" disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+      )
+    ),
+    []
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/AliasedSpinner.tsx",
+      withSpinnerImport(
+        '<Button disabled={loading} aria-busy={loading}><BusySpinner aria-label="加载中" />保存中</Button>',
+        "BusySpinner"
+      )
+    ),
+    []
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/WrongSpinnerSource.tsx",
+      'import { Spinner } from "./spinner"; <Button disabled={loading} aria-busy={loading}><Spinner aria-label="加载中" />保存中</Button>'
+    ).join("\n"),
+    /must import Spinner from @\/components\/ui\/spinner/
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/LocalSpinner.tsx",
+      'const Spinner = () => null; <Button disabled={loading} aria-busy={loading}><Spinner aria-label="加载中" />保存中</Button>'
+    ).join("\n"),
+    /must import Spinner from @\/components\/ui\/spinner/
   )
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
@@ -1199,14 +1465,18 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
       "fixtures/ExplicitTrueSpinner.tsx",
-      '<Button disabled aria-busy={true}><Spinner aria-label="加载中" />加载中</Button>'
+      withSpinnerImport(
+        '<Button disabled aria-busy={true}><Spinner aria-label="加载中" />加载中</Button>'
+      )
     ),
     []
   )
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(
       "fixtures/ExplicitTrueSpinnerAfterText.tsx",
-      '<Button disabled aria-busy={true}>保存<Spinner aria-label="加载中" /></Button>'
+      withSpinnerImport(
+        '<Button disabled aria-busy={true}>保存<Spinner aria-label="加载中" /></Button>'
+      )
     ),
     []
   )
@@ -1622,11 +1892,11 @@ test("admin actions use Button and admin rows remain registered surfaces", () =>
   )
   assert.ok(approve)
   assert.ok(reject)
-  assert.match(openingTags(approve, "Button")[0], /disabled=\{pendingReview !== null\}/)
+  assert.match(openingTags(approve, "Button")[0], /disabled=\{pendingReview !== null \|\| approving\}/)
   assert.match(openingTags(approve, "Button")[0], /aria-busy=\{approving\}/)
   assert.match(approve, /\{approving \? \([\s\S]*<Spinner aria-label="加载中" \/>/)
   assert.doesNotMatch(openingTags(approve, "Button")[0], /variant=/)
-  assert.match(openingTags(reject, "Button")[0], /disabled=\{pendingReview !== null\}/)
+  assert.match(openingTags(reject, "Button")[0], /disabled=\{pendingReview !== null \|\| rejecting\}/)
   assert.match(openingTags(reject, "Button")[0], /aria-busy=\{rejecting\}/)
   assert.match(reject, /\{rejecting \? \([\s\S]*<Spinner aria-label="加载中" \/>/)
   assert.match(openingTags(reject, "Button")[0], /variant="destructive"/)

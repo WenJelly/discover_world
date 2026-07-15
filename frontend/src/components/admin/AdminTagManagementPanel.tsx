@@ -408,7 +408,7 @@ export function AdminTagManagementPanel() {
             <div className="space-y-1.5"><Label htmlFor="merge-tag-reason">合并原因</Label><textarea id="merge-tag-reason" value={mergeReason} onChange={(event) => setMergeReason(event.target.value)} rows={4} maxLength={500} placeholder="说明两个标签需要合并的原因" className="w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30" /><p className="text-right text-xs text-muted-foreground">{mergeReason.length} / 500</p></div>
             <div className="rounded-lg bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-800 dark:text-amber-200">提交后，源标签的标签关联将迁移到目标标签，源标签会被停用。此操作不会删除目标内容。</div>
           </div> : null}
-          <DialogFooter><Button type="button" variant="outline" disabled={merging} onClick={() => handleMergeOpenChange(false)}>取消</Button><Button type="button" variant="destructive" disabled={!canMerge} aria-busy={merging} onClick={() => void handleMerge()}>{merging ? <Spinner aria-label="加载中" /> : <Merge className="size-4" />}确认合并</Button></DialogFooter>
+          <DialogFooter><Button type="button" variant="outline" disabled={merging} onClick={() => handleMergeOpenChange(false)}>取消</Button><Button type="button" variant="destructive" disabled={!canMerge || merging} aria-busy={merging} onClick={() => void handleMerge()}>{merging ? <Spinner aria-label="加载中" /> : <Merge className="size-4" />}确认合并</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </section>
