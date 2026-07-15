@@ -231,6 +231,9 @@ test("retired page-specific button CSS is removed", () => {
   assert.doesNotMatch(css, /discover-feedback__button/)
   assert.doesNotMatch(css, /discover-inline-error button/)
   assert.doesNotMatch(css, /search-clear-button/)
+  assert.doesNotMatch(css, /discover-filter__target/)
+  assert.doesNotMatch(css, /discover-category-picker/)
+  assert.doesNotMatch(css, /discover-category-target/)
 })
 
 test("public discovery and search keep only registered native interaction surfaces", () => {

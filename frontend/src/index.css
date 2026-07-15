@@ -271,14 +271,6 @@
   border-radius: 4px;
 }
 
-.discover-page .discover-category-target:hover {
-  color: #0099e5;
-}
-
-.discover-page .discover-category-target {
-  color: #71767a;
-}
-
 .discover-page .popup {
   position: absolute;
   top: calc(100% + 10px);
