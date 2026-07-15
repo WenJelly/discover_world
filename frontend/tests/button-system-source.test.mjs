@@ -1,7 +1,12 @@
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
+import { relative, resolve, sep } from "node:path"
 import test from "node:test"
+import { fileURLToPath } from "node:url"
+import * as ts from "typescript"
+
+const sourceRoot = fileURLToPath(new URL("../src", import.meta.url))
 
 function readSource(relativePath) {
   return readFileSync(new URL(`../src/${relativePath}`, import.meta.url), "utf8")
@@ -9,41 +14,67 @@ function readSource(relativePath) {
 
 function openingTags(source, tagName) {
   const result = []
-  const needle = `<${tagName}`
-  let start = 0
+  const sourceFile = ts.createSourceFile(
+    "source.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  )
 
-  while ((start = source.indexOf(needle, start)) >= 0) {
-    const boundary = source[start + needle.length]
-    if (boundary && !/[\s/>]/.test(boundary)) {
-      start += needle.length
-      continue
+  function visit(node) {
+    if (
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      node.tagName.getText(sourceFile) === tagName
+    ) {
+      result.push(node.getText(sourceFile))
     }
-
-    let quote = null
-    let braceDepth = 0
-    let end = start + needle.length
-
-    for (; end < source.length; end += 1) {
-      const char = source[end]
-      const previous = source[end - 1]
-      if (quote) {
-        if (char === quote && previous !== "\\") quote = null
-        continue
-      }
-      if (char === '"' || char === "'" || char === "`") {
-        quote = char
-        continue
-      }
-      if (char === "{") braceDepth += 1
-      if (char === "}") braceDepth -= 1
-      if (char === ">" && braceDepth === 0) break
-    }
-
-    result.push(source.slice(start, end + 1))
-    start = end + 1
+    ts.forEachChild(node, visit)
   }
 
+  visit(sourceFile)
+
   return result
+}
+
+function allOpeningTags(source) {
+  const result = []
+  const sourceFile = ts.createSourceFile(
+    "source.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  )
+
+  function visit(node) {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      result.push(node.getText(sourceFile))
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return result
+}
+
+function walkTsxFiles(directory = sourceRoot) {
+  const files = []
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const absolutePath = resolve(directory, entry.name)
+    if (entry.isDirectory()) {
+      files.push(...walkTsxFiles(absolutePath))
+    } else if (entry.isFile() && entry.name.endsWith(".tsx")) {
+      files.push({
+        absolutePath,
+        relativePath: relative(sourceRoot, absolutePath).split(sep).join("/"),
+        source: readFileSync(absolutePath, "utf8"),
+      })
+    }
+  }
+
+  return files
 }
 
 function elementBlocks(source, tagName) {
@@ -96,7 +127,9 @@ test("button foundations keep shadcn Button and provide Spinner plus interactive
   const spinner = readSource("components/ui/spinner.tsx")
   const surface = readSource("lib/interactive-surface.ts")
 
-  const buttonSha256 = createHash("sha256").update(button).digest("hex")
+  const buttonSha256 = createHash("sha256")
+    .update(button.replaceAll("\r\n", "\n"))
+    .digest("hex")
 
   assert.equal(
     buttonSha256,
@@ -116,6 +149,88 @@ test("button foundations keep shadcn Button and provide Spinner plus interactive
 export { interactiveSurfaceClassName }
 `
   )
+})
+
+test("all business native buttons and role buttons use the registered interaction surface", () => {
+  const businessFiles = walkTsxFiles().filter(
+    ({ relativePath }) => relativePath !== "components/ui/sidebar.tsx"
+  )
+  const nativeButtons = businessFiles.flatMap(({ relativePath, source }) =>
+    openingTags(source, "button").map((tag) => ({ relativePath, tag }))
+  )
+
+  assert.equal(
+    nativeButtons.length,
+    23,
+    nativeButtons.map(({ relativePath, tag }) => `${relativePath}: ${tag}`).join("\n")
+  )
+  for (const { relativePath, tag } of nativeButtons) {
+    assert.match(tag, /data-slot="interactive-surface"/, `${relativePath}: ${tag}`)
+    assert.match(tag, /interactiveSurfaceClassName/, `${relativePath}: ${tag}`)
+  }
+
+  const roleButtons = walkTsxFiles().flatMap(({ relativePath, source }) =>
+    allOpeningTags(source)
+      .filter((tag) => /\brole\s*=\s*["']button["']/.test(tag))
+      .map((tag) => ({ relativePath, tag }))
+  )
+  assert.deepEqual(
+    roleButtons.map(({ relativePath }) => relativePath),
+    ["components/upload/UploadDialog.tsx"]
+  )
+  assert.match(roleButtons[0].tag, /data-slot="interactive-surface"/)
+  assert.match(roleButtons[0].tag, /interactiveSurfaceClassName/)
+})
+
+test("business Button calls do not recreate visual systems", () => {
+  const businessFiles = walkTsxFiles().filter(
+    ({ relativePath }) => !relativePath.startsWith("components/ui/")
+  )
+  const forbiddenClasses = [
+    [
+      "arbitrary height",
+      /(?:^|[\s"'`])(?:[^\s"'`]+:)*h-\[[^\]]+\](?=$|[\s"'`}])/,
+    ],
+    [
+      "fixed height h-6 through h-12",
+      /(?:^|[\s"'`])(?:[^\s"'`]+:)*h-(?:[6-9]|1[0-2])(?=$|[\s"'`}])/,
+    ],
+    [
+      "rounded styling",
+      /(?:^|[\s"'`])(?:[^\s"'`]+:)*rounded(?:-[^\s"'`}]+)?(?=$|[\s"'`}])/,
+    ],
+    [
+      "horizontal padding",
+      /(?:^|[\s"'`])(?:[^\s"'`]+:)*(?:px|pl|pr|ps|pe)-[^\s"'`}]+(?=$|[\s"'`}])/,
+    ],
+    [
+      "page color",
+      /(?:^|[\s"'`])(?:[^\s"'`]+:)*(?:bg|text)-(?:blue|indigo|white|black|slate|red|rose|amber|green)(?:-[^\s"'`}]+)?(?=$|[\s"'`}])/,
+    ],
+  ]
+  const violations = []
+
+  for (const { relativePath, source } of businessFiles) {
+    for (const tag of openingTags(source, "Button")) {
+      for (const [contract, pattern] of forbiddenClasses) {
+        if (pattern.test(tag)) violations.push(`${relativePath}: ${contract}: ${tag}`)
+      }
+      if (/\bsize\s*=\s*["']icon[^"']*["']/.test(tag) && !/\baria-label=/.test(tag)) {
+        violations.push(`${relativePath}: icon Button requires aria-label: ${tag}`)
+      }
+    }
+  }
+
+  assert.deepEqual(violations, [])
+})
+
+test("retired page-specific button CSS is removed", () => {
+  const css = readSource("index.css")
+
+  assert.doesNotMatch(css, /discover-layout-switch__button/)
+  assert.doesNotMatch(css, /discover-feedback__button/)
+  assert.doesNotMatch(css, /discover-inline-error button/)
+  assert.doesNotMatch(css, /search-clear-button/)
 })
 
 test("public discovery and search keep only registered native interaction surfaces", () => {
@@ -140,6 +255,7 @@ test("shell and auth use shadcn actions and keep notification rows as surfaces",
   const navbar = readSource(taskFiles[0])
   const auth = readSource(taskFiles[1])
   const notificationBell = readSource(taskFiles[2])
+  const notifications = readSource(taskFiles[3])
 
   for (const relativePath of taskFiles.slice(0, 3)) {
     assertUsesShadcnButton(relativePath)
@@ -173,6 +289,15 @@ test("shell and auth use shadcn actions and keep notification rows as surfaces",
   assert.equal(openingTags(auth, "Spinner").length, 2)
   assert.match(auth, /aria-busy=\{loading === "login"\}/)
   assert.match(auth, /aria-busy=\{loading === "register"\}/)
+
+  assert.match(notifications, /import \{ Spinner \} from "@\/components\/ui\/spinner"/)
+  const loadMore = elementBlocks(notifications, "Button").find((block) =>
+    block.includes('loadNotifications("append")')
+  )
+  assert.ok(loadMore, "NotificationsPage must expose a load-more Button")
+  assert.match(openingTags(loadMore, "Button")[0], /disabled=\{loading\}/)
+  assert.match(openingTags(loadMore, "Button")[0], /aria-busy=\{loading\}/)
+  assert.match(loadMore, /<Spinner aria-label="加载中" \/>/)
 
   for (const relativePath of taskFiles) {
     assert.doesNotMatch(readSource(relativePath), /role\s*=\s*["']button["']/)
