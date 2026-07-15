@@ -450,6 +450,20 @@ const buttonClassForwardingAllowlist = new Map([
 ])
 const buttonSizeExpressionAllowlist = new Map()
 const buttonSpreadAllowlist = new Map()
+const buttonLoadingDisabledExpressionAllowlist = new Map([
+  [
+    "components/admin/AdminMediaReviewPanel.tsx",
+    new Set([
+      "pendingReview!==null::approving",
+      "pendingReview!==null::rejecting",
+    ]),
+  ],
+  ["components/admin/AdminReportsPanel.tsx", new Set(["!canResolve::resolving"])],
+  ["components/admin/AdminTagManagementPanel.tsx", new Set(["!canMerge::merging"])],
+  ["components/photo/DownloadButton.tsx", new Set(["disabled::loading"])],
+  ["components/post/PostComposerDialog.tsx", new Set(["!canSubmit::submitting"])],
+  ["pages/CommunityPage.tsx", new Set(["!canSubmit::submitting"])],
+])
 
 const tailwindPaletteColors = new Set([
   "amber",
@@ -579,6 +593,7 @@ function inspectBusinessButtons(relativePath, sourceOrSourceFile) {
 function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
   const sourceFile = sourceFileFor(relativePath, sourceOrSourceFile)
   const violations = []
+  const legacyLoaderNames = legacyLoaderLocalNames(sourceFile)
 
   for (const openingElement of jsxOpeningElements(sourceFile, "Button")) {
     const buttonElement = openingElement.parent
@@ -589,8 +604,8 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
 
     function inspectLoader(element, loadingExpression) {
       const tagName = element.tagName.getText(sourceFile)
-      if (tagName === "Loader2" || tagName === "LoaderCircle") {
-        legacyLoaders.push(tagName)
+      if (legacyLoaderNames.has(tagName)) {
+        legacyLoaders.push(legacyLoaderNames.get(tagName))
       } else if (tagName === "Spinner") {
         spinners.push({ element, loadingExpression })
       }
@@ -617,7 +632,7 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
       if (ts.isConditionalExpression(node)) {
         const condition = normalizeLoadingExpression(node.condition, sourceFile)
         visitContent(node.whenTrue, condition)
-        visitContent(node.whenFalse, `!(${condition})`)
+        visitContent(node.whenFalse, negateNormalizedLoadingExpression(condition))
         return
       }
       if (
@@ -662,8 +677,7 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
         ...new Set(spinners.map(({ loadingExpression }) => loadingExpression).filter(Boolean)),
       ]
       const sharesLoadingState = conditionalLoadingStates.length > 0
-        ? disabledState.kind !== "invalid" &&
-          ariaBusyState.kind === "expression" &&
+        ? ariaBusyState.kind === "expression" &&
           conditionalLoadingStates.every(
             (loadingExpression) => loadingExpression === ariaBusyState.expression
           )
@@ -677,11 +691,46 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
           `${relativePath}: Spinner Button disabled and aria-busy must be true or use the same loading state expression: ${openingElement.getText(sourceFile)}`
         )
       }
+      if (
+        conditionalLoadingStates.length > 0 &&
+        !conditionalLoadingStates.every((loadingExpression) =>
+          disabledIncludesLoadingState(
+            relativePath,
+            disabledState,
+            loadingExpression,
+            sourceFile
+          )
+        )
+      ) {
+        violations.push(
+          `${relativePath}: Spinner Button disabled must include Spinner loading state: ${openingElement.getText(sourceFile)}`
+        )
+      }
     }
     for (const { element: spinner } of spinners) {
       if (!hasStaticJsxAttribute(spinner, sourceFile, "aria-label", "加载中")) {
         violations.push(
           `${relativePath}: Spinner inside Button requires aria-label="加载中": ${spinner.getText(sourceFile)}`
+        )
+      }
+    }
+
+    const iconOnly = hasStaticIconSize(openingElement, sourceFile)
+    const hasVisibleLoadingText = spinners.every(({ loadingExpression }) =>
+      buttonElement.children.some((child) =>
+        hasVisibleTextForLoadingState(child, loadingExpression, sourceFile)
+      )
+    )
+    if (!hasVisibleLoadingText) {
+      if (iconOnly) {
+        if (!hasAccurateActionAriaLabel(openingElement, sourceFile)) {
+          violations.push(
+            `${relativePath}: icon loading Button requires an action aria-label: ${openingElement.getText(sourceFile)}`
+          )
+        }
+      } else {
+        violations.push(
+          `${relativePath}: non-icon loading Button requires visible loading text: ${openingElement.getText(sourceFile)}`
         )
       }
     }
@@ -691,7 +740,29 @@ function inspectBusinessButtonLoadingStates(relativePath, sourceOrSourceFile) {
 }
 
 function normalizeLoadingExpression(expression, sourceFile) {
-  return unwrapExpression(expression).getText(sourceFile).replace(/\s+/g, "")
+  const unwrapped = unwrapExpression(expression)
+  if (
+    ts.isPrefixUnaryExpression(unwrapped) &&
+    unwrapped.operator === ts.SyntaxKind.ExclamationToken
+  ) {
+    return negateNormalizedLoadingExpression(
+      normalizeLoadingExpression(unwrapped.operand, sourceFile)
+    )
+  }
+  return unwrapped.getText(sourceFile).replace(/\s+/g, "")
+}
+
+function negateNormalizedLoadingExpression(expression) {
+  if (/^![A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(expression)) {
+    return expression.slice(1)
+  }
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(expression)) {
+    return `!${expression}`
+  }
+  if (expression.startsWith("!(") && expression.endsWith(")")) {
+    return expression.slice(2, -1)
+  }
+  return `!(${expression})`
 }
 
 function resolveLoadingState(attribute, sourceFile) {
@@ -719,7 +790,146 @@ function resolveLoadingState(attribute, sourceFile) {
   return {
     kind: "expression",
     expression: normalizeLoadingExpression(expression, sourceFile),
+    node: expression,
   }
+}
+
+function disabledIncludesLoadingState(
+  relativePath,
+  disabledState,
+  loadingExpression,
+  sourceFile
+) {
+  if (disabledState.kind === "true") return true
+  if (disabledState.kind !== "expression") return false
+
+  function includes(expression) {
+    const unwrapped = unwrapExpression(expression)
+    if (normalizeLoadingExpression(unwrapped, sourceFile) === loadingExpression) {
+      return true
+    }
+    return (
+      ts.isBinaryExpression(unwrapped) &&
+      unwrapped.operatorToken.kind === ts.SyntaxKind.BarBarToken &&
+      (includes(unwrapped.left) || includes(unwrapped.right))
+    )
+  }
+
+  if (includes(disabledState.node)) return true
+  return isAllowlisted(
+    buttonLoadingDisabledExpressionAllowlist,
+    relativePath,
+    `${disabledState.expression}::${loadingExpression}`
+  )
+}
+
+function hasVisibleTextForLoadingState(node, loadingExpression, sourceFile) {
+  const unwrapped = unwrapExpression(node)
+  if (ts.isJsxText(unwrapped)) return unwrapped.text.trim() !== ""
+  if (ts.isStringLiteral(unwrapped) || ts.isNoSubstitutionTemplateLiteral(unwrapped)) {
+    return unwrapped.text.trim() !== ""
+  }
+  if (ts.isTemplateExpression(unwrapped)) {
+    return (
+      unwrapped.head.text.trim() !== "" ||
+      unwrapped.templateSpans.some((span) => span.literal.text.trim() !== "")
+    )
+  }
+  if (ts.isIdentifier(unwrapped)) {
+    return /(?:Label|Text|Title)$/.test(unwrapped.text)
+  }
+  if (ts.isPropertyAccessExpression(unwrapped)) {
+    return /^(?:label|text|title)$/.test(unwrapped.name.text)
+  }
+  if (ts.isJsxElement(unwrapped) || ts.isJsxFragment(unwrapped)) {
+    return unwrapped.children.some((child) =>
+      hasVisibleTextForLoadingState(child, loadingExpression, sourceFile)
+    )
+  }
+  if (ts.isJsxSelfClosingElement(unwrapped)) return false
+  if (ts.isJsxExpression(unwrapped)) {
+    return unwrapped.expression
+      ? hasVisibleTextForLoadingState(unwrapped.expression, loadingExpression, sourceFile)
+      : false
+  }
+  if (ts.isConditionalExpression(unwrapped)) {
+    const condition = normalizeLoadingExpression(unwrapped.condition, sourceFile)
+    if (condition === loadingExpression) {
+      return hasVisibleTextForLoadingState(
+        unwrapped.whenTrue,
+        loadingExpression,
+        sourceFile
+      )
+    }
+    if (negateNormalizedLoadingExpression(condition) === loadingExpression) {
+      return hasVisibleTextForLoadingState(
+        unwrapped.whenFalse,
+        loadingExpression,
+        sourceFile
+      )
+    }
+    return (
+      hasVisibleTextForLoadingState(unwrapped.whenTrue, loadingExpression, sourceFile) &&
+      hasVisibleTextForLoadingState(unwrapped.whenFalse, loadingExpression, sourceFile)
+    )
+  }
+  if (
+    ts.isBinaryExpression(unwrapped) &&
+    unwrapped.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+  ) {
+    const condition = normalizeLoadingExpression(unwrapped.left, sourceFile)
+    return condition === loadingExpression
+      ? hasVisibleTextForLoadingState(unwrapped.right, loadingExpression, sourceFile)
+      : false
+  }
+  return false
+}
+
+function legacyLoaderLocalNames(sourceFile) {
+  const loaders = new Map([
+    ["Loader2", "Loader2"],
+    ["LoaderCircle", "LoaderCircle"],
+  ])
+
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "lucide-react" ||
+      !statement.importClause?.namedBindings ||
+      !ts.isNamedImports(statement.importClause.namedBindings)
+    ) {
+      continue
+    }
+    for (const element of statement.importClause.namedBindings.elements) {
+      const importedName = (element.propertyName ?? element.name).text
+      if (importedName === "Loader2" || importedName === "LoaderCircle") {
+        loaders.set(element.name.text, importedName)
+      }
+    }
+  }
+
+  return loaders
+}
+
+function hasStaticIconSize(element, sourceFile) {
+  return jsxAttributes(element, sourceFile, "size").some((attribute) => {
+    const result = resolveJsxAttributeStrings(attribute, sourceFile)
+    return result.unresolved.length === 0 && result.values.some((value) => value.startsWith("icon"))
+  })
+}
+
+function hasAccurateActionAriaLabel(element, sourceFile) {
+  return jsxAttributes(element, sourceFile, "aria-label").some((attribute) => {
+    const result = resolveJsxAttributeStrings(attribute, sourceFile)
+    return (
+      result.unresolved.length === 0 &&
+      result.values.length > 0 &&
+      result.values.every(
+        (value) => value.trim() !== "" && !/^(?:加载中|loading)$/i.test(value.trim())
+      )
+    )
+  })
 }
 
 function hasStaticJsxAttribute(element, sourceFile, attributeName, expectedValue) {
@@ -913,6 +1123,71 @@ test("AST Button mutation fixtures enforce direct semantic attributes", () => {
       '<Button disabled={!canSubmit || loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}加载中</Button>'
     ),
     []
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/DisabledOmitsLoadingState.tsx",
+      '<Button disabled={canSubmit} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}保存中</Button>'
+    ).join("\n"),
+    /disabled must include Spinner loading state/
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/DisabledNegatesLoadingState.tsx",
+      '<Button disabled={!loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}保存中</Button>'
+    ).join("\n"),
+    /disabled must include Spinner loading state/
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/DisabledIncludesLoadingState.tsx",
+      '<Button disabled={loading || !canSubmit} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : null}保存中</Button>'
+    ),
+    []
+  )
+  for (const legacyLoader of ["Loader2", "LoaderCircle"]) {
+    assert.match(
+      inspectBusinessButtonLoadingStates(
+        `fixtures/Aliased${legacyLoader}.tsx`,
+        `import { ${legacyLoader} as BusyIcon } from "lucide-react"; <Button disabled={loading} aria-busy={loading}><BusyIcon />加载中</Button>`
+      ).join("\n"),
+      new RegExp(`must use Spinner instead of ${legacyLoader}`)
+    )
+  }
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/FalseBranchSpinner.tsx",
+      '<Button disabled={!loading} aria-busy={!loading}>{loading ? "保存" : <><Spinner aria-label="加载中" />保存中</>}</Button>'
+    ),
+    []
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/MissingVisibleLoadingText.tsx",
+      '<Button disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+    ).join("\n"),
+    /requires visible loading text/
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/VisibleLoadingText.tsx",
+      '<Button disabled={loading} aria-busy={loading}>{loading ? <><Spinner aria-label="加载中" />保存中</> : <Save />}</Button>'
+    ),
+    []
+  )
+  assert.deepEqual(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/IconLoadingButton.tsx",
+      '<Button size="icon-sm" aria-label="保存" disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+    ),
+    []
+  )
+  assert.match(
+    inspectBusinessButtonLoadingStates(
+      "fixtures/InaccurateIconLoadingLabel.tsx",
+      '<Button size="icon-sm" aria-label="加载中" disabled={loading} aria-busy={loading}>{loading ? <Spinner aria-label="加载中" /> : <Save />}</Button>'
+    ).join("\n"),
+    /requires an action aria-label/
   )
   assert.deepEqual(
     inspectBusinessButtonLoadingStates(

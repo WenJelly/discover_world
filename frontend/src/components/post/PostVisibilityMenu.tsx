@@ -80,7 +80,7 @@ export function PostVisibilityMenu({
         type="button"
         variant="ghost"
         size="default"
-        disabled={disabled}
+        disabled={disabled || loading}
         aria-busy={loading}
         onClick={() => setOpen((current) => !current)}
         aria-label={ariaLabel}
