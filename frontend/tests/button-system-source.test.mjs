@@ -12,50 +12,36 @@ function readSource(relativePath) {
   return readFileSync(new URL(`../src/${relativePath}`, import.meta.url), "utf8")
 }
 
-function openingTags(source, tagName) {
-  const result = []
-  const sourceFile = ts.createSourceFile(
-    "source.tsx",
+function createTsxSourceFile(relativePath, source) {
+  return ts.createSourceFile(
+    relativePath,
     source,
     ts.ScriptTarget.Latest,
     true,
     ts.ScriptKind.TSX
   )
+}
+
+function jsxOpeningElements(sourceFile, tagName) {
+  const result = []
 
   function visit(node) {
     if (
       (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
-      node.tagName.getText(sourceFile) === tagName
+      (!tagName || node.tagName.getText(sourceFile) === tagName)
     ) {
-      result.push(node.getText(sourceFile))
+      result.push(node)
     }
     ts.forEachChild(node, visit)
   }
 
   visit(sourceFile)
-
   return result
 }
 
-function allOpeningTags(source) {
-  const result = []
-  const sourceFile = ts.createSourceFile(
-    "source.tsx",
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX
-  )
-
-  function visit(node) {
-    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      result.push(node.getText(sourceFile))
-    }
-    ts.forEachChild(node, visit)
-  }
-
-  visit(sourceFile)
-  return result
+function openingTags(source, tagName) {
+  const sourceFile = createTsxSourceFile("source.tsx", source)
+  return jsxOpeningElements(sourceFile, tagName).map((node) => node.getText(sourceFile))
 }
 
 function walkTsxFiles(directory = sourceRoot) {
@@ -76,6 +62,13 @@ function walkTsxFiles(directory = sourceRoot) {
 
   return files
 }
+
+const tsxInventory = walkTsxFiles()
+  .sort((left, right) => left.relativePath.localeCompare(right.relativePath))
+  .map((file) => ({
+    ...file,
+    sourceFile: createTsxSourceFile(file.relativePath, file.source),
+  }))
 
 function elementBlocks(source, tagName) {
   const result = []
@@ -122,6 +115,564 @@ function assertBusyButtons(relativePath, callbackNeedle, busyState, expectedCoun
   }
 }
 
+function sourceFileFor(relativePath, sourceOrSourceFile) {
+  return typeof sourceOrSourceFile === "string"
+    ? createTsxSourceFile(relativePath, sourceOrSourceFile)
+    : sourceOrSourceFile
+}
+
+function jsxAttributes(element, sourceFile, attributeName) {
+  return element.attributes.properties.filter(
+    (property) =>
+      ts.isJsxAttribute(property) && property.name.getText(sourceFile) === attributeName
+  )
+}
+
+function mergeStaticStrings(...results) {
+  return {
+    values: results.flatMap((result) => result.values),
+    unresolved: results.flatMap((result) => result.unresolved),
+  }
+}
+
+function unwrapExpression(expression) {
+  if (
+    ts.isParenthesizedExpression(expression) ||
+    ts.isAsExpression(expression) ||
+    ts.isTypeAssertionExpression(expression) ||
+    ts.isNonNullExpression(expression) ||
+    ts.isSatisfiesExpression(expression)
+  ) {
+    return unwrapExpression(expression.expression)
+  }
+  return expression
+}
+
+function resolveStaticStrings(expression, sourceFile) {
+  const unwrapped = unwrapExpression(expression)
+  if (ts.isStringLiteral(unwrapped) || ts.isNoSubstitutionTemplateLiteral(unwrapped)) {
+    return { values: [unwrapped.text], unresolved: [] }
+  }
+  if (
+    unwrapped.kind === ts.SyntaxKind.NullKeyword ||
+    unwrapped.kind === ts.SyntaxKind.TrueKeyword ||
+    unwrapped.kind === ts.SyntaxKind.FalseKeyword ||
+    (ts.isIdentifier(unwrapped) && unwrapped.text === "undefined")
+  ) {
+    return { values: [], unresolved: [] }
+  }
+  if (ts.isConditionalExpression(unwrapped)) {
+    return mergeStaticStrings(
+      resolveStaticStrings(unwrapped.whenTrue, sourceFile),
+      resolveStaticStrings(unwrapped.whenFalse, sourceFile)
+    )
+  }
+  if (ts.isBinaryExpression(unwrapped)) {
+    if (unwrapped.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+      return resolveStaticStrings(unwrapped.right, sourceFile)
+    }
+    if (
+      unwrapped.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+      unwrapped.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+    ) {
+      return mergeStaticStrings(
+        resolveStaticStrings(unwrapped.left, sourceFile),
+        resolveStaticStrings(unwrapped.right, sourceFile)
+      )
+    }
+    if (unwrapped.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+      const left = resolveStaticStrings(unwrapped.left, sourceFile)
+      const right = resolveStaticStrings(unwrapped.right, sourceFile)
+      if (left.unresolved.length === 0 && right.unresolved.length === 0) {
+        return {
+          values: left.values.flatMap((leftValue) =>
+            right.values.map((rightValue) => `${leftValue}${rightValue}`)
+          ),
+          unresolved: [],
+        }
+      }
+      return mergeStaticStrings(left, right)
+    }
+  }
+  if (ts.isTemplateExpression(unwrapped)) {
+    let values = [unwrapped.head.text]
+    const unresolved = []
+    for (const span of unwrapped.templateSpans) {
+      const expressionResult = resolveStaticStrings(span.expression, sourceFile)
+      unresolved.push(...expressionResult.unresolved)
+      if (expressionResult.values.length === 0) {
+        values = values.map((value) => `${value}${span.literal.text}`)
+      } else {
+        values = values.flatMap((value) =>
+          expressionResult.values.map(
+            (expressionValue) => `${value}${expressionValue}${span.literal.text}`
+          )
+        )
+      }
+    }
+    return { values, unresolved }
+  }
+  return { values: [], unresolved: [unwrapped.getText(sourceFile)] }
+}
+
+function resolveJsxAttributeStrings(attribute, sourceFile) {
+  if (!attribute.initializer) {
+    return { values: [], unresolved: [attribute.getText(sourceFile)] }
+  }
+  if (ts.isStringLiteral(attribute.initializer)) {
+    return { values: [attribute.initializer.text], unresolved: [] }
+  }
+  if (ts.isJsxExpression(attribute.initializer) && attribute.initializer.expression) {
+    return resolveStaticStrings(attribute.initializer.expression, sourceFile)
+  }
+  return { values: [], unresolved: [attribute.initializer.getText(sourceFile)] }
+}
+
+function staticPropertyName(name, sourceFile) {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
+    return { value: name.text, unresolved: false }
+  }
+  if (ts.isComputedPropertyName(name)) {
+    const result = resolveStaticStrings(name.expression, sourceFile)
+    if (result.unresolved.length === 0 && result.values.length === 1) {
+      return { value: result.values[0], unresolved: false }
+    }
+  }
+  return { value: "", unresolved: true }
+}
+
+function inspectRoleSpread(expression, sourceFile) {
+  const unwrapped = unwrapExpression(expression)
+  if (ts.isObjectLiteralExpression(unwrapped)) {
+    const roles = []
+    const unresolved = []
+    for (const property of unwrapped.properties) {
+      if (ts.isSpreadAssignment(property)) {
+        const nested = inspectRoleSpread(property.expression, sourceFile)
+        roles.push(...nested.roles)
+        unresolved.push(...nested.unresolved)
+        continue
+      }
+      const name = staticPropertyName(property.name, sourceFile)
+      if (name.unresolved) {
+        unresolved.push(property.getText(sourceFile))
+        continue
+      }
+      if (name.value !== "role") continue
+      if (ts.isPropertyAssignment(property)) {
+        const result = resolveStaticStrings(property.initializer, sourceFile)
+        roles.push(...result.values)
+        unresolved.push(...result.unresolved)
+      } else {
+        unresolved.push(property.getText(sourceFile))
+      }
+    }
+    return { roles, unresolved }
+  }
+  if (ts.isConditionalExpression(unwrapped)) {
+    const whenTrue = inspectRoleSpread(unwrapped.whenTrue, sourceFile)
+    const whenFalse = inspectRoleSpread(unwrapped.whenFalse, sourceFile)
+    return {
+      roles: [...whenTrue.roles, ...whenFalse.roles],
+      unresolved: [...whenTrue.unresolved, ...whenFalse.unresolved],
+    }
+  }
+  if (ts.isBinaryExpression(unwrapped)) {
+    if (unwrapped.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+      return inspectRoleSpread(unwrapped.right, sourceFile)
+    }
+    if (
+      unwrapped.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+      unwrapped.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+    ) {
+      const left = inspectRoleSpread(unwrapped.left, sourceFile)
+      const right = inspectRoleSpread(unwrapped.right, sourceFile)
+      return {
+        roles: [...left.roles, ...right.roles],
+        unresolved: [...left.unresolved, ...right.unresolved],
+      }
+    }
+  }
+  if (
+    unwrapped.kind === ts.SyntaxKind.NullKeyword ||
+    unwrapped.kind === ts.SyntaxKind.FalseKeyword ||
+    (ts.isIdentifier(unwrapped) && unwrapped.text === "undefined")
+  ) {
+    return { roles: [], unresolved: [] }
+  }
+  return { roles: [], unresolved: [unwrapped.getText(sourceFile)] }
+}
+
+const businessRoleExpressionAllowlist = new Map()
+const businessIntrinsicSpreadAllowlist = new Map()
+
+function isAllowlisted(allowlist, relativePath, expression) {
+  return allowlist.get(relativePath)?.has(expression) ?? false
+}
+
+function inspectBusinessIntrinsicRoles(relativePath, sourceOrSourceFile) {
+  const sourceFile = sourceFileFor(relativePath, sourceOrSourceFile)
+  const roleButtons = []
+  const violations = []
+
+  for (const element of jsxOpeningElements(sourceFile)) {
+    const tagName = element.tagName.getText(sourceFile)
+    if (!/^[a-z][a-z0-9.-]*$/.test(tagName)) continue
+
+    const resolvedRoles = []
+    for (const property of element.attributes.properties) {
+      if (ts.isJsxSpreadAttribute(property)) {
+        const spread = inspectRoleSpread(property.expression, sourceFile)
+        resolvedRoles.push(...spread.roles)
+        for (const unresolved of spread.unresolved) {
+          if (!isAllowlisted(businessIntrinsicSpreadAllowlist, relativePath, unresolved)) {
+            violations.push(
+              `${relativePath}: unresolved intrinsic spread attributes on <${tagName}>: ${unresolved}`
+            )
+          }
+        }
+        continue
+      }
+      if (property.name.getText(sourceFile) !== "role") continue
+      const role = resolveJsxAttributeStrings(property, sourceFile)
+      resolvedRoles.push(...role.values)
+      for (const unresolved of role.unresolved) {
+        if (!isAllowlisted(businessRoleExpressionAllowlist, relativePath, unresolved)) {
+          violations.push(`${relativePath}: unresolved role on <${tagName}>: ${unresolved}`)
+        }
+      }
+    }
+
+    if (resolvedRoles.some((role) => role.trim().toLowerCase() === "button")) {
+      roleButtons.push({
+        relativePath,
+        tagName,
+        tag: element.getText(sourceFile),
+        element,
+        sourceFile,
+      })
+    }
+  }
+
+  return { roleButtons, violations }
+}
+
+function collectClassExpression(expression, sourceFile) {
+  const tokens = []
+  const unresolved = []
+  const addTokens = (value) => tokens.push(...value.split(/\s+/).filter(Boolean))
+
+  function collect(candidate) {
+    const unwrapped = unwrapExpression(candidate)
+    if (ts.isStringLiteral(unwrapped) || ts.isNoSubstitutionTemplateLiteral(unwrapped)) {
+      addTokens(unwrapped.text)
+      return
+    }
+    if (
+      unwrapped.kind === ts.SyntaxKind.NullKeyword ||
+      unwrapped.kind === ts.SyntaxKind.TrueKeyword ||
+      unwrapped.kind === ts.SyntaxKind.FalseKeyword ||
+      ts.isNumericLiteral(unwrapped) ||
+      (ts.isIdentifier(unwrapped) && unwrapped.text === "undefined")
+    ) {
+      return
+    }
+    if (ts.isTemplateExpression(unwrapped)) {
+      const result = resolveStaticStrings(unwrapped, sourceFile)
+      result.values.forEach(addTokens)
+      unresolved.push(...result.unresolved)
+      return
+    }
+    if (ts.isConditionalExpression(unwrapped)) {
+      collect(unwrapped.whenTrue)
+      collect(unwrapped.whenFalse)
+      return
+    }
+    if (ts.isBinaryExpression(unwrapped)) {
+      if (unwrapped.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+        collect(unwrapped.right)
+        return
+      }
+      if (
+        unwrapped.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+        unwrapped.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+      ) {
+        collect(unwrapped.left)
+        collect(unwrapped.right)
+        return
+      }
+      if (unwrapped.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+        const result = resolveStaticStrings(unwrapped, sourceFile)
+        result.values.forEach(addTokens)
+        unresolved.push(...result.unresolved)
+        return
+      }
+    }
+    if (ts.isCallExpression(unwrapped)) {
+      const callee = unwrapped.expression.getText(sourceFile)
+      if (callee === "cn" || callee === "clsx") {
+        unwrapped.arguments.forEach(collect)
+      } else {
+        unresolved.push(unwrapped.getText(sourceFile))
+      }
+      return
+    }
+    if (ts.isArrayLiteralExpression(unwrapped)) {
+      for (const element of unwrapped.elements) {
+        if (ts.isSpreadElement(element)) unresolved.push(element.getText(sourceFile))
+        else collect(element)
+      }
+      return
+    }
+    if (ts.isObjectLiteralExpression(unwrapped)) {
+      for (const property of unwrapped.properties) {
+        if (ts.isSpreadAssignment(property)) {
+          unresolved.push(property.getText(sourceFile))
+          continue
+        }
+        const name = staticPropertyName(property.name, sourceFile)
+        if (name.unresolved) unresolved.push(property.getText(sourceFile))
+        else addTokens(name.value)
+      }
+      return
+    }
+    unresolved.push(unwrapped.getText(sourceFile))
+  }
+
+  collect(expression)
+  return { tokens, unresolved }
+}
+
+const buttonClassForwardingAllowlist = new Map([
+  ["components/photo/DownloadButton.tsx", new Set(["className"])],
+  ["components/post/PostVisibilityMenu.tsx", new Set(["buttonClassName"])],
+])
+const buttonSizeExpressionAllowlist = new Map()
+const buttonSpreadAllowlist = new Map()
+
+const tailwindPaletteColors = new Set([
+  "amber",
+  "black",
+  "blue",
+  "cyan",
+  "emerald",
+  "fuchsia",
+  "gray",
+  "green",
+  "indigo",
+  "lime",
+  "neutral",
+  "orange",
+  "pink",
+  "purple",
+  "red",
+  "rose",
+  "sky",
+  "slate",
+  "stone",
+  "teal",
+  "violet",
+  "white",
+  "yellow",
+  "zinc",
+])
+
+function baseUtility(classToken) {
+  let bracketDepth = 0
+  let parenthesisDepth = 0
+  let lastVariantSeparator = -1
+  for (let index = 0; index < classToken.length; index += 1) {
+    const char = classToken[index]
+    if (char === "[") bracketDepth += 1
+    else if (char === "]") bracketDepth -= 1
+    else if (char === "(") parenthesisDepth += 1
+    else if (char === ")") parenthesisDepth -= 1
+    else if (char === ":" && bracketDepth === 0 && parenthesisDepth === 0) {
+      lastVariantSeparator = index
+    }
+  }
+  return classToken.slice(lastVariantSeparator + 1).replace(/^!/, "")
+}
+
+function forbiddenButtonClassReason(classToken) {
+  const utility = baseUtility(classToken)
+  if (/^h-\[.+\]$/.test(utility)) return "arbitrary height"
+  if (/^h-(?:[6-9]|1[0-2])$/.test(utility)) return "fixed height h-6 through h-12"
+  if (/^rounded(?:-.+)?$/.test(utility)) return "rounded styling"
+  if (/^(?:px|pl|pr|ps|pe)-.+$/.test(utility)) return "horizontal padding"
+
+  const color = /^(?:bg|text|border|ring)-(.+)$/.exec(utility)
+  if (!color) return ""
+  const colorValue = color[1].split("/")[0]
+  if (colorValue.startsWith("[") || colorValue.startsWith("(")) {
+    return "arbitrary color"
+  }
+  if (tailwindPaletteColors.has(colorValue.split("-")[0])) {
+    return "non-semantic palette color"
+  }
+  return ""
+}
+
+function inspectBusinessButtons(relativePath, sourceOrSourceFile) {
+  const sourceFile = sourceFileFor(relativePath, sourceOrSourceFile)
+  const violations = []
+
+  for (const element of jsxOpeningElements(sourceFile, "Button")) {
+    const tag = element.getText(sourceFile)
+    for (const property of element.attributes.properties) {
+      if (!ts.isJsxSpreadAttribute(property)) continue
+      const expression = property.expression.getText(sourceFile)
+      if (!isAllowlisted(buttonSpreadAllowlist, relativePath, expression)) {
+        violations.push(`${relativePath}: Button spread attributes are not allowed: ${tag}`)
+      }
+    }
+
+    for (const className of jsxAttributes(element, sourceFile, "className")) {
+      let classes = { tokens: [], unresolved: [] }
+      if (className.initializer && ts.isStringLiteral(className.initializer)) {
+        classes.tokens = className.initializer.text.split(/\s+/).filter(Boolean)
+      } else if (
+        className.initializer &&
+        ts.isJsxExpression(className.initializer) &&
+        className.initializer.expression
+      ) {
+        classes = collectClassExpression(className.initializer.expression, sourceFile)
+      } else {
+        classes.unresolved.push(className.getText(sourceFile))
+      }
+
+      for (const unresolved of classes.unresolved) {
+        if (!isAllowlisted(buttonClassForwardingAllowlist, relativePath, unresolved)) {
+          violations.push(`${relativePath}: unresolved className expression: ${unresolved}`)
+        }
+      }
+      for (const classToken of classes.tokens) {
+        const reason = forbiddenButtonClassReason(classToken)
+        if (reason) violations.push(`${relativePath}: ${reason}: ${classToken}`)
+      }
+    }
+
+    const hasDirectAriaLabel = jsxAttributes(element, sourceFile, "aria-label").length > 0
+    for (const size of jsxAttributes(element, sourceFile, "size")) {
+      const result = resolveJsxAttributeStrings(size, sourceFile)
+      for (const unresolved of result.unresolved) {
+        if (!isAllowlisted(buttonSizeExpressionAllowlist, relativePath, unresolved)) {
+          violations.push(`${relativePath}: unresolved size expression: ${unresolved}`)
+        }
+      }
+      if (
+        result.values.some((value) => value.trim().startsWith("icon")) &&
+        !hasDirectAriaLabel
+      ) {
+        violations.push(`${relativePath}: icon Button requires direct aria-label: ${tag}`)
+      }
+    }
+  }
+
+  return violations
+}
+
+function hasStaticJsxAttribute(element, sourceFile, attributeName, expectedValue) {
+  return jsxAttributes(element, sourceFile, attributeName).some((attribute) => {
+    const result = resolveJsxAttributeStrings(attribute, sourceFile)
+    return (
+      result.unresolved.length === 0 &&
+      result.values.some((value) => value.trim() === expectedValue)
+    )
+  })
+}
+
+function expressionContainsIdentifier(expression, identifier) {
+  let found = false
+  function visit(node) {
+    if (ts.isIdentifier(node) && node.text === identifier) found = true
+    if (!found) ts.forEachChild(node, visit)
+  }
+  visit(expression)
+  return found
+}
+
+function hasSharedInteractiveClass(element, sourceFile) {
+  return jsxAttributes(element, sourceFile, "className").some(
+    (attribute) =>
+      attribute.initializer &&
+      ts.isJsxExpression(attribute.initializer) &&
+      attribute.initializer.expression &&
+      expressionContainsIdentifier(
+        attribute.initializer.expression,
+        "interactiveSurfaceClassName"
+      )
+  )
+}
+
+test("AST role mutation fixtures enforce direct semantic attributes", () => {
+  const expressionRole = inspectBusinessIntrinsicRoles(
+    "fixtures/ExpressionRole.tsx",
+    '<div role={"button"} data-slot="interactive-surface" className={cn(interactiveSurfaceClassName)} />'
+  )
+  assert.equal(expressionRole.roleButtons.length, 1)
+
+  const dynamicRole = inspectBusinessIntrinsicRoles(
+    "fixtures/DynamicRole.tsx",
+    "<div role={dynamicRole} />"
+  )
+  assert.match(dynamicRole.violations.join("\n"), /unresolved role/)
+
+  const spreadRole = inspectBusinessIntrinsicRoles(
+    "fixtures/SpreadRole.tsx",
+    "<div {...roleProps} />"
+  )
+  assert.match(spreadRole.violations.join("\n"), /unresolved intrinsic spread attributes/)
+})
+
+test("AST Button mutation fixtures enforce direct semantic attributes", () => {
+  assert.match(
+    inspectBusinessButtons(
+      "fixtures/DynamicClass.tsx",
+      "<Button className={businessButtonClass}>操作</Button>"
+    ).join("\n"),
+    /unresolved className/
+  )
+  assert.match(
+    inspectBusinessButtons(
+      "fixtures/SpreadButton.tsx",
+      "<Button {...dangerButtonProps}>操作</Button>"
+    ).join("\n"),
+    /spread attributes/
+  )
+
+  const colorViolations = inspectBusinessButtons(
+    "fixtures/PaletteColors.tsx",
+    '<Button className="bg-cyan-500 border-blue-500 ring-blue-500 bg-[#00ffff]">操作</Button>'
+  ).join("\n")
+  assert.match(colorViolations, /bg-cyan-500/)
+  assert.match(colorViolations, /border-blue-500/)
+  assert.match(colorViolations, /ring-blue-500/)
+  assert.match(colorViolations, /bg-\[#00ffff\]/)
+
+  assert.match(
+    inspectBusinessButtons(
+      "fixtures/ExpressionIconSize.tsx",
+      '<Button size={"icon-sm"}>操作</Button>'
+    ).join("\n"),
+    /aria-label/
+  )
+  assert.match(
+    inspectBusinessButtons(
+      "fixtures/DynamicSize.tsx",
+      "<Button size={iconSize}>操作</Button>"
+    ).join("\n"),
+    /unresolved size/
+  )
+  assert.deepEqual(
+    inspectBusinessButtons(
+      "fixtures/NestedProp.tsx",
+      '<Button tooltip={<span className="bg-blue-500" />} className="gap-2">操作</Button>'
+    ),
+    []
+  )
+})
+
 test("button foundations keep shadcn Button and provide Spinner plus interactive surface states", () => {
   const button = readSource("components/ui/button.tsx")
   const spinner = readSource("components/ui/spinner.tsx")
@@ -152,11 +703,16 @@ export { interactiveSurfaceClassName }
 })
 
 test("all business native buttons and role buttons use the registered interaction surface", () => {
-  const businessFiles = walkTsxFiles().filter(
-    ({ relativePath }) => relativePath !== "components/ui/sidebar.tsx"
+  const businessFiles = tsxInventory.filter(
+    ({ relativePath }) => !relativePath.startsWith("components/ui/")
   )
-  const nativeButtons = businessFiles.flatMap(({ relativePath, source }) =>
-    openingTags(source, "button").map((tag) => ({ relativePath, tag }))
+  const nativeButtons = businessFiles.flatMap(({ relativePath, sourceFile }) =>
+    jsxOpeningElements(sourceFile, "button").map((element) => ({
+      relativePath,
+      sourceFile,
+      element,
+      tag: element.getText(sourceFile),
+    }))
   )
 
   assert.equal(
@@ -164,62 +720,60 @@ test("all business native buttons and role buttons use the registered interactio
     23,
     nativeButtons.map(({ relativePath, tag }) => `${relativePath}: ${tag}`).join("\n")
   )
-  for (const { relativePath, tag } of nativeButtons) {
-    assert.match(tag, /data-slot="interactive-surface"/, `${relativePath}: ${tag}`)
-    assert.match(tag, /interactiveSurfaceClassName/, `${relativePath}: ${tag}`)
+  for (const { relativePath, sourceFile, element, tag } of nativeButtons) {
+    assert.equal(
+      hasStaticJsxAttribute(element, sourceFile, "data-slot", "interactive-surface"),
+      true,
+      `${relativePath}: ${tag}`
+    )
+    assert.equal(hasSharedInteractiveClass(element, sourceFile), true, `${relativePath}: ${tag}`)
   }
 
-  const roleButtons = walkTsxFiles().flatMap(({ relativePath, source }) =>
-    allOpeningTags(source)
-      .filter((tag) => /\brole\s*=\s*["']button["']/.test(tag))
-      .map((tag) => ({ relativePath, tag }))
+  const sidebar = tsxInventory.find(
+    ({ relativePath }) => relativePath === "components/ui/sidebar.tsx"
   )
+  assert.ok(sidebar, "components/ui/sidebar.tsx must remain in the TSX inventory")
+  const sidebarNativeButtons = jsxOpeningElements(sidebar.sourceFile, "button")
+  assert.equal(sidebarNativeButtons.length, 1, "SidebarRail must remain the only sidebar button")
+
+  const totalNativeButtons = tsxInventory.reduce(
+    (count, { sourceFile }) => count + jsxOpeningElements(sourceFile, "button").length,
+    0
+  )
+  assert.equal(nativeButtons.length + sidebarNativeButtons.length, 24)
+  assert.equal(totalNativeButtons, 24)
+
+  const roleInspections = businessFiles.map(({ relativePath, sourceFile }) =>
+    inspectBusinessIntrinsicRoles(relativePath, sourceFile)
+  )
+  assert.deepEqual(roleInspections.flatMap(({ violations }) => violations), [])
+  const roleButtons = roleInspections.flatMap(({ roleButtons: resolved }) => resolved)
   assert.deepEqual(
     roleButtons.map(({ relativePath }) => relativePath),
     ["components/upload/UploadDialog.tsx"]
   )
-  assert.match(roleButtons[0].tag, /data-slot="interactive-surface"/)
-  assert.match(roleButtons[0].tag, /interactiveSurfaceClassName/)
+  assert.equal(
+    hasStaticJsxAttribute(
+      roleButtons[0].element,
+      roleButtons[0].sourceFile,
+      "data-slot",
+      "interactive-surface"
+    ),
+    true
+  )
+  assert.equal(
+    hasSharedInteractiveClass(roleButtons[0].element, roleButtons[0].sourceFile),
+    true
+  )
 })
 
 test("business Button calls do not recreate visual systems", () => {
-  const businessFiles = walkTsxFiles().filter(
+  const businessFiles = tsxInventory.filter(
     ({ relativePath }) => !relativePath.startsWith("components/ui/")
   )
-  const forbiddenClasses = [
-    [
-      "arbitrary height",
-      /(?:^|[\s"'`])(?:[^\s"'`]+:)*h-\[[^\]]+\](?=$|[\s"'`}])/,
-    ],
-    [
-      "fixed height h-6 through h-12",
-      /(?:^|[\s"'`])(?:[^\s"'`]+:)*h-(?:[6-9]|1[0-2])(?=$|[\s"'`}])/,
-    ],
-    [
-      "rounded styling",
-      /(?:^|[\s"'`])(?:[^\s"'`]+:)*rounded(?:-[^\s"'`}]+)?(?=$|[\s"'`}])/,
-    ],
-    [
-      "horizontal padding",
-      /(?:^|[\s"'`])(?:[^\s"'`]+:)*(?:px|pl|pr|ps|pe)-[^\s"'`}]+(?=$|[\s"'`}])/,
-    ],
-    [
-      "page color",
-      /(?:^|[\s"'`])(?:[^\s"'`]+:)*(?:bg|text)-(?:blue|indigo|white|black|slate|red|rose|amber|green)(?:-[^\s"'`}]+)?(?=$|[\s"'`}])/,
-    ],
-  ]
-  const violations = []
-
-  for (const { relativePath, source } of businessFiles) {
-    for (const tag of openingTags(source, "Button")) {
-      for (const [contract, pattern] of forbiddenClasses) {
-        if (pattern.test(tag)) violations.push(`${relativePath}: ${contract}: ${tag}`)
-      }
-      if (/\bsize\s*=\s*["']icon[^"']*["']/.test(tag) && !/\baria-label=/.test(tag)) {
-        violations.push(`${relativePath}: icon Button requires aria-label: ${tag}`)
-      }
-    }
-  }
+  const violations = businessFiles.flatMap(({ relativePath, sourceFile }) =>
+    inspectBusinessButtons(relativePath, sourceFile)
+  )
 
   assert.deepEqual(violations, [])
 })
@@ -301,10 +855,6 @@ test("shell and auth use shadcn actions and keep notification rows as surfaces",
   assert.match(openingTags(loadMore, "Button")[0], /disabled=\{loading\}/)
   assert.match(openingTags(loadMore, "Button")[0], /aria-busy=\{loading\}/)
   assert.match(loadMore, /<Spinner aria-label="加载中" \/>/)
-
-  for (const relativePath of taskFiles) {
-    assert.doesNotMatch(readSource(relativePath), /role\s*=\s*["']button["']/)
-  }
 })
 
 test("account post upload and media actions use Button while semantic surfaces remain native", () => {
@@ -338,12 +888,6 @@ test("account post upload and media actions use Button while semantic surfaces r
   assertMarkedNativeSurfaces("components/photo/PhotoStats.tsx", 0)
   assertMarkedNativeSurfaces("components/photo/PhotoDetailDialog.tsx", 0)
   assertMarkedNativeSurfaces("components/ImagePreviewModal.tsx", 0)
-
-  const upload = readSource("components/upload/UploadDialog.tsx")
-  assert.match(
-    upload,
-    /data-slot="interactive-surface"\s+role="button"|role="button"\s+data-slot="interactive-surface"/
-  )
 })
 
 test("admin actions use Button and admin rows remain registered surfaces", () => {
