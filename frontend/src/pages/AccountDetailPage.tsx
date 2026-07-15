@@ -958,7 +958,7 @@ export default function AccountDetailPage() {
         {/* Content */}
         <TabsContent
           value="posts"
-          render={<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" />}
+          className="mx-auto max-w-3xl px-4 py-4 sm:px-6"
         >
           <>
             {isOwnProfile ? (
@@ -1018,7 +1018,7 @@ export default function AccountDetailPage() {
         </TabsContent>
         <TabsContent
           value="pictures"
-          render={<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" />}
+          className="mx-auto max-w-3xl px-4 py-4 sm:px-6"
         >
           <div className="space-y-4">
             {isOwnProfile && !picturesLoading && pictures.length > 0 ? (
@@ -1108,7 +1108,7 @@ export default function AccountDetailPage() {
         </TabsContent>
         <TabsContent
           value="featured"
-          render={<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" />}
+          className="mx-auto max-w-3xl px-4 py-4 sm:px-6"
         >
           <div className="space-y-4">
             {isOwnProfile && !featuredLoading && featuredImages.length > 0 ? (
@@ -1181,7 +1181,7 @@ export default function AccountDetailPage() {
         </TabsContent>
         <TabsContent
           value="albums"
-          render={<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" />}
+          className="mx-auto max-w-3xl px-4 py-4 sm:px-6"
         >
           <div className="space-y-4">
             {isOwnProfile ? (

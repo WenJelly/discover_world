@@ -1663,6 +1663,19 @@ test("selection controls expose their current state to assistive technology", ()
   assert.equal(openingTags(account, "TabsList").length, 1)
   assert.equal(openingTags(account, "TabsTrigger").length, 1)
   assert.match(openingTags(account, "TabsTrigger")[0], /value=\{tab\.id\}/)
+  const inspectPanelMainUsage = (source) =>
+    elementBlocks(source, "TabsContent").flatMap((block) => {
+      const openingTag = openingTags(block, "TabsContent")[0]
+      return openingTag.includes("render={<main") || openingTags(block, "main").length > 0
+        ? ["TabsContent must use its default div panel without a nested main"]
+        : []
+    })
+  assert.deepEqual(
+    inspectPanelMainUsage(
+      '<TabsContent value="posts" render={<main className="content" />}>内容</TabsContent>'
+    ),
+    ["TabsContent must use its default div panel without a nested main"]
+  )
   const accountPanels = openingTags(account, "TabsContent")
   assert.equal(accountPanels.length, 4)
   for (const tabId of ["posts", "pictures", "featured", "albums"]) {
@@ -1670,9 +1683,12 @@ test("selection controls expose their current state to assistive technology", ()
     assert.ok(panel, `missing ${tabId} TabsContent`)
     assert.match(
       panel,
-      /render=\{<main className="mx-auto max-w-3xl px-4 py-4 sm:px-6" \/>\}/
+      /className="mx-auto max-w-3xl px-4 py-4 sm:px-6"/
     )
+    assert.doesNotMatch(panel, /render=\{<main/)
   }
+  assert.deepEqual(inspectPanelMainUsage(account), [])
+  assert.equal(openingTags(account, "main").length, 0)
   assert.doesNotMatch(account, /role="tablist"|role="tab"|role="tabpanel"/)
   assert.doesNotMatch(account, /aria-selected=\{activeTab === tab\.id\}/)
   assert.match(account, /aria-pressed=\{profile\.isFollowing\}/)
